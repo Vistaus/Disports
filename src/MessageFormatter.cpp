@@ -4,6 +4,7 @@
 #include <QLocale>
 #include <QRegularExpression>
 #include <QStringList>
+#include <QTextBoundaryFinder>
 #include <QTextDocumentFragment>
 
 #include <algorithm>
@@ -99,7 +100,7 @@ struct Protected {
 // Links, mentions, custom emoji and timestamps, applied to HTML-escaped text
 // (so "<" and ">" appear as entities). In rich mode the generated HTML is
 // kept in `store`.
-QString replaceTokens(QString text, Snowflake guild, bool rich, Protected* store = nullptr)
+QString replaceTokens(QString text, Snowflake guild, bool rich, Protected* store = nullptr, int emojiSize = 20)
 {
     static const QRegularExpression user(QStringLiteral("&lt;@!?(\\d+)&gt;"));
     static const QRegularExpression channel(QStringLiteral("&lt;#(\\d+)&gt;"));
@@ -157,8 +158,10 @@ QString replaceTokens(QString text, Snowflake guild, bool rich, Protected* store
         if (!rich)
             return QStringLiteral(":%1:").arg(m.captured(2));
         const bool animated = !m.captured(1).isEmpty();
-        return html(QStringLiteral("<img src=\"%1\" width=\"20\" height=\"20\">")
-                        .arg(DiscordUrls::emoji(DiscordUrls::fromId(m.captured(3)), animated)));
+        return html(QStringLiteral("<img src=\"%1\" width=\"%2\" height=\"%2\">")
+                        .arg(DiscordUrls::emoji(DiscordUrls::fromId(m.captured(3)), animated,
+                                                emojiSize > 24 ? 96 : 48))
+                        .arg(emojiSize));
     });
     replaceAll(timestamp, [&](const QRegularExpressionMatch& m) {
         const QString formatted = formatTimestamp(m.captured(1).toLongLong(), m.captured(2));
@@ -210,7 +213,55 @@ QString applyBlocks(const QString& text)
 
 namespace MessageFormatter {
 
-QString richText(const QString& content, Snowflake guild)
+namespace {
+
+// Whether a grapheme cluster is an emoji: pictographs, symbols that have an
+// emoji presentation, flags, keycaps and ZWJ sequences.
+bool isEmojiCluster(const QString& cluster)
+{
+    bool pictograph = false;
+    for (const char32_t cp : cluster.toUcs4()) {
+        if (cp == 0xFE0F || cp == 0x20E3)          // emoji presentation, keycap
+            return true;
+        if ((cp >= 0x1F000 && cp <= 0x1FAFF)       // pictographs, flags, faces
+            || (cp >= 0x2600 && cp <= 0x27BF)      // misc symbols, dingbats
+            || (cp >= 0x2B00 && cp <= 0x2BFF)      // arrows, stars
+            || (cp >= 0x2300 && cp <= 0x23FF)      // watch, hourglass, ...
+            || (cp >= 0x2190 && cp <= 0x21FF)      // arrows
+            || cp == 0x00A9 || cp == 0x00AE || cp == 0x203C || cp == 0x2049
+            || cp == 0x2122 || cp == 0x2139 || cp == 0x3030 || cp == 0x303D
+            || cp == 0x3297 || cp == 0x3299 || cp == 0x24C2)
+            pictograph = true;
+        else if (cp != 0x200D && !(cp >= 0x1F3FB && cp <= 0x1F3FF) && !(cp >= 0xE0020 && cp <= 0xE007F))
+            return false;                          // anything else: text
+    }
+    return pictograph;
+}
+
+}
+
+int emojiOnlyCount(const QString& content)
+{
+    static const QRegularExpression custom(QStringLiteral("<a?:\\w+:\\d+>"));
+    int count = 0;
+    QString rest = content;
+    rest.replace(custom, QStringLiteral(" "));
+    count += int(content.count(custom));
+
+    rest = rest.simplified().remove(QLatin1Char(' '));
+    QTextBoundaryFinder finder(QTextBoundaryFinder::Grapheme, rest);
+    qsizetype start = 0;
+    while (finder.toNextBoundary() != -1) {
+        const qsizetype end = finder.position();
+        if (!isEmojiCluster(rest.mid(start, end - start)))
+            return 0;
+        ++count;
+        start = end;
+    }
+    return count;
+}
+
+QString richText(const QString& content, Snowflake guild, int emojiSize)
 {
     // Split out code first so nothing inside it is formatted.
     static const QRegularExpression code(QStringLiteral("```(?:[\\w+-]*\\n)?([\\s\\S]*?)```|`([^`\\n]+)`"));
@@ -220,7 +271,7 @@ QString richText(const QString& content, Snowflake guild)
     auto flushText = [&](qsizetype end) {
         Protected store;
         const QString escaped = content.mid(last, end - last).toHtmlEscaped();
-        result += store.restore(applyBlocks(applyInline(replaceTokens(escaped, guild, true, &store))));
+        result += store.restore(applyBlocks(applyInline(replaceTokens(escaped, guild, true, &store, emojiSize))));
     };
 
     auto it = code.globalMatch(content);
@@ -451,7 +502,7 @@ SystemMessage systemMessage(const Message& m, Snowflake guild)
             text += QStringLiteral(" Winner: %1 (%2 of %3 votes)").arg(bold(winner), votes, total);
         else
             text += total.toInt() > 0 ? QStringLiteral(" It ended in a tie.") : QStringLiteral(" Nobody voted.");
-        return line("like", text);
+        return line("ok", text);
     }
     case IN_GAME_MESSAGE_NUX:
         return line("stock_application", QStringLiteral("%1 messaged you from a game.").arg(author));

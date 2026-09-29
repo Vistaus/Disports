@@ -2,8 +2,11 @@ import QtQuick
 import Lomiri.Components
 import Disports.Core
 
-// A poll: tap an answer to vote, tap it again to take the vote back. Results
-// show once you voted or the poll closed, like Discord.
+// A poll, in Lomiri's list style: the question as a header, then one row per
+// answer with a tick (single choice, like OptionSelector) or a CheckBox
+// (multiple choice). Tap an answer to vote, again to take the vote back.
+// Once you voted or the poll closed, each answer shows its votes and a
+// ProgressBar.
 LomiriShape {
     id: card
 
@@ -14,9 +17,8 @@ LomiriShape {
     readonly property var answers: poll.answers || []
     readonly property var myVotes: answers.filter(function(a) { return a.me }).map(function(a) { return a.id })
     readonly property bool showResults: poll.closed || myVotes.length > 0
-    readonly property real padding: units.gu(1.25)
 
-    height: column.height + padding * 2
+    height: column.height
     aspect: LomiriShape.Flat
     radius: "small"
     backgroundColor: theme.palette.normal.foreground
@@ -34,25 +36,24 @@ LomiriShape {
 
     Column {
         id: column
-        x: card.padding
-        y: card.padding
-        width: card.width - card.padding * 2
-        spacing: units.gu(0.75)
+        width: parent.width
 
-        Label {
-            width: parent.width
-            text: card.poll.question || ""
-            font.bold: true
-            wrapMode: Text.Wrap
-        }
-
-        Label {
-            width: parent.width
-            text: card.poll.closed ? i18n.tr("Poll closed")
-                  : card.poll.multiselect ? i18n.tr("Select one or more answers")
-                  : i18n.tr("Select one answer")
-            textSize: Label.XSmall
-            color: theme.palette.normal.backgroundSecondaryText
+        ListItemLayout {
+            id: header
+            title.text: card.poll.question || ""
+            title.font.bold: true
+            title.wrapMode: Text.Wrap
+            title.maximumLineCount: 4
+            subtitle.text: {
+                const votes = card.poll.totalVotes || 0
+                const parts = [card.poll.closed ? i18n.tr("Poll closed") : i18n.tr("Poll")]
+                parts.push(i18n.tr("%1 vote", "%1 votes", votes).arg(votes))
+                if (card.poll.expires)
+                    parts.push(card.poll.expires)
+                if (!card.poll.closed && card.poll.multiselect)
+                    parts.push(i18n.tr("pick any"))
+                return parts.join(" · ")
+            }
         }
 
         Repeater {
@@ -64,113 +65,84 @@ LomiriShape {
                 required property var modelData
 
                 width: column.width
-                height: units.gu(4.5)
+                height: layout.height + (bar.visible ? bar.height + units.gu(1) : 0) + divider.height
                 enabled: !card.poll.closed
                 onClicked: card.vote(modelData.id)
 
-                LomiriShape {
+                // Pressed feedback, like a ListItem
+                Rectangle {
                     anchors.fill: parent
-                    aspect: LomiriShape.Flat
-                    radius: "small"
-                    backgroundColor: theme.palette.normal.base
+                    visible: answer.pressed
+                    color: theme.palette.highlighted.background
                 }
 
-                // Share of the votes
-                LomiriShape {
-                    visible: card.showResults && answer.modelData.percent > 0
-                    anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
-                    width: parent.width * answer.modelData.percent / 100
-                    aspect: LomiriShape.Flat
-                    radius: "small"
-                    backgroundColor: answer.modelData.me ? Qt.rgba(theme.palette.normal.focus.r, theme.palette.normal.focus.g,
-                                                                   theme.palette.normal.focus.b, 0.35)
-                                                         : Qt.rgba(theme.palette.normal.backgroundText.r,
-                                                                   theme.palette.normal.backgroundText.g,
-                                                                   theme.palette.normal.backgroundText.b, 0.12)
+                Rectangle {
+                    id: divider
+                    anchors { left: parent.left; right: parent.right; top: parent.top }
+                    height: units.dp(1)
+                    color: theme.palette.normal.base
                 }
 
-                Row {
-                    anchors {
-                        left: parent.left
-                        right: result.left
-                        leftMargin: units.gu(1)
-                        rightMargin: units.gu(1)
-                        verticalCenter: parent.verticalCenter
-                    }
-                    spacing: units.gu(0.75)
-
-                    Label {
-                        anchors.verticalCenter: parent.verticalCenter
-                        visible: text !== ""
-                        text: answer.modelData.emoji
-                    }
+                ListItemLayout {
+                    id: layout
+                    anchors.top: divider.bottom
+                    title.text: (answer.modelData.emoji ? answer.modelData.emoji + "  " : "") + answer.modelData.text
+                    title.font.bold: answer.modelData.me
+                    summary.text: card.showResults
+                                  ? i18n.tr("%1 vote", "%1 votes", answer.modelData.votes).arg(answer.modelData.votes)
+                                    + " · " + answer.modelData.percent + "%"
+                                  : ""
 
                     Image {
-                        anchors.verticalCenter: parent.verticalCenter
+                        SlotsLayout.position: SlotsLayout.Leading
                         visible: answer.modelData.emojiUrl !== ""
-                        width: units.gu(2.2)
+                        width: units.gu(2.5)
                         height: width
                         source: answer.modelData.emojiUrl
-                        sourceSize.width: units.gu(4)
+                        sourceSize.width: units.gu(5)
                         asynchronous: true
                     }
 
-                    Label {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width - x
-                        text: answer.modelData.text
-                        elide: Text.ElideRight
-                        font.bold: answer.modelData.me
-                    }
-                }
-
-                Row {
-                    id: result
-                    anchors { right: parent.right; rightMargin: units.gu(1); verticalCenter: parent.verticalCenter }
-                    spacing: units.gu(0.75)
-
-                    Label {
-                        anchors.verticalCenter: parent.verticalCenter
-                        visible: card.showResults
-                        text: answer.modelData.percent + "%"
-                        textSize: Label.Small
-                        color: theme.palette.normal.backgroundSecondaryText
-                    }
-
-                    Icon {
-                        anchors.verticalCenter: parent.verticalCenter
-                        visible: !card.poll.closed || answer.modelData.me
-                        width: units.gu(2)
-                        height: width
-                        name: answer.modelData.me ? "tick" : ""
-                        color: theme.palette.normal.focus
-
-                        // An empty circle or square to tap, like a radio
-                        // button or a check box.
-                        Rectangle {
-                            anchors.fill: parent
-                            visible: !answer.modelData.me
-                            radius: card.poll.multiselect ? units.dp(3) : width / 2
-                            color: "transparent"
-                            border.width: units.dp(1.5)
-                            border.color: theme.palette.normal.backgroundSecondaryText
+                    // Multiple choice
+                    CheckBox {
+                        SlotsLayout.position: SlotsLayout.Trailing
+                        visible: card.poll.multiselect
+                        checked: answer.modelData.me
+                        enabled: !card.poll.closed
+                        onTriggered: {
+                            checked = Qt.binding(function() { return answer.modelData.me })
+                            card.vote(answer.modelData.id)
                         }
                     }
+
+                    // Single choice: the tick of an OptionSelector
+                    Icon {
+                        SlotsLayout.position: SlotsLayout.Trailing
+                        visible: !card.poll.multiselect
+                        width: units.gu(2)
+                        height: width
+                        name: "tick"
+                        opacity: answer.modelData.me ? 1 : 0
+                        color: theme.palette.normal.activity
+                    }
+                }
+
+                ProgressBar {
+                    id: bar
+                    visible: card.showResults
+                    anchors {
+                        left: parent.left
+                        right: parent.right
+                        top: layout.bottom
+                        leftMargin: units.gu(2)
+                        rightMargin: units.gu(2)
+                    }
+                    minimumValue: 0
+                    maximumValue: 100
+                    value: answer.modelData.percent
+                    showProgressPercentage: false
                 }
             }
-        }
-
-        Label {
-            width: parent.width
-            text: {
-                const votes = card.poll.totalVotes || 0
-                const parts = [i18n.tr("%1 vote", "%1 votes", votes).arg(votes)]
-                if (card.poll.expires)
-                    parts.push(card.poll.expires)
-                return parts.join(" • ")
-            }
-            textSize: Label.XSmall
-            color: theme.palette.normal.backgroundSecondaryText
         }
     }
 }

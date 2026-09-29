@@ -68,7 +68,8 @@ Item {
                 visible: !row.isCategory
                 enabled: row.openable
                 opacity: row.openable ? 1 : 0.6
-                divider.visible: false
+                // Separator lines between contacts, groups and channels
+                divider.visible: true
                 color: row.active ? theme.palette.highlighted.background : "transparent"
                 onClicked: panel.channelOpened(row.channelId)
 

@@ -2,8 +2,8 @@ import QtQuick
 import Lomiri.Components
 import Disports.Core
 
-// Emoji picker: search, a category bar (the server's own emoji first) and a
-// grid. Used for the composer and for reacting to messages.
+// Emoji picker: search, categories down the side (the server's own emoji
+// first) and a grid. Used below the composer, and in a popover to react.
 Rectangle {
     id: picker
 
@@ -39,16 +39,17 @@ Rectangle {
         onTextChanged: Session.emoji.search = text
     }
 
+    // Categories down the side, so the grid keeps the height. The current
+    // one is marked like Lomiri's Sections, with a bar in the accent colour.
     ListView {
         id: categoryBar
         anchors {
             top: searchField.bottom
             left: parent.left
-            right: parent.right
+            bottom: parent.bottom
             topMargin: units.gu(0.5)
         }
-        height: units.gu(4.5)
-        orientation: ListView.Horizontal
+        width: visible ? units.gu(5) : 0
         clip: true
         visible: searchField.text === ""
         model: Session.emoji.categories
@@ -61,16 +62,23 @@ Rectangle {
             readonly property bool isServer: modelData.key === "server"
             readonly property bool current: Session.emoji.category === modelData.key
 
-            width: visible ? units.gu(4.5) : 0
-            height: categoryBar.height
+            width: categoryBar.width
+            height: visible ? units.gu(4.5) : 0
             visible: !isServer || Session.emoji.hasServerEmoji
             onClicked: Session.emoji.category = modelData.key
 
             Rectangle {
                 anchors.fill: parent
-                anchors.margins: units.dp(2)
-                radius: units.gu(0.6)
-                color: categoryButton.current ? theme.palette.highlighted.base : "transparent"
+                visible: categoryButton.pressed
+                color: theme.palette.highlighted.background
+            }
+
+            Rectangle {
+                anchors { left: parent.left; top: parent.top; bottom: parent.bottom; margins: units.gu(0.75) }
+                anchors.leftMargin: 0
+                width: units.dp(3)
+                visible: categoryButton.current
+                color: theme.palette.normal.activity
             }
 
             Icon {
@@ -79,7 +87,8 @@ Rectangle {
                 width: units.gu(2.5)
                 height: width
                 name: "contact-group"
-                color: theme.palette.normal.backgroundText
+                color: categoryButton.current ? theme.palette.normal.backgroundText
+                                              : theme.palette.normal.backgroundSecondaryText
             }
 
             Label {
@@ -87,15 +96,23 @@ Rectangle {
                 visible: !categoryButton.isServer
                 text: categoryButton.modelData.icon
                 font.pixelSize: units.gu(2.2)
+                opacity: categoryButton.current ? 1 : 0.6
             }
         }
+    }
+
+    Rectangle {
+        visible: categoryBar.visible
+        anchors { top: categoryBar.top; bottom: parent.bottom; left: categoryBar.right }
+        width: units.dp(1)
+        color: theme.palette.normal.base
     }
 
     GridView {
         id: grid
         anchors {
-            top: categoryBar.visible ? categoryBar.bottom : searchField.bottom
-            left: parent.left
+            top: searchField.bottom
+            left: categoryBar.right
             right: parent.right
             bottom: parent.bottom
             margins: units.gu(0.5)

@@ -11,7 +11,13 @@ class Message;
 // emoji and timestamps.
 namespace MessageFormatter {
 
-QString richText(const QString& content, Snowflake guild);
+// emojiSize: pixel size of custom emoji images.
+QString richText(const QString& content, Snowflake guild, int emojiSize = 20);
+
+// The number of emoji when the content is nothing but emoji (Unicode or
+// custom, separated by spaces at most), else 0. Messages of up to three
+// show them large.
+int emojiOnlyCount(const QString& content);
 
 // Plain, single-line text for reply previews and notifications.
 QString plainText(const QString& content, Snowflake guild);

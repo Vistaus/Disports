@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Lomiri.Components
+import Lomiri.Components.Popups
 import Disports.Core
 
 // Messages of the open channel plus the composer.
@@ -11,55 +12,61 @@ Item {
     property string replyToId: ""
     property string replyToAuthor: ""
 
-    // The emoji panel: "" (closed), "compose" (insert into the message) or
-    // "react" (react to reactMessageId).
+    // The emoji panel under the composer: "" (closed) or "compose".
     property string emojiMode: ""
-    property string reactMessageId: ""
 
     signal mediaOpened(var media)
 
-    // Whether the list followed the newest message before the reaction
-    // picker scrolled it to the message being reacted to.
-    property bool followedBeforeReact: false
-
-    function openEmoji(mode, messageId, row) {
-        if (emojiMode === "react" && mode !== "react")
-            closeEmoji()
-        if (mode === "react" && emojiMode !== "react")
-            followedBeforeReact = messageList.followNewest
+    function openEmoji(mode) {
         emojiMode = mode
-        reactMessageId = messageId || ""
         emojiPicker.reset()
         Qt.inputMethod.hide()
         input.focus = false
-        if (mode === "react" && row !== undefined) {
-            // Keep the message in view above the picker.
-            messageList.followNewest = false
-            messageList.keepVisibleRow = row
-            messageList.keepRowVisible()
-        }
     }
 
     function closeEmoji() {
-        messageList.keepVisibleRow = -1
-        if (emojiMode === "react" && followedBeforeReact) {
-            messageList.followNewest = true
-            messageList.scrollToNewest()
-        }
         emojiMode = ""
-        reactMessageId = ""
     }
 
     function emojiPicked(emoji) {
-        if (emojiMode === "react") {
-            Session.addReaction(reactMessageId, emoji.reaction)
-            closeEmoji()
-            return
-        }
         input.insert(input.cursorPosition, emoji.insertText)
     }
 
-    // Opening an attachment should not leave a half-typed reaction around.
+    // Reacting: the emoji picker in a popover by the message (or its +).
+    function openReactionPicker(messageId, caller) {
+        closeEmoji()
+        PopupUtils.open(reactionPopover, caller, { "messageId": messageId })
+    }
+
+    Component {
+        id: reactionPopover
+
+        Popover {
+            id: popover
+
+            property string messageId: ""
+
+            contentWidth: Math.min(units.gu(42), chatPanel.width - units.gu(4))
+
+            Item {
+                width: popover.contentWidth
+                height: Math.min(units.gu(40), chatPanel.height * 0.6)
+
+                EmojiPicker {
+                    id: reactionPicker
+                    anchors.fill: parent
+                    color: "transparent"
+                    Component.onCompleted: reset()
+                    onPicked: function(emoji) {
+                        Session.addReaction(popover.messageId, emoji.reaction)
+                        PopupUtils.close(popover)
+                    }
+                }
+            }
+        }
+    }
+
+    // Opening an attachment closes the emoji panel.
     onMediaOpened: closeEmoji()
 
     function send() {
@@ -71,6 +78,20 @@ Item {
         messageList.scrollToNewest()
         input.text = ""
         chatPanel.replyToId = ""
+    }
+
+    // Custom emoji in messages, sized with the text: a bit taller than a
+    // line, and large for messages of only 1-3 emoji (like Discord).
+    Binding {
+        target: Session.messages
+        property: "emojiSize"
+        value: Math.round(units.gu(2.2))
+    }
+
+    Binding {
+        target: Session.messages
+        property: "jumboEmojiSize"
+        value: Math.round(units.gu(5))
     }
 
     Connections {
@@ -125,23 +146,11 @@ Item {
             })
         }
 
-        // The row the reaction picker keeps in view while it opens, or -1.
-        property int keepVisibleRow: -1
-
-        function keepRowVisible() {
-            if (keepVisibleRow >= 0 && keepVisibleRow < count)
-                positionViewAtIndex(keepVisibleRow, ListView.Contain)
-        }
-
-        onMovementStarted: keepVisibleRow = -1
         onMovementEnded: followNewest = atYEnd
         onFlickEnded: followNewest = atYEnd
         onCountChanged: scrollToNewest()
         onContentHeightChanged: scrollToNewest()
-        onHeightChanged: {
-            scrollToNewest()
-            keepRowVisible()
-        }
+        onHeightChanged: scrollToNewest()
 
         delegate: MessageDelegate {
             width: messageList.width
@@ -151,7 +160,7 @@ Item {
                 chatPanel.replyToAuthor = author
                 input.forceActiveFocus()
             }
-            onReactRequested: function(messageId) { chatPanel.openEmoji("react", messageId, index) }
+            onReactRequested: function(messageId, caller) { chatPanel.openReactionPicker(messageId, caller) }
             onMediaOpened: function(media) { chatPanel.mediaOpened(media) }
         }
 
@@ -287,8 +296,6 @@ Item {
                     height: width
                     source: chatPanel.emojiMode === "compose" ? "" : "qrc:/assets/emoji.svg"
                     name: chatPanel.emojiMode === "compose" ? "input-keyboard-symbolic" : ""
-                    // emoji.svg is drawn in black; recolour it for the theme.
-                    keyColor: chatPanel.emojiMode === "compose" ? "#808080" : "#000000"
                     color: theme.palette.normal.backgroundText
                 }
             }
@@ -297,7 +304,7 @@ Item {
                 id: input
                 Layout.fillWidth: true
                 autoSize: true
-                maximumLineCount: 4
+                maximumLineCount: Session.preferences.composerMaxLines
                 placeholderText: Session.connected ? i18n.tr("Message %1").arg(Session.currentChannelName)
                                                    : i18n.tr("Waiting for connection…")
                 readOnly: !Session.connected
@@ -348,37 +355,10 @@ Item {
             LomiriNumberAnimation {}
         }
 
-        Rectangle {
-            id: reactHeader
-            anchors { top: parent.top; left: parent.left; right: parent.right }
-            height: chatPanel.emojiMode === "react" ? units.gu(4) : 0
-            visible: height > 0
-            color: theme.palette.normal.base
-
-            Label {
-                anchors { left: parent.left; leftMargin: units.gu(2); verticalCenter: parent.verticalCenter }
-                text: i18n.tr("React to message")
-                font.pixelSize: units.gu(1.4)
-            }
-
-            Icon {
-                anchors { right: parent.right; rightMargin: units.gu(2); verticalCenter: parent.verticalCenter }
-                width: units.gu(2)
-                height: width
-                name: "close"
-                color: theme.palette.normal.backgroundText
-                MouseArea {
-                    anchors.fill: parent
-                    anchors.margins: -units.gu(1)
-                    onClicked: chatPanel.closeEmoji()
-                }
-            }
-        }
-
         EmojiPicker {
             id: emojiPicker
             anchors {
-                top: reactHeader.bottom
+                top: parent.top
                 left: parent.left
                 right: parent.right
                 bottom: parent.bottom

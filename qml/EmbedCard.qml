@@ -23,6 +23,9 @@ LomiriShape {
     radius: "small"
     backgroundColor: theme.palette.normal.foreground
 
+    // Rich text ignores linkColor; its links take their colour from CSS.
+    readonly property string linkStyle: "<style>a { color: " + theme.palette.normal.activity + "; }</style>"
+
     function openLink(link) {
         if (link)
             Qt.openUrlExternally(link)
@@ -118,7 +121,7 @@ LomiriShape {
                 Label {
                     width: parent.width
                     visible: text !== ""
-                    text: card.embed.description || ""
+                    text: card.embed.description ? card.linkStyle + card.embed.description : ""
                     textFormat: Text.RichText
                     textSize: Label.Small
                     wrapMode: Text.Wrap
@@ -169,11 +172,11 @@ LomiriShape {
 
                     Label {
                         width: parent.width
-                        text: modelData.value
+                        text: card.linkStyle + modelData.value
                         textFormat: Text.RichText
                         textSize: Label.Small
                         wrapMode: Text.Wrap
-                        onLinkActivated: function(link) { card.openLink(link) }
+                            onLinkActivated: function(link) { card.openLink(link) }
                     }
                 }
             }

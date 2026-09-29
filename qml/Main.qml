@@ -11,6 +11,11 @@ MainView {
     // pushes the whole app off screen. Keep room for the keyboard ourselves
     // (the same workaround Morph uses).
     anchorToKeyboard: false
+
+    // Settings > Theme; "" follows the system.
+    theme.name: Session.preferences.themeMode === 0 ? "Lomiri.Components.Themes.Ambiance"
+              : Session.preferences.themeMode === 1 ? "Lomiri.Components.Themes.SuruDark"
+              : ""
     width: units.gu(45)
     height: units.gu(75)
 

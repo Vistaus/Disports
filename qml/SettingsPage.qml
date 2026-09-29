@@ -42,6 +42,31 @@ Page {
             }
 
             ListItem {
+                height: appearanceHeader.height
+                divider.visible: false
+                ListItemLayout {
+                    id: appearanceHeader
+                    title.text: i18n.tr("Theme")
+                    title.font.bold: true
+                }
+            }
+
+            Item {
+                width: parent.width
+                height: themeSelector.height + units.gu(2)
+
+                OptionSelector {
+                    id: themeSelector
+                    anchors { left: parent.left; right: parent.right; margins: units.gu(2) }
+                    expanded: true
+                    // Same order as Preferences.themeMode: 0 light, 1 dark, 2 system.
+                    model: [i18n.tr("Light"), i18n.tr("Dark"), i18n.tr("Follow system")]
+                    selectedIndex: Session.preferences.themeMode
+                    onDelegateClicked: function(index) { Session.preferences.themeMode = index }
+                }
+            }
+
+            ListItem {
                 height: dmHeader.height
                 divider.visible: false
                 ListItemLayout {
@@ -78,6 +103,79 @@ Page {
                     id: chatHeader
                     title.text: i18n.tr("Chat")
                     title.font.bold: true
+                }
+            }
+
+            ListItem {
+                height: chatPicturesLayout.height + (divider.visible ? divider.height : 0)
+                onClicked: chatPicturesSwitch.trigger()
+
+                ListItemLayout {
+                    id: chatPicturesLayout
+                    title.text: i18n.tr("Show profile pictures")
+                    summary.text: i18n.tr("Off: messages use the full width")
+                    summary.wrapMode: Text.WordWrap
+                    summary.maximumLineCount: 3
+
+                    Switch {
+                        id: chatPicturesSwitch
+                        SlotsLayout.position: SlotsLayout.Trailing
+                        checked: Session.preferences.chatProfilePictures
+                        onTriggered: Session.preferences.chatProfilePictures = checked
+                    }
+                }
+            }
+
+            ListItem {
+                height: linesLayout.height + linesSlider.height + units.gu(1)
+
+                ListItemLayout {
+                    id: linesLayout
+                    title.text: i18n.tr("Message box lines")
+                    summary.text: i18n.tr("How far the message box grows before it scrolls")
+
+                    Label {
+                        SlotsLayout.position: SlotsLayout.Trailing
+                        text: Session.preferences.composerMaxLines
+                        font.bold: true
+                    }
+                }
+
+                Slider {
+                    id: linesSlider
+                    anchors { left: parent.left; right: parent.right; top: linesLayout.bottom; leftMargin: units.gu(2); rightMargin: units.gu(2) }
+                    minimumValue: 1
+                    maximumValue: 6
+                    stepSize: 1
+                    live: true
+                    value: Session.preferences.composerMaxLines
+                    function formatValue(v) { return Math.round(v) }
+                    onValueChanged: Session.preferences.composerMaxLines = Math.round(value)
+                }
+            }
+
+            ListItem {
+                height: blockedHeader.height
+                divider.visible: false
+                ListItemLayout {
+                    id: blockedHeader
+                    title.text: i18n.tr("Messages from blocked users")
+                    subtitle.text: ""
+                }
+            }
+
+            Item {
+                width: parent.width
+                height: blockedSelector.height + units.gu(2)
+
+                OptionSelector {
+                    id: blockedSelector
+                    readonly property var modes: ["hide", "reveal", "show"]
+                    anchors { left: parent.left; right: parent.right; margins: units.gu(2) }
+                    expanded: true
+                    model: [i18n.tr("Hide completely"), i18n.tr("Show a placeholder to tap"), i18n.tr("Show normally")]
+                    selectedIndex: Math.max(0, modes.indexOf(Session.preferences.blockedMessages))
+                    onDelegateClicked: function(index) { Session.preferences.blockedMessages = modes[index] }
                 }
             }
 

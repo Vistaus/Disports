@@ -3,14 +3,14 @@ import Lomiri.Components
 import Disports.Core
 
 // The reactions under a message. Tapping one adds or removes yours; the
-// last chip opens the emoji picker to add another.
+// last chip (Suru's "bot" icon) opens the reaction picker to add another.
 Flow {
     id: bar
 
     property string messageId: ""
     property var reactions: []
 
-    signal addRequested()
+    signal addRequested(Item caller)
 
     spacing: units.gu(0.5)
 
@@ -73,7 +73,7 @@ Flow {
         visible: bar.reactions.length > 0
         width: units.gu(4)
         height: units.gu(3.2)
-        onClicked: bar.addRequested()
+        onClicked: bar.addRequested(addChip)
 
         LomiriShape {
             anchors.fill: parent
@@ -82,11 +82,12 @@ Flow {
             backgroundColor: theme.palette.normal.base
         }
 
+        // Add a reaction: Suru's "bot" icon, as on the React swipe action
         Icon {
             anchors.centerIn: parent
-            width: units.gu(1.8)
+            width: units.gu(2)
             height: width
-            name: "add"
+            name: "bot"
             color: theme.palette.normal.backgroundText
         }
     }

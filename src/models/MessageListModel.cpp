@@ -9,6 +9,7 @@
 
 #include <list>
 
+#include "discord/DiscordInstance.hpp"
 #include "discord/state/MessageCache.hpp"
 
 #include "DiscordUrls.h"
@@ -234,7 +235,7 @@ bool bodyIsEmbedLink(const Message& m)
 //   description (rich text), fields [{name, value, inline}],
 //   thumbnailUrl (small picture beside the text), image (mediaOf() entry
 //   under the text, or null), footer, footerIcon
-QVariantList embedsOf(const Message& m, Snowflake guild)
+QVariantList embedsOf(const Message& m, Snowflake guild, int emojiSize)
 {
     QVariantList cards;
     for (const RichEmbed& e : m.m_embeds) {
@@ -247,8 +248,8 @@ QVariantList embedsOf(const Message& m, Snowflake guild)
         QVariantList fields;
         for (const RichEmbedField& f : e.m_fields) {
             fields.append(QVariantMap{
-                {QStringLiteral("name"), MessageFormatter::richText(str(f.m_title), guild)},
-                {QStringLiteral("value"), MessageFormatter::richText(str(f.m_value), guild)},
+                {QStringLiteral("name"), MessageFormatter::richText(str(f.m_title), guild, emojiSize)},
+                {QStringLiteral("value"), MessageFormatter::richText(str(f.m_value), guild, emojiSize)},
                 {QStringLiteral("inline"), f.m_bInline},
             });
         }
@@ -287,7 +288,7 @@ QVariantList embedsOf(const Message& m, Snowflake guild)
             {QStringLiteral("authorIcon"), str(e.m_authorIconProxiedUrl.empty() ? e.m_authorIconUrl : e.m_authorIconProxiedUrl)},
             {QStringLiteral("title"), str(e.m_title).toHtmlEscaped()},
             {QStringLiteral("url"), str(e.m_url)},
-            {QStringLiteral("description"), MessageFormatter::richText(str(e.m_description), guild)},
+            {QStringLiteral("description"), MessageFormatter::richText(str(e.m_description), guild, emojiSize)},
             {QStringLiteral("fields"), fields},
             {QStringLiteral("thumbnailUrl"), thumbnail},
             {QStringLiteral("image"), image},
@@ -417,10 +418,10 @@ QVariant MessageListModel::data(const QModelIndex& index, int role) const
             return system.text;
         if (m.m_type == MessageType::THREAD_STARTER_MESSAGE)
             return m.m_pReferencedMessage
-                       ? MessageFormatter::richText(str(m.m_pReferencedMessage->m_message), m_guild)
+                       ? MessageFormatter::richText(str(m.m_pReferencedMessage->m_message), m_guild, m_emojiSize)
                        : QStringLiteral("<i>Sorry, we couldn't load the first message in this thread.</i>");
         if (m.m_bIsForward && m.m_pReferencedMessage)
-            return MessageFormatter::richText(str(m.m_pReferencedMessage->m_message), m_guild);
+            return MessageFormatter::richText(str(m.m_pReferencedMessage->m_message), m_guild, m_emojiSize);
         return bodyIsEmbedLink(m) ? QString() : richBody(m);
     case PlainBodyRole:
         if (systemRow)
@@ -437,6 +438,11 @@ QVariant MessageListModel::data(const QModelIndex& index, int role) const
     case IsSystemRole:  return systemRow;
     case SystemIconRole: return system.icon;
     case GroupedRole:   return row.grouped;
+    case AuthorChangedRole: return row.authorChanged;
+    case BlockedRole: {
+        DiscordInstance* instance = GetDiscordInstance();
+        return instance && instance->IsUserBlocked(m.m_author_snowflake);
+    }
     case HasReplyRole:  return m.IsReply() && m.m_type != MessageType::THREAD_STARTER_MESSAGE && !systemRow;
     case ReplyAuthorRole:
         return m.m_pReferencedMessage ? QString::fromStdString(m.m_pReferencedMessage->m_author) : QString();
@@ -448,7 +454,7 @@ QVariant MessageListModel::data(const QModelIndex& index, int role) const
     // their line already says it all.
     case MediaRole:     return systemRow ? QVariantList() : mediaOf(m);
     case ReactionsRole: return reactionsOf(m);
-    case EmbedsRole:    return systemRow ? QVariantList() : embedsOf(m, m_guild);
+    case EmbedsRole:    return systemRow ? QVariantList() : embedsOf(m, m_guild, m_emojiSize);
     case InteractionRole:
         if (m.m_interactionName.empty() || m.m_interactionUserName.empty())
             return QString();
@@ -460,6 +466,7 @@ QVariant MessageListModel::data(const QModelIndex& index, int role) const
     case ForwardedRole: return m.m_bIsForward;
     case StickersRole:  return systemRow ? QVariantList() : stickersOf(m);
     case PollRole:      return pollOf(m);
+    case JumboRole:     return !systemRow && !m.m_bIsForward && isJumbo(m);
     }
     return QVariant();
 }
@@ -490,6 +497,9 @@ QHash<int, QByteArray> MessageListModel::roleNames() const
         {ForwardedRole, "forwarded"},
         {StickersRole, "stickers"},
         {PollRole, "poll"},
+        {JumboRole, "jumbo"},
+        {AuthorChangedRole, "authorChanged"},
+        {BlockedRole, "blocked"},
     };
 }
 
@@ -550,12 +560,15 @@ void MessageListModel::computeGrouping(std::vector<Row>& rows)
 {
     for (size_t i = 0; i < rows.size(); ++i) {
         rows[i].grouped = false;
+        rows[i].authorChanged = false;
         if (i + 1 >= rows.size())
             continue;
         const Message& current = *rows[i].message;
         const Message& older = *rows[i + 1].message;
-        if (current.m_author_snowflake != older.m_author_snowflake)
+        if (current.m_author_snowflake != older.m_author_snowflake) {
+            rows[i].authorChanged = true;
             continue;
+        }
         if (current.IsReply() || isSystem(current) || isSystem(older))
             continue;
         if (current.m_dateTime - older.m_dateTime > GroupWindowSeconds)
@@ -622,7 +635,7 @@ void MessageListModel::sync()
             endRemoveRows();
         }
         if (!m_rows.empty())
-            emit dataChanged(index(0), index(int(m_rows.size()) - 1), {GroupedRole});
+            emit dataChanged(index(0), index(int(m_rows.size()) - 1), {GroupedRole, AuthorChangedRole});
         emit countChanged();
     } else if (!aligned) {
         beginResetModel();
@@ -678,12 +691,44 @@ Snowflake MessageListModel::newestMessageId() const
     return 0;
 }
 
+bool MessageListModel::isJumbo(const Message& message)
+{
+    const int count = MessageFormatter::emojiOnlyCount(QString::fromStdString(message.m_message));
+    return count > 0 && count <= 3;
+}
+
+void MessageListModel::setEmojiSize(int size)
+{
+    if (size <= 0 || m_emojiSize == size)
+        return;
+    m_emojiSize = size;
+    refreshBodies();
+}
+
+void MessageListModel::setJumboEmojiSize(int size)
+{
+    if (size <= 0 || m_jumboEmojiSize == size)
+        return;
+    m_jumboEmojiSize = size;
+    refreshBodies();
+}
+
+// The emoji sizes are baked into the rich text; render it again.
+void MessageListModel::refreshBodies()
+{
+    m_bodyCache.clear();
+    emit emojiSizeChanged();
+    if (!m_rows.empty())
+        emit dataChanged(index(0), index(int(m_rows.size()) - 1), {BodyRole});
+}
+
 QString MessageListModel::richBody(const Message& message) const
 {
     auto it = m_bodyCache.constFind(message.m_snowflake);
     if (it != m_bodyCache.constEnd())
         return *it;
-    const QString body = MessageFormatter::richText(QString::fromStdString(message.m_message), m_guild);
+    const QString body = MessageFormatter::richText(QString::fromStdString(message.m_message), m_guild,
+                                                    isJumbo(message) ? m_jumboEmojiSize : m_emojiSize);
     m_bodyCache.insert(message.m_snowflake, body);
     return body;
 }

@@ -18,6 +18,10 @@ class MessageListModel : public QAbstractListModel
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
     Q_PROPERTY(bool hasOlder READ hasOlder NOTIFY hasOlderChanged)
     Q_PROPERTY(bool reachedStart READ reachedStart NOTIFY hasOlderChanged)
+    // Pixel sizes of custom emoji in messages, and in emoji-only messages
+    // (up to three emoji, shown large). Set from QML in grid units.
+    Q_PROPERTY(int emojiSize READ emojiSize WRITE setEmojiSize NOTIFY emojiSizeChanged)
+    Q_PROPERTY(int jumboEmojiSize READ jumboEmojiSize WRITE setJumboEmojiSize NOTIFY emojiSizeChanged)
 
 public:
     enum Roles {
@@ -44,6 +48,9 @@ public:
         ForwardedRole,     // the body is a forwarded message
         StickersRole,      // list of {name, url, animated, lottie}
         PollRole,          // see pollOf(), or null
+        JumboRole,         // only 1-3 emoji: show them large
+        AuthorChangedRole, // the message above is from someone else: separator
+        BlockedRole,       // from a user the account blocked
     };
 
     using QAbstractListModel::QAbstractListModel;
@@ -68,19 +75,28 @@ public:
 
     void setOwnUserId(Snowflake user) { m_ownUser = user; }
 
+    int emojiSize() const { return m_emojiSize; }
+    void setEmojiSize(int size);
+    int jumboEmojiSize() const { return m_jumboEmojiSize; }
+    void setJumboEmojiSize(int size);
+
 signals:
     void countChanged();
     void hasOlderChanged();
+    void emojiSizeChanged();
 
 private:
     struct Row {
         MessagePtr message;
         bool grouped = false;
+        bool authorChanged = false; // another author than the message above
     };
 
     std::vector<Row> readCache(Snowflake& olderGap, bool& reachedStart) const;
     static void computeGrouping(std::vector<Row>& rows);
     QString richBody(const Message& message) const;
+    static bool isJumbo(const Message& message);
+    void refreshBodies();
 
     Snowflake m_guild = 0;
     Snowflake m_channel = 0;
@@ -88,5 +104,7 @@ private:
     Snowflake m_olderGap = 0;
     bool m_reachedStart = false;
     std::vector<Row> m_rows;
+    int m_emojiSize = 20;
+    int m_jumboEmojiSize = 48;
     mutable QHash<Snowflake, QString> m_bodyCache; // message id -> rich text
 };

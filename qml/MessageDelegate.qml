@@ -27,9 +27,13 @@ ListItem {
     required property bool forwarded
     required property var stickers
     required property var poll
+    required property bool jumbo
+    required property bool authorChanged
+    required property bool blocked
 
     signal replyRequested(string messageId, string author)
-    signal reactRequested(string messageId)
+    // caller: the item the reaction picker points at
+    signal reactRequested(string messageId, Item caller)
     signal mediaOpened(var media)
 
     // On screen with the app not hidden or suspended: GIFs may play (if
@@ -42,10 +46,28 @@ ListItem {
                && y + height > view.contentY && y < view.contentY + view.height
     }
 
+    readonly property bool showAvatar: Session.preferences.chatProfilePictures
     readonly property real avatarSize: units.gu(4.5)
-    readonly property real contentLeft: units.gu(2) + avatarSize + units.gu(1.5)
+    // Without pictures, system messages still keep room for their icon.
+    readonly property real contentLeft: showAvatar ? units.gu(2) + avatarSize + units.gu(1.5)
+                                        : (isSystem || placeholder) ? units.gu(5.5) : units.gu(2)
 
-    height: content.height + (grouped ? units.gu(0.3) : units.gu(1.2))
+    // Messages from blocked users (Settings > Blocked messages): hidden, a
+    // placeholder to tap, or shown.
+    property bool revealed: false
+    readonly property string blockedMode: blocked && !revealed ? Session.preferences.blockedMessages : "show"
+    readonly property bool hiddenBlocked: blockedMode === "hide"
+    readonly property bool placeholder: blockedMode === "reveal"
+
+    // System lines get even room above and below; messages a bit more
+    // above, where a new author starts.
+    height: hiddenBlocked ? 0
+          : placeholder ? placeholderLabel.height + units.gu(1.2)
+          : isSystem ? content.height + units.gu(1.2)
+          : grouped ? content.height + units.gu(0.3)
+          // At least as tall as the avatar, so it never runs into the next row.
+          : Math.max(content.height, avatar.visible ? avatar.height : 0) + units.gu(1.2)
+    visible: !hiddenBlocked
     divider.visible: false
     opacity: isPending ? 0.5 : 1
 
@@ -58,10 +80,10 @@ ListItem {
                 onTriggered: bubble.replyRequested(bubble.messageId, bubble.author)
             },
             Action {
-                iconName: "add"
+                iconName: "bot"
                 text: i18n.tr("React")
                 visible: !bubble.isPending && !bubble.isSystem
-                onTriggered: bubble.reactRequested(bubble.messageId)
+                onTriggered: bubble.reactRequested(bubble.messageId, bubble)
             },
             Action {
                 iconName: "edit-copy"
@@ -71,25 +93,64 @@ ListItem {
         ]
     }
 
-    // System messages (joins, pins, calls, ...): an icon where the avatar
-    // goes, and one line of text that names the author.
+    // A line where another author's messages start.
+    Rectangle {
+        visible: bubble.authorChanged
+        anchors { top: parent.top; left: parent.left; right: parent.right; leftMargin: units.gu(2); rightMargin: units.gu(2) }
+        height: units.dp(1)
+        color: theme.palette.normal.base
+    }
+
+    // Rich text ignores linkColor; its links take their colour from CSS.
+    readonly property string linkStyle: "<style>a { color: " + theme.palette.normal.activity + "; }</style>"
+
+    // One-line rows: system messages and the placeholder of a blocked
+    // user's message. An icon where the avatar goes, centred on the first
+    // line of text.
+    readonly property bool lineRow: isSystem || placeholder
+
+    FontMetrics {
+        id: bodyMetrics
+        font: bodyLabel.font
+    }
+
     Icon {
-        visible: bubble.isSystem
-        anchors {
-            right: content.left
-            rightMargin: units.gu(1.5)
-            top: parent.top
-            topMargin: units.gu(0.9)
-        }
-        width: units.gu(2.2)
+        visible: bubble.lineRow
+        x: bubble.contentLeft - units.gu(1.5) - width
+        // One line: its real height (inline emoji make it taller than the
+        // font's line); more lines: the first one.
+        readonly property Item line: bubble.placeholder ? placeholderLabel : bodyLabel
+        readonly property real lineHeight: line.lineCount === 1 ? line.height : bodyMetrics.height
+        y: (bubble.placeholder ? placeholderLabel.y : content.y + bodyLabel.y) + (lineHeight - height) / 2
+        width: units.gu(2)
         height: width
-        name: bubble.systemIcon
+        name: bubble.placeholder ? "security-alert" : bubble.systemIcon
         color: theme.palette.normal.backgroundSecondaryText
+    }
+
+    Label {
+        id: placeholderLabel
+        visible: bubble.placeholder
+        anchors {
+            left: parent.left
+            right: parent.right
+            top: parent.top
+            leftMargin: bubble.contentLeft
+            rightMargin: units.gu(2)
+            topMargin: units.gu(0.6)
+        }
+        text: bubble.linkStyle + i18n.tr("Message from a blocked user") + " · <a href=\"show\">" + i18n.tr("Show") + "</a>"
+              + " <font size=\"1\" color=\"" + theme.palette.normal.backgroundSecondaryText + "\">" + bubble.timestamp + "</font>"
+        textFormat: Text.RichText
+        wrapMode: Text.Wrap
+        font: bodyLabel.font
+        color: theme.palette.normal.backgroundSecondaryText
+        onLinkActivated: bubble.revealed = true
     }
 
     SidebarIcon {
         id: avatar
-        visible: !bubble.grouped && !bubble.isSystem
+        visible: bubble.showAvatar && !bubble.grouped && !bubble.isSystem && !bubble.placeholder
         anchors {
             left: parent.left
             top: parent.top
@@ -103,13 +164,14 @@ ListItem {
 
     Column {
         id: content
+        visible: !bubble.placeholder
         anchors {
             left: parent.left
             right: parent.right
             top: parent.top
             leftMargin: bubble.contentLeft
             rightMargin: units.gu(2)
-            topMargin: bubble.grouped ? units.gu(0.15) : units.gu(0.8)
+            topMargin: bubble.isSystem ? units.gu(0.6) : bubble.grouped ? units.gu(0.15) : units.gu(0.8)
         }
         spacing: units.gu(0.3)
 
@@ -202,14 +264,16 @@ ListItem {
         }
 
         Label {
+            id: bodyLabel
             width: parent.width
-            visible: text !== ""
-            text: bubble.body + (bubble.isSystem
+            visible: bubble.body !== ""
+            text: bubble.linkStyle + bubble.body + (bubble.isSystem
                                  ? " <font size=\"1\" color=\"" + theme.palette.normal.backgroundSecondaryText + "\">" + bubble.timestamp + "</font>"
                                  : bubble.edited ? " <font size=\"1\" color=\"#888\">(edited)</font>" : "")
             textFormat: Text.RichText
             wrapMode: Text.Wrap
-            font.pixelSize: units.gu(1.6)
+            // Only 1-3 emoji: large, like Discord
+            font.pixelSize: bubble.jumbo ? units.gu(4.2) : units.gu(1.6)
             color: bubble.isSystem ? theme.palette.normal.backgroundSecondaryText : theme.palette.normal.backgroundText
             onLinkActivated: function(link) { Qt.openUrlExternally(link) }
         }
@@ -263,7 +327,7 @@ ListItem {
             visible: bubble.reactions.length > 0
             messageId: bubble.messageId
             reactions: bubble.reactions
-            onAddRequested: bubble.reactRequested(bubble.messageId)
+            onAddRequested: function(caller) { bubble.reactRequested(bubble.messageId, caller) }
         }
     }
 }
