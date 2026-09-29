@@ -25,6 +25,8 @@ below are where the two differ structurally.
   `Close`, `SendMsg`) instead of a websocketpp/asio wrapper;
   `WebsocketClient.cpp` is gone. Close codes use `WsCloseStatus`.
 - `DiscordInstance::HandleRequest` no longer dumps OpenSSL's error queue.
+- Guild folders carry their colour (`AbstractGuildItem::GetColor`, parsed
+  in `SettingsManager::GetGuildFoldersEx`).
 
 ## What the host provides
 

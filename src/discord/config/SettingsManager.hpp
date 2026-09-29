@@ -136,7 +136,9 @@ public: // SETTINGS
 	bool GetMessageCompact();
 
 	std::vector<Snowflake> GetGuildFolders();
-	void GetGuildFoldersEx(std::map<Snowflake, std::string>& folders, std::vector<std::pair<Snowflake, Snowflake>>& guilds);
+	// Folder names and colours (0xRRGGBB, or -1 when the folder has none),
+	// and the guilds in order as (folder id, guild id) pairs.
+	void GetGuildFoldersEx(std::map<Snowflake, std::string>& folders, std::map<Snowflake, int>& folderColors, std::vector<std::pair<Snowflake, Snowflake>>& guilds);
 
 private:
 	Protobuf::DecodeHint* CreateHint();

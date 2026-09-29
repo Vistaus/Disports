@@ -23,6 +23,7 @@ qt_add_executable(disports
     src/main.cpp
     src/DiscordUrls.cpp src/DiscordUrls.h
     src/MessageFormatter.cpp src/MessageFormatter.h
+    src/Preferences.cpp src/Preferences.h
     src/RemoteAuth.cpp src/RemoteAuth.h
     src/Session.cpp src/Session.h
     src/backend/CoreGlobals.cpp src/backend/CoreGlobals.h
@@ -32,6 +33,7 @@ qt_add_executable(disports
     src/models/ChannelListModel.cpp src/models/ChannelListModel.h
     src/models/GuildListModel.cpp src/models/GuildListModel.h
     src/models/MessageListModel.cpp src/models/MessageListModel.h
+    src/models/UnreadDmListModel.cpp src/models/UnreadDmListModel.h
 )
 
 qt_add_qml_module(disports
@@ -42,6 +44,8 @@ qt_add_qml_module(disports
         qml/MainPage.qml
         qml/Sidebar.qml
         qml/SidebarIcon.qml
+        qml/FolderPreviewIcon.qml
+        qml/StatusDot.qml
         qml/ChannelPanel.qml
         qml/ChatPanel.qml
         qml/ChatPage.qml

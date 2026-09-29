@@ -34,6 +34,9 @@ public:
 	// Check if this guild folder contains an item.
 	virtual bool ContainsGuild(Snowflake sf) { return false; }
 
+	// Folder colour as 0xRRGGBB, or -1 if none (always -1 for guilds).
+	virtual int GetColor() { return -1; }
+
 protected:
 	friend class FolderGuildItem;
 	friend class GuildGuildItem;
@@ -50,12 +53,15 @@ public:
 			delete item;
 	}
 
-	FolderGuildItem(Snowflake id, const std::string& name) {
+	FolderGuildItem(Snowflake id, const std::string& name, int color = -1) {
 		m_id = id;
 		m_name = name;
+		m_color = color;
 	}
 
 	bool IsFolder() override { return true; }
+
+	int GetColor() override { return m_color; }
 
 	std::list<AbstractGuildItem*>* GetItems() override { return &m_items; }
 
@@ -94,6 +100,7 @@ public:
 
 private:
 	std::list<AbstractGuildItem*> m_items;
+	int m_color = -1;
 };
 
 class GuildGuildItem : public AbstractGuildItem
@@ -140,10 +147,10 @@ public:
 			delete item;
 	}
 
-	void AddFolder(Snowflake folderId, const std::string& name)
+	void AddFolder(Snowflake folderId, const std::string& name, int color = -1)
 	{
 		// TODO: If needed, support folder depths >1? Discord doesn't (yet)
-		m_items.push_back(new FolderGuildItem(folderId, name));
+		m_items.push_back(new FolderGuildItem(folderId, name, color));
 	}
 
 	bool ContainsGuild(Snowflake snowflake)

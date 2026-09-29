@@ -6,11 +6,19 @@ MainView {
     id: root
 
     applicationName: "disports.jukfiuu"
-    anchorToKeyboard: true
+    // MainView's own keyboard handling uses the keyboard height as reported,
+    // which on Ubuntu Touch with Qt 6 is not HiDPI-scaled: it overshoots and
+    // pushes the whole app off screen. Keep room for the keyboard ourselves
+    // (the same workaround Morph uses).
+    anchorToKeyboard: false
     width: units.gu(45)
     height: units.gu(75)
 
     readonly property bool wideLayout: width >= units.gu(90)
+
+    readonly property real keyboardHeight: Qt.inputMethod.visible
+        ? Math.min(Qt.inputMethod.keyboardRectangle.height / (units.gridUnit / 8), height / 2)
+        : 0
 
     function showPhase() {
         switch (Session.phase) {
@@ -63,6 +71,11 @@ MainView {
     PageStack {
         id: stack
         anchors.fill: parent
+        anchors.bottomMargin: root.keyboardHeight
+
+        Behavior on anchors.bottomMargin {
+            LomiriNumberAnimation {}
+        }
     }
 
     // Splash while signing in for the first time.

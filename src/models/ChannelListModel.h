@@ -27,6 +27,7 @@ public:
         IconUrlRole,     // direct messages only
         TopicRole,
         IndentedRole,    // belongs to a category
+        StatusRole,      // 1:1 direct messages: "online", "idle", "dnd" or "offline"
     };
 
     using QAbstractListModel::QAbstractListModel;
@@ -39,6 +40,8 @@ public:
     void reload();
     void refreshChannel(Snowflake channel);
     static QString displayName(const Channel& channel);
+    // Profile picture of a 1:1 conversation, or a group's icon.
+    static QString iconUrl(const Channel& channel);
     void refreshAll();
     void clear();
 

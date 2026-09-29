@@ -37,12 +37,14 @@ Item {
             required property int mentions
             required property string iconUrl
             required property bool indented
+            required property string status
 
             readonly property bool conversation: kind === "dm" || kind === "group"
+            readonly property bool pictures: Session.preferences.dmProfilePictures
             readonly property bool active: Session.currentChannelId === channelId
 
             width: list.width
-            height: isCategory ? units.gu(4) : (conversation ? units.gu(7) : units.gu(5.5))
+            height: isCategory ? units.gu(4) : (conversation && pictures ? units.gu(7) : units.gu(5.5))
 
             Label {
                 visible: row.isCategory
@@ -78,15 +80,51 @@ Item {
                         rightMargin: units.gu(2)
                         verticalCenter: parent.verticalCenter
                     }
-                    spacing: units.gu(row.conversation ? 1.5 : 1)
+                    spacing: units.gu(row.conversation ? 1.25 : 1)
 
-                    SidebarIcon {
+                    // Direct messages with profile pictures
+                    Item {
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: row.conversation
+                        visible: row.conversation && row.pictures
                         width: units.gu(4.5)
                         height: width
-                        imageSource: row.iconUrl
-                        iconName: row.iconUrl === "" ? "contact-group" : ""
+
+                        SidebarIcon {
+                            anchors.fill: parent
+                            imageSource: row.iconUrl
+                            iconName: row.kind === "group" && row.iconUrl === "" ? "contact-group" : ""
+                            label: row.name.charAt(0)
+                        }
+
+                        Rectangle {
+                            visible: row.kind === "dm"
+                            anchors { right: parent.right; bottom: parent.bottom; margins: -units.dp(2) }
+                            width: units.gu(1.6)
+                            height: width
+                            radius: width / 2
+                            color: theme.palette.normal.background
+
+                            StatusDot {
+                                anchors.centerIn: parent
+                                status: row.status
+                            }
+                        }
+                    }
+
+                    // Direct messages with icons only
+                    StatusDot {
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: row.kind === "dm" && !row.pictures
+                        status: row.status
+                    }
+
+                    Icon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: units.gu(2)
+                        height: width
+                        visible: row.kind === "group" && !row.pictures
+                        name: "contact-group"
+                        color: theme.palette.normal.backgroundSecondaryText
                     }
 
                     Icon {
@@ -112,9 +150,9 @@ Item {
                         readonly property bool emphasized: row.unread || row.mentions > 0 || row.conversation
 
                         anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width - (row.conversation ? units.gu(10) : units.gu(7))
+                        width: parent.width - (row.conversation && row.pictures ? units.gu(10) : units.gu(7))
                         text: row.name
-                        font.pixelSize: units.gu(row.conversation ? 1.8 : 1.7)
+                        font.pixelSize: units.gu(row.conversation && row.pictures ? 1.8 : 1.7)
                         font.bold: row.unread || row.mentions > 0
                         color: emphasized ? theme.palette.normal.backgroundText
                                           : theme.palette.normal.backgroundSecondaryText
@@ -124,6 +162,7 @@ Item {
                     UnreadBadge {
                         anchors.verticalCenter: parent.verticalCenter
                         mentions: row.mentions
+                        unread: row.unread && !row.conversation
                     }
                 }
             }

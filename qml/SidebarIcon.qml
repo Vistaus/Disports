@@ -1,53 +1,59 @@
 import QtQuick
 import Lomiri.Components
 
-// A server or DM icon in the Lomiri shape; initials or a Suru icon when
-// there is no image.
+// A server, DM or folder icon in the Lomiri shape: the image, or a Suru
+// icon / initials on a tile when there is none.
 Item {
-    id: icon
+    id: iconItem
 
     property url imageSource: ""
     property string iconName: ""
     property string label: ""
-    property bool highlighted: false
+    property bool showTileBackground: false
+
+    readonly property bool hasImage: imageSource != "" && image.status !== Image.Error
 
     width: units.gu(5)
     height: units.gu(5)
 
+    Image {
+        id: image
+        visible: false
+        source: iconItem.imageSource
+        asynchronous: true
+        fillMode: Image.PreserveAspectCrop
+        sourceSize.width: units.gu(10)
+        sourceSize.height: units.gu(10)
+    }
+
     LomiriShape {
         anchors.fill: parent
         aspect: LomiriShape.DropShadow
-        radius: "medium"
-        backgroundColor: icon.highlighted || icon.imageSource == ""
+        radius: iconItem.width > units.gu(3) ? "medium" : "small"
+        backgroundColor: iconItem.showTileBackground || !iconItem.hasImage
                          ? theme.palette.highlighted.base
-                         : theme.palette.normal.base
+                         : "transparent"
         sourceFillMode: LomiriShape.PreserveAspectCrop
-        source: icon.imageSource != "" ? image : null
-
-        Image {
-            id: image
-            visible: false
-            source: icon.imageSource
-            asynchronous: true
-            sourceSize.width: units.gu(10)
-            sourceSize.height: units.gu(10)
-        }
+        source: iconItem.hasImage && image.status === Image.Ready ? image : null
     }
 
     Icon {
         anchors.centerIn: parent
-        width: units.gu(2.5)
+        width: iconItem.width / 2
         height: width
-        name: icon.iconName
-        visible: icon.imageSource == "" && icon.iconName !== ""
-        color: icon.highlighted ? "white" : theme.palette.normal.backgroundText
+        name: iconItem.iconName
+        visible: !iconItem.hasImage && iconItem.iconName !== ""
+        color: "white"
     }
 
     Label {
         anchors.centerIn: parent
-        text: icon.label
-        visible: icon.imageSource == "" && icon.iconName === ""
-        font.pixelSize: units.gu(1.6)
+        width: parent.width - units.gu(0.5)
+        horizontalAlignment: Text.AlignHCenter
+        elide: Text.ElideRight
+        text: iconItem.label
+        visible: !iconItem.hasImage && iconItem.iconName === ""
+        font.pixelSize: Math.round(iconItem.height * 0.32)
         font.bold: true
         color: "white"
     }

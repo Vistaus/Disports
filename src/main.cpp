@@ -43,9 +43,21 @@ void scheduleScreenshot(QQuickView* view)
 }
 
 // Test hooks for headless runs: DISPORTS_OPEN_CHANNEL=<id> opens a channel
-// once connected, DISPORTS_SEND_MESSAGE=<text> then sends a message to it.
+// once connected, DISPORTS_SEND_MESSAGE=<text> then sends a message to it,
+// DISPORTS_EXPAND_FOLDER=<id> expands a server folder.
 void scheduleTestActions(Session* session)
 {
+    const QString folder = qEnvironmentVariable("DISPORTS_EXPAND_FOLDER");
+    if (!folder.isEmpty()) {
+        QObject::connect(session->guilds(), &GuildListModel::countChanged, session, [session, folder]() {
+            static bool done = false;
+            if (!done && session->guilds()->rowCount() > 0) {
+                done = true;
+                QTimer::singleShot(0, session, [session, folder]() { session->guilds()->toggleFolder(folder); });
+            }
+        });
+    }
+
     const QString channel = qEnvironmentVariable("DISPORTS_OPEN_CHANNEL");
     if (channel.isEmpty())
         return;

@@ -1,0 +1,18 @@
+import QtQuick
+import Lomiri.Components
+
+LomiriShape {
+    property string status: "offline" // "online" | "idle" | "dnd" | "offline"
+
+    width: units.gu(1.2)
+    height: units.gu(1.2)
+    aspect: LomiriShape.Flat
+    radius: "small"
+
+    backgroundColor: {
+        if (status === "online") return "#23A55A"
+        if (status === "idle")   return "#F0B232"
+        if (status === "dnd")    return "#F23F43"
+        return "#80848E"
+    }
+}

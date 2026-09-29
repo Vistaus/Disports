@@ -16,6 +16,8 @@ Item {
         if (text.trim() === "")
             return
         Session.sendMessage(text, chatPanel.replyToId)
+        messageList.followNewest = true
+        messageList.scrollToNewest()
         input.text = ""
         chatPanel.replyToId = ""
     }
@@ -25,6 +27,8 @@ Item {
         function onCurrentChannelChanged() {
             chatPanel.replyToId = ""
             input.text = ""
+            messageList.followNewest = true
+            messageList.scrollToNewest()
         }
     }
 
@@ -54,6 +58,26 @@ Item {
         model: Session.messages
         verticalLayoutDirection: ListView.BottomToTop
         cacheBuffer: units.gu(60)
+
+        // Stay on the newest message until the user scrolls away, and go
+        // back to it whenever the content grows (history arriving, images or
+        // text laid out late) or the view shrinks (keyboard opening). With a
+        // bottom-to-top list the newest message is at the visual bottom:
+        // atYEnd, and positionViewAtBeginning() goes there.
+        property bool followNewest: true
+
+        function scrollToNewest() {
+            Qt.callLater(function() {
+                if (messageList.followNewest)
+                    messageList.positionViewAtBeginning()
+            })
+        }
+
+        onMovementEnded: followNewest = atYEnd
+        onFlickEnded: followNewest = atYEnd
+        onCountChanged: scrollToNewest()
+        onContentHeightChanged: scrollToNewest()
+        onHeightChanged: scrollToNewest()
 
         delegate: MessageDelegate {
             width: messageList.width
@@ -87,9 +111,11 @@ Item {
             }
         }
 
-        // Load older history automatically when scrolled to the top.
-        onAtYEndChanged: {
-            if (atYEnd && count > 0 && Session.messages.hasOlder && !Session.loadingMessages)
+        // Load older history automatically when scrolled to the top (the
+        // visual top is atYBeginning in a bottom-to-top list).
+        onAtYBeginningChanged: {
+            if (atYBeginning && !followNewest && count > 0
+                    && Session.messages.hasOlder && !Session.loadingMessages)
                 Session.loadOlderMessages()
         }
 

@@ -1,12 +1,14 @@
 #pragma once
 
 #include <QAbstractListModel>
+#include <QSet>
 
 #include <vector>
 
 #include "discord/models/Snowflake.hpp"
 
-// Servers in the sidebar, in the user's order (folders flattened).
+// The server rail: servers and server folders in the user's order. A folder
+// row is followed by its servers while it is expanded.
 class GuildListModel : public QAbstractListModel
 {
     Q_OBJECT
@@ -15,12 +17,18 @@ class GuildListModel : public QAbstractListModel
 
 public:
     enum Roles {
-        GuildIdRole = Qt::UserRole + 1,
+        KindRole = Qt::UserRole + 1, // "guild" or "folder"
+        ItemIdRole,                  // guild or folder id
         NameRole,
         IconUrlRole,
         InitialsRole,
         UnreadRole,
         MentionsRole,
+        FolderIdRole,                // folder the guild is in, or ""
+        FolderColorRole,             // "#rrggbb", or "" for no colour
+        ExpandedRole,                // folders only
+        PreviewsRole,                // folders only: up to 4 {iconUrl, initials}
+        GuildIdsRole,                // folders only: ids of the servers inside
     };
 
     using QAbstractListModel::QAbstractListModel;
@@ -29,11 +37,13 @@ public:
     QVariant data(const QModelIndex& index, int role) const override;
     QHash<int, QByteArray> roleNames() const override;
 
-    // Rebuilds the list from the core (READY, guild create/delete).
+    // Rebuilds the list from the core (READY, guild or folder changes).
     void reload();
     // Unread markers changed; the rows stay the same.
     void refreshUnread();
     void clear();
+
+    Q_INVOKABLE void toggleFolder(const QString& folderId);
 
     int directMessageMentions() const;
 
@@ -42,5 +52,17 @@ signals:
     void unreadChanged();
 
 private:
-    std::vector<Snowflake> m_ids;
+    struct Row {
+        bool folder = false;
+        Snowflake id = 0;
+        Snowflake folderId = 0;
+        int color = -1;
+        QString name;
+        std::vector<Snowflake> guilds; // folders only
+    };
+
+    std::vector<Row> buildRows() const;
+
+    std::vector<Row> m_rows;
+    QSet<Snowflake> m_expanded;
 };

@@ -44,6 +44,7 @@ Page {
             id: sidebar
             height: parent.height
             onDirectMessagesSelected: Session.selectDirectMessages()
+            onDirectMessageOpened: function(channelId) { mainPage.openChannel(channelId) }
             onGuildSelected: function(guildId) { Session.selectGuild(guildId) }
         }
 

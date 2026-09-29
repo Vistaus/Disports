@@ -303,9 +303,10 @@ std::vector<Snowflake> SettingsManager::GetGuildFolders()
 	return v;
 }
 
-void SettingsManager::GetGuildFoldersEx(std::map<Snowflake, std::string>& folders, std::vector<std::pair<Snowflake, Snowflake>>& guilds)
+void SettingsManager::GetGuildFoldersEx(std::map<Snowflake, std::string>& folders, std::map<Snowflake, int>& folderColors, std::vector<std::pair<Snowflake, Snowflake>>& guilds)
 {
 	folders.clear();
+	folderColors.clear();
 	guilds.clear();
 
 	auto pgfRoot = m_pSettingsMessage->GetFieldObjectDefault<Protobuf::ObjectMessage>(Settings::FIELD_GUILD_FOLDERS);
@@ -349,8 +350,21 @@ void SettingsManager::GetGuildFoldersEx(std::map<Snowflake, std::string>& folder
 			}
 		}
 
+		// The colour is a UInt64Value wrapper like the other fields.
+		int folderColor = -1;
+		auto pFolderColorPar = item->GetFieldObject(Settings::GuildFolders::Item::FIELD_COLOR);
+		if (pFolderColorPar)
+		{
+			auto pFolderColor = pFolderColorPar->GetFieldObjectDefault<Protobuf::ObjectVarInt>(1);
+
+			if (pFolderColor) {
+				folderColor = int(pFolderColor->GetValue() & 0xFFFFFF);
+			}
+		}
+
 		if (folderId) {
 			folders[folderId] = folderName;
+			folderColors[folderId] = folderColor;
 		}
 
 		auto pBytesBase = item->GetFieldObject(Settings::GuildFolders::Item::FIELD_GUILD_IDS);
@@ -392,6 +406,7 @@ Protobuf::DecodeHint* SettingsManager::CreateHint()
 
 	pFolderHint->AddChild(Settings::GuildFolders::Item::FIELD_GUILD_IDS, DecodeHint::O_BYTES);
 	pFolderHint->AddChild(Settings::GuildFolders::Item::FIELD_NAME, DecodeHint::O_MESSAGE);
+	pFolderHint->AddChild(Settings::GuildFolders::Item::FIELD_COLOR, DecodeHint::O_MESSAGE);
 	
 	return pHint;
 }

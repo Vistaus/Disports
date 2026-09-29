@@ -42,6 +42,53 @@ Page {
             color: theme.palette.normal.base
         }
 
+        Label {
+            text: i18n.tr("Direct messages")
+            font.pixelSize: units.gu(1.6)
+            font.bold: true
+        }
+
+        Item {
+            width: parent.width
+            height: units.gu(4.5)
+
+            Column {
+                anchors {
+                    left: parent.left
+                    right: picturesSwitch.left
+                    rightMargin: units.gu(2)
+                    verticalCenter: parent.verticalCenter
+                }
+                spacing: units.gu(0.5)
+
+                Label {
+                    width: parent.width
+                    text: i18n.tr("Show profile pictures")
+                }
+
+                Label {
+                    width: parent.width
+                    text: i18n.tr("Off: icons and status only, which loads fewer images")
+                    font.pixelSize: units.gu(1.4)
+                    color: theme.palette.normal.backgroundSecondaryText
+                    wrapMode: Text.WordWrap
+                }
+            }
+
+            Switch {
+                id: picturesSwitch
+                anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                checked: Session.preferences.dmProfilePictures
+                onClicked: Session.preferences.dmProfilePictures = checked
+            }
+        }
+
+        Rectangle {
+            width: parent.width
+            height: units.dp(1)
+            color: theme.palette.normal.base
+        }
+
         Button {
             width: parent.width
             text: i18n.tr("Log out")

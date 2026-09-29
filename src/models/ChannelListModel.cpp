@@ -69,6 +69,32 @@ QString ChannelListModel::displayName(const Channel& channel)
     return name;
 }
 
+QString ChannelListModel::iconUrl(const Channel& channel)
+{
+    if (channel.m_channelType == Channel::DM)
+        return DiscordUrls::userAvatar(channel.GetDMRecipient(), channel.m_avatarLnk);
+    if (channel.m_channelType == Channel::GROUPDM)
+        return DiscordUrls::channelIcon(channel.m_snowflake, channel.m_avatarLnk);
+    return QString();
+}
+
+namespace {
+
+QString statusOf(const Channel& channel)
+{
+    if (channel.m_channelType != Channel::DM)
+        return QString();
+    Profile* profile = GetProfileCache()->LookupProfile(channel.GetDMRecipient(), "", "", "", false);
+    switch (profile ? profile->m_activeStatus : STATUS_OFFLINE) {
+    case STATUS_ONLINE: return QStringLiteral("online");
+    case STATUS_IDLE:   return QStringLiteral("idle");
+    case STATUS_DND:    return QStringLiteral("dnd");
+    default:            return QStringLiteral("offline");
+    }
+}
+
+}
+
 int ChannelListModel::rowCount(const QModelIndex& parent) const
 {
     return parent.isValid() ? 0 : int(m_ids.size());
@@ -97,12 +123,8 @@ QVariant ChannelListModel::data(const QModelIndex& index, int role) const
     case IndentedRole:
         return !channel->IsCategory() && !channel->IsDM()
                && channel->m_parentCateg != 0 && channel->m_parentCateg != channel->m_snowflake;
-    case IconUrlRole:
-        if (channel->m_channelType == Channel::DM)
-            return DiscordUrls::userAvatar(channel->GetDMRecipient(), channel->m_avatarLnk);
-        if (channel->m_channelType == Channel::GROUPDM)
-            return DiscordUrls::channelIcon(channel->m_snowflake, channel->m_avatarLnk);
-        return QString();
+    case IconUrlRole:    return iconUrl(*channel);
+    case StatusRole:     return statusOf(*channel);
     }
     return QVariant();
 }
@@ -120,6 +142,7 @@ QHash<int, QByteArray> ChannelListModel::roleNames() const
         {IconUrlRole, "iconUrl"},
         {TopicRole, "topic"},
         {IndentedRole, "indented"},
+        {StatusRole, "status"},
     };
 }
 

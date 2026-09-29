@@ -2169,9 +2169,10 @@ bool DiscordInstance::SortGuilds()
 	m_guildItemList.Clear();
 
 	std::map<Snowflake, std::string> folderNames;
+	std::map<Snowflake, int> folderColors;
 	std::vector<std::pair<Snowflake, Snowflake>> guilds; // pair (folderid, guildid)
 
-	GetSettingsManager()->GetGuildFoldersEx(folderNames, guilds);
+	GetSettingsManager()->GetGuildFoldersEx(folderNames, folderColors, guilds);
 
 	std::map<Snowflake, bool> folderAdded;
 	std::map<Snowflake, bool> guildAdded;
@@ -2181,7 +2182,9 @@ bool DiscordInstance::SortGuilds()
 	{
 		if (!folderAdded[guild.first] && guild.first) {
 			folderAdded[guild.first] = true;
-			m_guildItemList.AddFolder(guild.first, folderNames[guild.first]);
+			auto color = folderColors.find(guild.first);
+			m_guildItemList.AddFolder(guild.first, folderNames[guild.first],
+				color != folderColors.end() ? color->second : -1);
 		}
 
 		// Set the guild added flag to true even if we aren't adding it, because

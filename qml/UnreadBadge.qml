@@ -1,23 +1,25 @@
 import QtQuick
 import Lomiri.Components
 
-// A mention count bubble, or a small dot for unread messages.
+// A mention count, or a dot for unread messages without mentions.
 Rectangle {
     id: badge
 
     property int mentions: 0
     property bool unread: false
 
-    visible: mentions > 0 || unread
-    width: mentions > 0 ? Math.max(height, countLabel.implicitWidth + units.gu(1)) : units.gu(1)
-    height: mentions > 0 ? units.gu(2.2) : units.gu(1)
+    readonly property string kind: mentions > 0 ? "count" : (unread ? "dot" : "none")
+
+    visible: kind !== "none"
+    width: kind === "dot" ? units.gu(1.2) : Math.max(height, countLabel.width + units.gu(1.2))
+    height: kind === "dot" ? units.gu(1.2) : units.gu(2.4)
     radius: height / 2
-    color: mentions > 0 ? theme.palette.normal.negative : theme.palette.normal.backgroundText
+    color: theme.palette.normal.focus
 
     Label {
         id: countLabel
         anchors.centerIn: parent
-        visible: badge.mentions > 0
+        visible: badge.kind === "count"
         text: badge.mentions > 99 ? "99+" : String(badge.mentions)
         font.pixelSize: units.gu(1.3)
         font.bold: true

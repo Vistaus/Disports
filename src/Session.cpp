@@ -72,6 +72,8 @@ Session::Session(QObject* parent)
     m_guilds = new GuildListModel(this);
     m_channels = new ChannelListModel(this);
     m_messages = new MessageListModel(this);
+    m_unreadDms = new UnreadDmListModel(this);
+    m_preferences = new Preferences(this);
 
     m_qrLogin = new RemoteAuth(m_http->networkAccessManager(), this);
     connect(m_qrLogin, &RemoteAuth::tokenReceived, this, &Session::loginWithToken);
@@ -262,6 +264,7 @@ void Session::destroyInstance()
     m_messages->setChannel(0, 0);
     m_channels->clear();
     m_guilds->clear();
+    m_unreadDms->clear();
     m_fetchedChannels.clear();
     m_typingUntil.clear();
     updateTypingText();
@@ -609,18 +612,25 @@ void Session::coreSelectedChannelChanged()
 void Session::coreChannelListChanged()
 {
     m_channels->reload();
-    m_guilds->refreshUnread();
+    refreshUnread();
 }
 
 void Session::coreChannelAcknowledged(Snowflake channel)
 {
     m_channels->refreshChannel(channel);
+    refreshUnread();
+}
+
+void Session::refreshUnread()
+{
     m_guilds->refreshUnread();
+    m_unreadDms->reload();
 }
 
 void Session::coreGuildListChanged()
 {
     m_guilds->reload();
+    m_unreadDms->reload();
     m_channels->reload();
     if (m_instance)
         m_messages->setOwnUserId(m_instance->GetUserID());
@@ -638,6 +648,8 @@ void Session::coreProfileChanged()
 
 void Session::coreUserChanged(Snowflake)
 {
+    // Names, avatars and presence shown in the lists.
+    m_channels->refreshAll();
     if (m_messages->channel())
         m_messages->sync();
 }
@@ -748,7 +760,7 @@ void Session::coreMessageAdded(Snowflake channel, const Message& msg)
         m_channels->reload(); // conversations are ordered by activity
     else
         m_channels->refreshChannel(channel);
-    m_guilds->refreshUnread();
+    refreshUnread();
 }
 
 void Session::coreMessageUpdated(Snowflake channel, const Message&)

@@ -11,10 +11,12 @@
 #include "discord/models/Snowflake.hpp"
 
 // Complete types: moc needs them for the QObject* properties below.
+#include "Preferences.h"
 #include "RemoteAuth.h"
 #include "models/ChannelListModel.h"
 #include "models/GuildListModel.h"
 #include "models/MessageListModel.h"
+#include "models/UnreadDmListModel.h"
 
 class DiscordInstance;
 class Message;
@@ -60,6 +62,8 @@ class Session : public QObject
     Q_PROPERTY(GuildListModel* guilds READ guilds CONSTANT)
     Q_PROPERTY(ChannelListModel* channels READ channels CONSTANT)
     Q_PROPERTY(MessageListModel* messages READ messages CONSTANT)
+    Q_PROPERTY(UnreadDmListModel* unreadDirectMessages READ unreadDirectMessages CONSTANT)
+    Q_PROPERTY(Preferences* preferences READ preferences CONSTANT)
     Q_PROPERTY(RemoteAuth* qrLogin READ qrLogin CONSTANT)
 
 public:
@@ -106,6 +110,8 @@ public:
     GuildListModel* guilds() const { return m_guilds; }
     ChannelListModel* channels() const { return m_channels; }
     MessageListModel* messages() const { return m_messages; }
+    UnreadDmListModel* unreadDirectMessages() const { return m_unreadDms; }
+    Preferences* preferences() const { return m_preferences; }
     RemoteAuth* qrLogin() const { return m_qrLogin; }
 
     Q_INVOKABLE void loginWithToken(const QString& token);
@@ -180,6 +186,7 @@ private:
     void ensureMessagesLoaded();
     void updateTypingText();
     void afterGuildSelected();
+    void refreshUnread();
 
     Phase m_phase = Starting;
     bool m_connected = false;
@@ -212,5 +219,7 @@ private:
     GuildListModel* m_guilds = nullptr;
     ChannelListModel* m_channels = nullptr;
     MessageListModel* m_messages = nullptr;
+    UnreadDmListModel* m_unreadDms = nullptr;
+    Preferences* m_preferences = nullptr;
     RemoteAuth* m_qrLogin = nullptr;
 };
