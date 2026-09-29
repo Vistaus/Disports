@@ -11,7 +11,7 @@ namespace ContentType
 		GIF,
 		WEBP,
 		MP4,
-		//...
+		VIDEO, // any other video/* type
 	};
 
 	static eType GetFromString(const std::string& str) {
@@ -20,6 +20,8 @@ namespace ContentType
 		if (str == "image/jpeg") return JPEG;
 		if (str == "image/gif")  return GIF;
 		if (str == "image/webp") return WEBP;
+		if (str == "video/mp4")  return MP4;
+		if (str.rfind("video/", 0) == 0) return VIDEO;
 
 		return BLOB;
 	}

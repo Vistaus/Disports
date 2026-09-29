@@ -1,5 +1,7 @@
 #include "Session.h"
 
+#include <QMediaPlayer>
+
 #include <QDateTime>
 #include <QGuiApplication>
 #include <QStandardPaths>
@@ -74,6 +76,7 @@ Session::Session(QObject* parent)
     m_messages = new MessageListModel(this);
     m_unreadDms = new UnreadDmListModel(this);
     m_preferences = new Preferences(this);
+    m_emoji = new EmojiPickerModel(this);
 
     m_qrLogin = new RemoteAuth(m_http->networkAccessManager(), this);
     connect(m_qrLogin, &RemoteAuth::tokenReceived, this, &Session::loginWithToken);
@@ -129,10 +132,13 @@ void Session::start()
 {
     GetLocalSettings()->Load();
 
-    // DISPORTS_API_URL points the client at a test server.
+    // DISPORTS_API_URL and DISPORTS_CDN_URL point the client at a test server.
     const QByteArray api = qgetenv("DISPORTS_API_URL");
     if (!api.isEmpty())
         GetLocalSettings()->SetDiscordAPI(api.toStdString());
+    const QByteArray cdn = qgetenv("DISPORTS_CDN_URL");
+    if (!cdn.isEmpty())
+        GetLocalSettings()->SetDiscordCDN(cdn.toStdString());
 
     const std::string token = GetLocalSettings()->GetToken();
     if (token.empty()) {
@@ -594,6 +600,7 @@ void Session::openChannel(const QString& channelId)
 void Session::coreSelectedGuildChanged()
 {
     m_channels->reload();
+    m_emoji->reloadServerEmoji();
     emit currentGuildChanged();
 }
 
@@ -773,6 +780,43 @@ void Session::coreMessageDeleted(Snowflake)
 {
     if (m_messages->channel())
         m_messages->sync();
+}
+
+void Session::addReaction(const QString& messageId, const QString& emoji)
+{
+    if (!m_instance || !m_connected || emoji.isEmpty() || !m_messages->channel())
+        return;
+    m_instance->RequestAddReaction(m_messages->channel(), DiscordUrls::fromId(messageId), emoji.toStdString());
+}
+
+void Session::toggleReaction(const QString& messageId, const QString& emoji, bool reacted)
+{
+    if (!m_instance || !m_connected || emoji.isEmpty() || !m_messages->channel())
+        return;
+    const Snowflake message = DiscordUrls::fromId(messageId);
+    if (reacted)
+        m_instance->RequestRemoveReaction(m_messages->channel(), message, emoji.toStdString());
+    else
+        m_instance->RequestAddReaction(m_messages->channel(), message, emoji.toStdString());
+}
+
+void Session::votePoll(const QString& messageId, const QVariantList& answerIds)
+{
+    if (!m_instance || !m_connected || !m_messages->channel())
+        return;
+    std::vector<int> ids;
+    for (const QVariant& id : answerIds)
+        ids.push_back(id.toInt());
+    m_instance->RequestPollVote(m_messages->channel(), DiscordUrls::fromId(messageId), ids);
+}
+
+bool Session::videoPlaybackAvailable()
+{
+    if (m_videoAvailable < 0) {
+        QMediaPlayer probe;
+        m_videoAvailable = probe.isAvailable() ? 1 : 0;
+    }
+    return m_videoAvailable == 1;
 }
 
 void Session::notifyTyping()

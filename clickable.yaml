@@ -14,14 +14,34 @@ dependencies_target:
   - qt6-base-dev
   - qt6-declarative-dev
   - qt6-websockets-dev
+  - qt6-multimedia-dev
   - libssl-dev
+  - libwebp-dev
   # QML runtime modules, so `clickable desktop` can run the app in the
   # container. On a device they come with the OS image.
   - qml6-module-lomiri-components
   - qml6-module-qtquick-layouts
   - qml6-module-qtquick-window
   - qml6-module-qtqml-workerscript
+  - qml6-module-qtmultimedia
 
-# Not part of every 24.04-2.x device image yet; ship it with the app.
+# Not part of every 24.04-2.x device image yet; ship them with the app.
+# QtMultimedia (video and GIF playback) also needs FFmpeg's libraries
+# (libavcodec60 and co.), which are too big to ship; without them the app
+# falls back to still pictures and "Open in browser".
 install_lib:
   - /usr/lib/${ARCH_TRIPLET}/libQt6WebSockets.so.6*
+  - /usr/lib/${ARCH_TRIPLET}/libQt6Multimedia.so.6*
+  - /usr/lib/${ARCH_TRIPLET}/libQt6MultimediaQuick.so.6*
+  # For the WebP image plugin (third_party/qtimageformats); small, and
+  # most images already have them.
+  - /usr/lib/${ARCH_TRIPLET}/libwebp.so.7*
+  - /usr/lib/${ARCH_TRIPLET}/libwebpdemux.so.2*
+  - /usr/lib/${ARCH_TRIPLET}/libwebpmux.so.3*
+  - /usr/lib/${ARCH_TRIPLET}/libsharpyuv.so.0*
+
+install_qml:
+  - /usr/lib/${ARCH_TRIPLET}/qt6/qml/QtMultimedia
+
+install_data:
+  /usr/lib/${ARCH_TRIPLET}/qt6/plugins/multimedia: ${INSTALL_DIR}/lib/${ARCH_TRIPLET}/plugins

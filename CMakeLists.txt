@@ -9,7 +9,7 @@ set(APP_ID "disports.jukfiuu")
 
 option(CLICK_MODE "Install as an Ubuntu Touch click package" ON)
 
-find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Qml Quick Network WebSockets)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Qml Quick Network WebSockets Multimedia)
 find_package(OpenSSL REQUIRED)
 
 qt_standard_project_setup(REQUIRES 6.8)
@@ -31,6 +31,7 @@ qt_add_executable(disports
     src/backend/QtHttpClient.cpp src/backend/QtHttpClient.h
     src/backend/QtWebsocketClient.cpp src/backend/QtWebsocketClient.h
     src/models/ChannelListModel.cpp src/models/ChannelListModel.h
+    src/models/EmojiPickerModel.cpp src/models/EmojiPickerModel.h
     src/models/GuildListModel.cpp src/models/GuildListModel.h
     src/models/MessageListModel.cpp src/models/MessageListModel.h
     src/models/UnreadDmListModel.cpp src/models/UnreadDmListModel.h
@@ -54,6 +55,15 @@ qt_add_qml_module(disports
         qml/UnreadBadge.qml
         qml/ConnectionBanner.qml
         qml/SettingsPage.qml
+        qml/EmojiPicker.qml
+        qml/ReactionBar.qml
+        qml/MediaPreview.qml
+        qml/EmbedCard.qml
+        qml/GifVideo.qml
+        qml/VideoPlayer.qml
+        qml/StickerView.qml
+        qml/PollCard.qml
+        qml/MediaViewerPage.qml
 )
 
 qt_add_resources(disports "assets"
@@ -62,10 +72,18 @@ qt_add_resources(disports "assets"
     FILES
         ${PROJECT_SOURCE_DIR}/assets/logo.svg
         ${PROJECT_SOURCE_DIR}/assets/send.svg
+        ${PROJECT_SOURCE_DIR}/assets/emoji.svg
+)
+
+qt_add_resources(disports "data"
+    PREFIX "/"
+    FILES
+        data/emoji.json
 )
 
 target_include_directories(disports PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_compile_definitions(disports PRIVATE DISPORTS_VERSION="${PROJECT_VERSION}")
+target_compile_definitions(disports PRIVATE DISPORTS_VERSION="${PROJECT_VERSION}"
+    DISPORTS_ARCH_TRIPLET="${CMAKE_LIBRARY_ARCHITECTURE}")
 
 target_link_libraries(disports PRIVATE
     Qt6::Gui
@@ -73,6 +91,7 @@ target_link_libraries(disports PRIVATE
     Qt6::Quick
     Qt6::Network
     Qt6::WebSockets
+    Qt6::Multimedia
     OpenSSL::Crypto
     discord
     qrcodegen

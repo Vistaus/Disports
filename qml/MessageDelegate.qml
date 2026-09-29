@@ -5,6 +5,7 @@ import Disports.Core
 ListItem {
     id: bubble
 
+    required property int index
     required property string messageId
     required property string author
     required property string avatarUrl
@@ -18,9 +19,28 @@ ListItem {
     required property bool hasReply
     required property string replyAuthor
     required property string replyBody
-    required property var attachments
+    required property var media
+    required property var reactions
+    required property var embeds
+    required property string systemIcon
+    required property string interaction
+    required property bool forwarded
+    required property var stickers
+    required property var poll
 
     signal replyRequested(string messageId, string author)
+    signal reactRequested(string messageId)
+    signal mediaOpened(var media)
+
+    // On screen with the app not hidden or suspended: GIFs may play (if
+    // enabled).
+    readonly property bool onScreen: {
+        const view = ListView.view
+        return view !== null && visible
+               && Qt.application.state !== Qt.ApplicationHidden
+               && Qt.application.state !== Qt.ApplicationSuspended
+               && y + height > view.contentY && y < view.contentY + view.height
+    }
 
     readonly property real avatarSize: units.gu(4.5)
     readonly property real contentLeft: units.gu(2) + avatarSize + units.gu(1.5)
@@ -38,11 +58,33 @@ ListItem {
                 onTriggered: bubble.replyRequested(bubble.messageId, bubble.author)
             },
             Action {
+                iconName: "add"
+                text: i18n.tr("React")
+                visible: !bubble.isPending && !bubble.isSystem
+                onTriggered: bubble.reactRequested(bubble.messageId)
+            },
+            Action {
                 iconName: "edit-copy"
                 text: i18n.tr("Copy")
                 onTriggered: Clipboard.push(bubble.plainBody)
             }
         ]
+    }
+
+    // System messages (joins, pins, calls, ...): an icon where the avatar
+    // goes, and one line of text that names the author.
+    Icon {
+        visible: bubble.isSystem
+        anchors {
+            right: content.left
+            rightMargin: units.gu(1.5)
+            top: parent.top
+            topMargin: units.gu(0.9)
+        }
+        width: units.gu(2.2)
+        height: width
+        name: bubble.systemIcon
+        color: theme.palette.normal.backgroundSecondaryText
     }
 
     SidebarIcon {
@@ -95,9 +137,33 @@ ListItem {
             }
         }
 
+        // Who ran the command this message answers
+        Row {
+            visible: bubble.interaction !== ""
+            width: parent.width
+            spacing: units.gu(0.75)
+
+            Icon {
+                anchors.verticalCenter: parent.verticalCenter
+                width: units.gu(1.6)
+                height: width
+                name: "stock_application"
+                color: theme.palette.normal.backgroundSecondaryText
+            }
+
+            Label {
+                width: parent.width - units.gu(2.5)
+                text: bubble.interaction
+                textFormat: Text.StyledText
+                textSize: Label.Small
+                color: theme.palette.normal.backgroundSecondaryText
+                elide: Text.ElideRight
+            }
+        }
+
         // Author and time
         Row {
-            visible: !bubble.grouped
+            visible: !bubble.grouped && !bubble.isSystem
             spacing: units.gu(1)
 
             Label {
@@ -115,71 +181,89 @@ ListItem {
             }
         }
 
+        Row {
+            visible: bubble.forwarded
+            spacing: units.gu(0.75)
+
+            Icon {
+                anchors.verticalCenter: parent.verticalCenter
+                width: units.gu(1.6)
+                height: width
+                name: "mail-forwarded"
+                color: theme.palette.normal.backgroundSecondaryText
+            }
+
+            Label {
+                text: i18n.tr("Forwarded")
+                textSize: Label.Small
+                font.italic: true
+                color: theme.palette.normal.backgroundSecondaryText
+            }
+        }
+
         Label {
             width: parent.width
             visible: text !== ""
-            text: bubble.body + (bubble.edited ? " <font size=\"1\" color=\"#888\">(edited)</font>" : "")
+            text: bubble.body + (bubble.isSystem
+                                 ? " <font size=\"1\" color=\"" + theme.palette.normal.backgroundSecondaryText + "\">" + bubble.timestamp + "</font>"
+                                 : bubble.edited ? " <font size=\"1\" color=\"#888\">(edited)</font>" : "")
             textFormat: Text.RichText
             wrapMode: Text.Wrap
             font.pixelSize: units.gu(1.6)
-            font.italic: bubble.isSystem
             color: bubble.isSystem ? theme.palette.normal.backgroundSecondaryText : theme.palette.normal.backgroundText
             onLinkActivated: function(link) { Qt.openUrlExternally(link) }
         }
 
         Repeater {
-            model: bubble.attachments
+            model: bubble.media
 
-            delegate: Item {
+            delegate: MediaPreview {
                 required property var modelData
-
-                readonly property real maxWidth: Math.min(content.width, units.gu(30))
-                readonly property real ratio: modelData.width > 0 ? modelData.height / modelData.width : 0.75
-
-                width: modelData.isImage ? Math.min(maxWidth, modelData.width > 0 ? modelData.width : maxWidth)
-                                         : content.width
-                height: modelData.isImage ? width * ratio : units.gu(4)
-
-                Image {
-                    anchors.fill: parent
-                    visible: modelData.isImage
-                    source: modelData.isImage ? modelData.url : ""
-                    fillMode: Image.PreserveAspectFit
-                    asynchronous: true
-                    sourceSize.width: parent.width * 2
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: Qt.openUrlExternally(modelData.url)
-                    }
-                }
-
-                Rectangle {
-                    anchors.fill: parent
-                    visible: !modelData.isImage
-                    radius: units.gu(0.5)
-                    color: theme.palette.normal.base
-
-                    Row {
-                        anchors { left: parent.left; leftMargin: units.gu(1); verticalCenter: parent.verticalCenter }
-                        spacing: units.gu(1)
-                        Icon {
-                            width: units.gu(2); height: width
-                            name: "attachment"
-                            color: theme.palette.normal.backgroundText
-                        }
-                        Label {
-                            text: modelData.fileName
-                            elide: Text.ElideMiddle
-                            width: content.width - units.gu(5)
-                        }
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: Qt.openUrlExternally(modelData.url)
-                    }
-                }
+                media: modelData
+                maxWidth: Math.min(content.width, units.gu(30))
+                playing: bubble.onScreen
+                onOpened: function(media) { bubble.mediaOpened(media) }
             }
+        }
+
+        Repeater {
+            model: bubble.embeds
+
+            delegate: EmbedCard {
+                required property var modelData
+                embed: modelData
+                width: Math.min(content.width, units.gu(52))
+                playing: bubble.onScreen
+                onMediaOpened: function(media) { bubble.mediaOpened(media) }
+            }
+        }
+
+        Repeater {
+            model: bubble.stickers
+
+            delegate: StickerView {
+                required property var modelData
+                sticker: modelData
+                playing: bubble.onScreen
+            }
+        }
+
+        Loader {
+            active: !!bubble.poll
+            visible: active
+            width: Math.min(content.width, units.gu(52))
+            sourceComponent: PollCard {
+                messageId: bubble.messageId
+                poll: bubble.poll
+            }
+        }
+
+        ReactionBar {
+            width: parent.width
+            visible: bubble.reactions.length > 0
+            messageId: bubble.messageId
+            reactions: bubble.reactions
+            onAddRequested: bubble.reactRequested(bubble.messageId)
         }
     }
 }

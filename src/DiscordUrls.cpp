@@ -41,11 +41,22 @@ QString channelIcon(Snowflake channel, const std::string& hash, int size)
                        .arg(size);
 }
 
-QString emoji(Snowflake emojiId, bool animated, int size)
+QString emoji(Snowflake emojiId, bool, int size)
 {
-    return cdn() + QStringLiteral("emojis/%1.%2?size=%3")
-                       .arg(id(emojiId), animated ? QStringLiteral("gif") : QStringLiteral("png"))
-                       .arg(size);
+    // Always the still image, even for animated emoji: nothing in the chat
+    // animates on its own (and it is a smaller download).
+    return cdn() + QStringLiteral("emojis/%1.png?size=%2").arg(id(emojiId)).arg(size);
+}
+
+QString sticker(Snowflake stickerId, bool gif, int size)
+{
+    // GIF stickers are only served by the media proxy.
+    QString base = cdn();
+    if (gif && base == QLatin1String("https://cdn.discordapp.com/"))
+        base = QStringLiteral("https://media.discordapp.net/");
+    return base + QStringLiteral("stickers/%1.%2?size=%3")
+                      .arg(id(stickerId), gif ? QStringLiteral("gif") : QStringLiteral("png"))
+                      .arg(size);
 }
 
 QString initials(const QString& name)

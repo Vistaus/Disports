@@ -9,3 +9,7 @@
 [submodule "third_party/qrcodegen/upstream"]
 	path = third_party/qrcodegen/upstream
 	url = https://github.com/nayuki/QR-Code-generator.git
+[submodule "third_party/qtimageformats"]
+	path = third_party/qtimageformats
+	url = https://github.com/qt/qtimageformats.git
+	shallow = true

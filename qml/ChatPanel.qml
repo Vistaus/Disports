@@ -11,6 +11,57 @@ Item {
     property string replyToId: ""
     property string replyToAuthor: ""
 
+    // The emoji panel: "" (closed), "compose" (insert into the message) or
+    // "react" (react to reactMessageId).
+    property string emojiMode: ""
+    property string reactMessageId: ""
+
+    signal mediaOpened(var media)
+
+    // Whether the list followed the newest message before the reaction
+    // picker scrolled it to the message being reacted to.
+    property bool followedBeforeReact: false
+
+    function openEmoji(mode, messageId, row) {
+        if (emojiMode === "react" && mode !== "react")
+            closeEmoji()
+        if (mode === "react" && emojiMode !== "react")
+            followedBeforeReact = messageList.followNewest
+        emojiMode = mode
+        reactMessageId = messageId || ""
+        emojiPicker.reset()
+        Qt.inputMethod.hide()
+        input.focus = false
+        if (mode === "react" && row !== undefined) {
+            // Keep the message in view above the picker.
+            messageList.followNewest = false
+            messageList.keepVisibleRow = row
+            messageList.keepRowVisible()
+        }
+    }
+
+    function closeEmoji() {
+        messageList.keepVisibleRow = -1
+        if (emojiMode === "react" && followedBeforeReact) {
+            messageList.followNewest = true
+            messageList.scrollToNewest()
+        }
+        emojiMode = ""
+        reactMessageId = ""
+    }
+
+    function emojiPicked(emoji) {
+        if (emojiMode === "react") {
+            Session.addReaction(reactMessageId, emoji.reaction)
+            closeEmoji()
+            return
+        }
+        input.insert(input.cursorPosition, emoji.insertText)
+    }
+
+    // Opening an attachment should not leave a half-typed reaction around.
+    onMediaOpened: closeEmoji()
+
     function send() {
         const text = input.text
         if (text.trim() === "")
@@ -25,6 +76,7 @@ Item {
     Connections {
         target: Session
         function onCurrentChannelChanged() {
+            chatPanel.closeEmoji()
             chatPanel.replyToId = ""
             input.text = ""
             messageList.followNewest = true
@@ -73,19 +125,34 @@ Item {
             })
         }
 
+        // The row the reaction picker keeps in view while it opens, or -1.
+        property int keepVisibleRow: -1
+
+        function keepRowVisible() {
+            if (keepVisibleRow >= 0 && keepVisibleRow < count)
+                positionViewAtIndex(keepVisibleRow, ListView.Contain)
+        }
+
+        onMovementStarted: keepVisibleRow = -1
         onMovementEnded: followNewest = atYEnd
         onFlickEnded: followNewest = atYEnd
         onCountChanged: scrollToNewest()
         onContentHeightChanged: scrollToNewest()
-        onHeightChanged: scrollToNewest()
+        onHeightChanged: {
+            scrollToNewest()
+            keepRowVisible()
+        }
 
         delegate: MessageDelegate {
             width: messageList.width
             onReplyRequested: function(messageId, author) {
+                chatPanel.closeEmoji()
                 chatPanel.replyToId = messageId
                 chatPanel.replyToAuthor = author
                 input.forceActiveFocus()
             }
+            onReactRequested: function(messageId) { chatPanel.openEmoji("react", messageId, index) }
+            onMediaOpened: function(media) { chatPanel.mediaOpened(media) }
         }
 
         // With a bottom-to-top view the footer sits above the oldest message.
@@ -169,7 +236,7 @@ Item {
 
     Rectangle {
         id: composer
-        anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+        anchors { left: parent.left; right: parent.right; bottom: emojiPanel.top }
         height: Session.canSendMessages ? inputRow.implicitHeight + units.gu(2) : units.gu(5)
         color: theme.palette.normal.background
 
@@ -198,6 +265,34 @@ Item {
             }
             spacing: units.gu(1)
 
+            // Emoji panel / back to the keyboard
+            AbstractButton {
+                Layout.preferredWidth: units.gu(4.5)
+                Layout.preferredHeight: units.gu(4.5)
+                Layout.alignment: Qt.AlignBottom
+                enabled: Session.connected
+                opacity: enabled ? 1 : 0.4
+                onClicked: {
+                    if (chatPanel.emojiMode === "compose") {
+                        chatPanel.closeEmoji()
+                        input.forceActiveFocus()
+                    } else {
+                        chatPanel.openEmoji("compose")
+                    }
+                }
+
+                Icon {
+                    anchors.centerIn: parent
+                    width: units.gu(2.8)
+                    height: width
+                    source: chatPanel.emojiMode === "compose" ? "" : "qrc:/assets/emoji.svg"
+                    name: chatPanel.emojiMode === "compose" ? "input-keyboard-symbolic" : ""
+                    // emoji.svg is drawn in black; recolour it for the theme.
+                    keyColor: chatPanel.emojiMode === "compose" ? "#808080" : "#000000"
+                    color: theme.palette.normal.backgroundText
+                }
+            }
+
             TextArea {
                 id: input
                 Layout.fillWidth: true
@@ -209,6 +304,7 @@ Item {
                 wrapMode: TextEdit.Wrap
                 textFormat: TextEdit.PlainText
                 onTextChanged: if (text !== "") Session.notifyTyping()
+                onActiveFocusChanged: if (activeFocus && chatPanel.emojiMode === "compose") chatPanel.closeEmoji()
                 Keys.onReturnPressed: function(event) {
                     // Enter sends on a hardware keyboard; the on-screen
                     // keyboard's Enter inserts a line break.
@@ -233,10 +329,61 @@ Item {
                     anchors.centerIn: parent
                     width: units.gu(3)
                     height: width
-                    source: "qrc:/assets/send.svg"
+                    name: "send"
                     color: theme.palette.normal.backgroundText
                 }
             }
+        }
+    }
+
+    // Emoji picker below the composer, in place of the keyboard.
+    Item {
+        id: emojiPanel
+        anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+        height: chatPanel.emojiMode !== "" ? Math.min(units.gu(32), chatPanel.height * 0.5) : 0
+        visible: height > 0
+        clip: true
+
+        Behavior on height {
+            LomiriNumberAnimation {}
+        }
+
+        Rectangle {
+            id: reactHeader
+            anchors { top: parent.top; left: parent.left; right: parent.right }
+            height: chatPanel.emojiMode === "react" ? units.gu(4) : 0
+            visible: height > 0
+            color: theme.palette.normal.base
+
+            Label {
+                anchors { left: parent.left; leftMargin: units.gu(2); verticalCenter: parent.verticalCenter }
+                text: i18n.tr("React to message")
+                font.pixelSize: units.gu(1.4)
+            }
+
+            Icon {
+                anchors { right: parent.right; rightMargin: units.gu(2); verticalCenter: parent.verticalCenter }
+                width: units.gu(2)
+                height: width
+                name: "close"
+                color: theme.palette.normal.backgroundText
+                MouseArea {
+                    anchors.fill: parent
+                    anchors.margins: -units.gu(1)
+                    onClicked: chatPanel.closeEmoji()
+                }
+            }
+        }
+
+        EmojiPicker {
+            id: emojiPicker
+            anchors {
+                top: reactHeader.bottom
+                left: parent.left
+                right: parent.right
+                bottom: parent.bottom
+            }
+            onPicked: function(emoji) { chatPanel.emojiPicked(emoji) }
         }
     }
 }

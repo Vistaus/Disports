@@ -47,6 +47,11 @@ public:
 		return m_previewWidth != m_width || m_previewHeight != m_height;
 	}
 
+	bool IsVideo() const
+	{
+		return m_contentType == ContentType::MP4 || m_contentType == ContentType::VIDEO;
+	}
+
 	bool IsImage() const
 	{
 		return

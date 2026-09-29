@@ -24,5 +24,11 @@ Page {
             bottom: parent.bottom
         }
         showHeader: false
+        onMediaOpened: function(media) {
+            if (media.viewType === "none")
+                Qt.openUrlExternally(media.openUrl || media.viewUrl)
+            else
+                chatPage.pageStack.push(Qt.resolvedUrl("MediaViewerPage.qml"), { "media": media })
+        }
     }
 }

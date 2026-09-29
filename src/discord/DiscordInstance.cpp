@@ -694,7 +694,9 @@ void DiscordInstance::HandleRequest(NetRequest* pRequest)
 		//DebugResponse(pRequest);
 		Json j;
 		
-		if (pRequest->itype != IMAGE && pRequest->itype != IMAGE_ATTACHMENT)
+		// Media is binary, and some endpoints (reactions) reply 204 with no
+		// body at all.
+		if (pRequest->itype != IMAGE && pRequest->itype != IMAGE_ATTACHMENT && !pRequest->response.empty())
 		{
 			j = Json::parse(pRequest->response);
 		}
@@ -981,7 +983,8 @@ std::string DiscordInstance::TransformMention(const std::string& source, Snowfla
 
 					longestMatchStr = ename;
 					longestMatchID = em.first;
-					longestMatchMeta = ":" + em.second.m_name;
+					// Animated emoji need the "a" prefix: <a:name:id>
+					longestMatchMeta = (em.second.m_bAnimated ? "a:" : ":") + em.second.m_name;
 				}
 				break;
 		}
@@ -2307,6 +2310,154 @@ void DiscordInstance::ParseAndAddGuild(nlohmann::json& elem)
 	m_guilds.push_front(g);
 }
 
+// REACTIONS
+
+namespace
+{
+	enum { REACTION_ADD, REACTION_REMOVE, REACTION_REMOVE_ALL, REACTION_REMOVE_EMOJI };
+
+	std::string EncodeUrlComponent(const std::string& text)
+	{
+		static const char hex[] = "0123456789ABCDEF";
+		std::string out;
+		for (unsigned char c : text)
+		{
+			if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~' || c == ':') {
+				out += char(c);
+			} else {
+				out += '%';
+				out += hex[c >> 4];
+				out += hex[c & 15];
+			}
+		}
+		return out;
+	}
+}
+
+void DiscordInstance::HandleMESSAGE_REACTION_ADD(Json& j) { UpdateReactions(j["d"], REACTION_ADD); }
+void DiscordInstance::HandleMESSAGE_REACTION_REMOVE(Json& j) { UpdateReactions(j["d"], REACTION_REMOVE); }
+void DiscordInstance::HandleMESSAGE_REACTION_REMOVE_ALL(Json& j) { UpdateReactions(j["d"], REACTION_REMOVE_ALL); }
+void DiscordInstance::HandleMESSAGE_REACTION_REMOVE_EMOJI(Json& j) { UpdateReactions(j["d"], REACTION_REMOVE_EMOJI); }
+
+void DiscordInstance::UpdateReactions(Json& data, int change)
+{
+	Snowflake channelId = GetSnowflake(data, "channel_id");
+	Snowflake messageId = GetSnowflake(data, "message_id");
+
+	// Only messages we have loaded are shown; others get their reactions
+	// when they are fetched.
+	MessagePtr cached = GetMessageCache()->GetLoadedMessage(channelId, messageId);
+	if (!cached)
+		return;
+	Message msg = *cached;
+
+	Snowflake emojiId = 0;
+	std::string emojiName;
+	bool animated = false;
+	if (data.contains("emoji") && data["emoji"].is_object()) {
+		Json& emoji = data["emoji"];
+		emojiId = GetSnowflake(emoji, "id");
+		emojiName = GetFieldSafe(emoji, "name");
+		animated = GetFieldSafeBool(emoji, "animated", false);
+	}
+	bool me = GetSnowflake(data, "user_id") == m_mySnowflake;
+
+	switch (change)
+	{
+		case REACTION_ADD:
+			msg.AddReaction(emojiId, emojiName, animated, me);
+			break;
+		case REACTION_REMOVE:
+			msg.RemoveReaction(emojiId, emojiName, me);
+			break;
+		case REACTION_REMOVE_ALL:
+			msg.m_reactions.clear();
+			break;
+		case REACTION_REMOVE_EMOJI:
+			msg.m_reactions.erase(
+				std::remove_if(msg.m_reactions.begin(), msg.m_reactions.end(),
+					[&](const Reaction& r) { return r.IsEmoji(emojiId, emojiName); }),
+				msg.m_reactions.end());
+			break;
+	}
+
+	GetFrontend()->OnUpdateMessage(channelId, msg);
+}
+
+void DiscordInstance::RequestAddReaction(Snowflake chan, Snowflake msg, const std::string& emoji)
+{
+	GetHTTPClient()->PerformRequest(
+		true,
+		NetRequest::PUT,
+		GetDiscordAPI() + "channels/" + std::to_string(chan) + "/messages/" + std::to_string(msg)
+			+ "/reactions/" + EncodeUrlComponent(emoji) + "/@me?location=Message&type=0",
+		DiscordRequest::REACTION,
+		msg,
+		"",
+		m_token
+	);
+}
+
+void DiscordInstance::RequestRemoveReaction(Snowflake chan, Snowflake msg, const std::string& emoji)
+{
+	GetHTTPClient()->PerformRequest(
+		true,
+		NetRequest::DELETE_,
+		GetDiscordAPI() + "channels/" + std::to_string(chan) + "/messages/" + std::to_string(msg)
+			+ "/reactions/" + EncodeUrlComponent(emoji) + "/0/@me?location=Message&burst=false",
+		DiscordRequest::REACTION,
+		msg,
+		"",
+		m_token
+	);
+}
+
+// POLLS
+
+void DiscordInstance::HandleMESSAGE_POLL_VOTE_ADD(Json& j) { UpdatePollVote(j["d"], +1); }
+void DiscordInstance::HandleMESSAGE_POLL_VOTE_REMOVE(Json& j) { UpdatePollVote(j["d"], -1); }
+
+void DiscordInstance::UpdatePollVote(Json& data, int change)
+{
+	Snowflake channelId = GetSnowflake(data, "channel_id");
+	Snowflake messageId = GetSnowflake(data, "message_id");
+
+	MessagePtr cached = GetMessageCache()->GetLoadedMessage(channelId, messageId);
+	if (!cached || !cached->m_pMessagePoll)
+		return;
+	Message msg = *cached;
+	// The poll is shared with the cached message; change a copy.
+	msg.m_pMessagePoll = std::make_shared<MessagePoll>(*cached->m_pMessagePoll);
+
+	auto it = msg.m_pMessagePoll->m_options.find(GetFieldSafeInt(data, "answer_id"));
+	if (it == msg.m_pMessagePoll->m_options.end())
+		return;
+	MessagePollOption& option = it->second;
+	option.m_voteCount = std::max(0, option.m_voteCount + change);
+	if (GetSnowflake(data, "user_id") == m_mySnowflake)
+		option.m_bMeVoted = change > 0;
+
+	GetFrontend()->OnUpdateMessage(channelId, msg);
+}
+
+void DiscordInstance::RequestPollVote(Snowflake chan, Snowflake msg, const std::vector<int>& answerIds)
+{
+	Json body;
+	body["answer_ids"] = Json::array();
+	for (int id : answerIds)
+		body["answer_ids"].push_back(std::to_string(id));
+
+	GetHTTPClient()->PerformRequest(
+		true,
+		NetRequest::PUT,
+		GetDiscordAPI() + "channels/" + std::to_string(chan) + "/polls/" + std::to_string(msg) + "/answers/@me",
+		DiscordRequest::POLL_VOTE,
+		msg,
+		body.dump(),
+		m_token
+	);
+}
+
 // DISPATCH FUNCTIONS
 
 #define DECL(Code) g_dispatchFunctions[#Code] = &DiscordInstance::Handle ## Code
@@ -2320,6 +2471,12 @@ void DiscordInstance::InitDispatchFunctions()
 	DECL(MESSAGE_UPDATE);
 	DECL(MESSAGE_DELETE);
 	DECL(MESSAGE_ACK);
+	DECL(MESSAGE_REACTION_ADD);
+	DECL(MESSAGE_REACTION_REMOVE);
+	DECL(MESSAGE_REACTION_REMOVE_ALL);
+	DECL(MESSAGE_REACTION_REMOVE_EMOJI);
+	DECL(MESSAGE_POLL_VOTE_ADD);
+	DECL(MESSAGE_POLL_VOTE_REMOVE);
 	DECL(USER_SETTINGS_PROTO_UPDATE);
 	DECL(USER_GUILD_SETTINGS_UPDATE);
 	DECL(USER_NOTE_UPDATE);

@@ -71,6 +71,12 @@ Page {
                     anchors.fill: parent
                     anchors.leftMargin: units.dp(1)
                     visible: Session.currentChannelId !== ""
+                    onMediaOpened: function(media) {
+                        if (media.viewType === "none")
+                            Qt.openUrlExternally(media.openUrl || media.viewUrl)
+                        else
+                            mainPage.pageStack.push(Qt.resolvedUrl("MediaViewerPage.qml"), { "media": media })
+                    }
                 }
 
                 Label {

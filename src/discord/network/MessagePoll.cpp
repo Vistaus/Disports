@@ -17,7 +17,7 @@ MessagePoll::MessagePoll(const nlohmann::json& j)
 		if (j.contains("answers") && j["answers"].is_array()) {
 			for (const auto& ans : j["answers"]) {
 				MessagePollOption mpo;
-				mpo.m_answerId = GetFieldSafeInt(j, "answer_id");
+				mpo.m_answerId = GetFieldSafeInt(ans, "answer_id");
 
 				if (!ans.contains("poll_media")) continue;
 				const auto& pollMedia = ans["poll_media"];

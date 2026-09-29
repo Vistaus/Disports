@@ -462,6 +462,14 @@ public:
 	// Request a message deletion.
 	void RequestDeleteMessage(Snowflake chan, Snowflake msg);
 
+	// Add or remove the current user's reaction. The emoji is a Unicode
+	// emoji or "name:id" for a custom one (Reaction::GetApiString). The
+	// message updates when the gateway confirms the change.
+	void RequestAddReaction(Snowflake chan, Snowflake msg, const std::string& emoji);
+	void RequestRemoveReaction(Snowflake chan, Snowflake msg, const std::string& emoji);
+	// Replaces the current user's votes on a poll; no answers removes them.
+	void RequestPollVote(Snowflake chan, Snowflake msg, const std::vector<int>& answerIds);
+
 	// Request a message to be pinned.
 	void RequestPinMessage(Snowflake chan, Snowflake msg);
 
@@ -537,6 +545,14 @@ private:
 	void HandleMESSAGE_DELETE(nlohmann::json& j);
 	void HandleMESSAGE_UPDATE(nlohmann::json& j);
 	void HandleMESSAGE_ACK(nlohmann::json& j);
+	void HandleMESSAGE_REACTION_ADD(nlohmann::json& j);
+	void HandleMESSAGE_REACTION_REMOVE(nlohmann::json& j);
+	void HandleMESSAGE_REACTION_REMOVE_ALL(nlohmann::json& j);
+	void HandleMESSAGE_REACTION_REMOVE_EMOJI(nlohmann::json& j);
+	void UpdateReactions(nlohmann::json& data, int change);
+	void HandleMESSAGE_POLL_VOTE_ADD(nlohmann::json& j);
+	void HandleMESSAGE_POLL_VOTE_REMOVE(nlohmann::json& j);
+	void UpdatePollVote(nlohmann::json& data, int change);
 	void HandleUSER_GUILD_SETTINGS_UPDATE(nlohmann::json& j);
 	void HandleUSER_SETTINGS_PROTO_UPDATE(nlohmann::json& j);
 	void HandleUSER_NOTE_UPDATE(nlohmann::json& j);

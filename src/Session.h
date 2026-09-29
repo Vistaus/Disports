@@ -14,6 +14,7 @@
 #include "Preferences.h"
 #include "RemoteAuth.h"
 #include "models/ChannelListModel.h"
+#include "models/EmojiPickerModel.h"
 #include "models/GuildListModel.h"
 #include "models/MessageListModel.h"
 #include "models/UnreadDmListModel.h"
@@ -64,6 +65,7 @@ class Session : public QObject
     Q_PROPERTY(MessageListModel* messages READ messages CONSTANT)
     Q_PROPERTY(UnreadDmListModel* unreadDirectMessages READ unreadDirectMessages CONSTANT)
     Q_PROPERTY(Preferences* preferences READ preferences CONSTANT)
+    Q_PROPERTY(EmojiPickerModel* emoji READ emoji CONSTANT)
     Q_PROPERTY(RemoteAuth* qrLogin READ qrLogin CONSTANT)
 
 public:
@@ -112,6 +114,7 @@ public:
     MessageListModel* messages() const { return m_messages; }
     UnreadDmListModel* unreadDirectMessages() const { return m_unreadDms; }
     Preferences* preferences() const { return m_preferences; }
+    EmojiPickerModel* emoji() const { return m_emoji; }
     RemoteAuth* qrLogin() const { return m_qrLogin; }
 
     Q_INVOKABLE void loginWithToken(const QString& token);
@@ -126,6 +129,17 @@ public:
     Q_INVOKABLE void markCurrentChannelRead();
     Q_INVOKABLE void notifyTyping();
     Q_INVOKABLE void clearNotice();
+
+    // Reactions on messages of the open channel. `emoji` is a Unicode emoji
+    // or "name:id" (the `reaction` role of the emoji picker and the `emoji`
+    // field of a message's reactions).
+    Q_INVOKABLE void addReaction(const QString& messageId, const QString& emoji);
+    Q_INVOKABLE void toggleReaction(const QString& messageId, const QString& emoji, bool reacted);
+    // Replaces the user's votes on a poll; an empty list removes them.
+    Q_INVOKABLE void votePoll(const QString& messageId, const QVariantList& answerIds);
+    // Whether QtMultimedia can play video here (its backend loads). Checked
+    // once, on first use.
+    Q_INVOKABLE bool videoPlaybackAvailable();
 
     // Called by QtFrontend.
     void coreConnecting();
@@ -207,6 +221,7 @@ private:
     std::unique_ptr<QtFrontend> m_frontend;
     DiscordInstance* m_instance = nullptr;
 
+    int m_videoAvailable = -1; // -1: not checked yet
     QTimer m_heartbeatTimer;
     bool m_heartbeatAcked = true;
     QTimer m_reconnectTimer;
@@ -221,5 +236,6 @@ private:
     MessageListModel* m_messages = nullptr;
     UnreadDmListModel* m_unreadDms = nullptr;
     Preferences* m_preferences = nullptr;
+    EmojiPickerModel* m_emoji = nullptr;
     RemoteAuth* m_qrLogin = nullptr;
 };

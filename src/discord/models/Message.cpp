@@ -177,7 +177,7 @@ void RichEmbed::Load(Json& j)
 	auto& author = j["author"];
 	auto& fields = j["fields"];
 	auto& provider = j["provider"];
-	//auto& video = j["video"];
+	auto& video = j["video"];
 
 	m_typeStr = GetFieldSafe(j, "type");
 
@@ -192,7 +192,8 @@ void RichEmbed::Load(Json& j)
 	m_title = GetFieldSafe(j, "title");
 	m_description = GetFieldSafe(j, "description");
 	m_url = GetFieldSafe(j, "url");
-	m_timestamp = ParseTime(GetFieldSafe(j, "timestamp"));
+	const std::string timestamp = GetFieldSafe(j, "timestamp");
+	m_timestamp = timestamp.empty() ? 0 : ParseTime(timestamp);
 	m_color = GetFieldSafeInt(j, "color");
 	
 	if (footer.is_object()) {
@@ -224,7 +225,63 @@ void RichEmbed::Load(Json& j)
 		m_providerName = GetFieldSafe(provider, "name");
 		m_providerUrl = GetFieldSafe(provider, "url");
 	}
-	// video
+	if (video.is_object()) {
+		m_bHasVideo = true;
+		m_videoUrl = GetFieldSafe(video, "url");
+		m_videoProxiedUrl = GetFieldSafe(video, "proxy_url");
+		m_videoWidth = GetFieldSafeInt(video, "width");
+		m_videoHeight = GetFieldSafeInt(video, "height");
+	}
+	if (fields.is_array()) {
+		for (auto& f : fields) {
+			if (!f.is_object())
+				continue;
+			RichEmbedField field;
+			field.m_title = GetFieldSafe(f, "name");
+			field.m_value = GetFieldSafe(f, "value");
+			field.m_bInline = f.contains("inline") && f["inline"].is_boolean() && f["inline"].get<bool>();
+			m_fields.push_back(field);
+		}
+	}
+}
+
+void Message::AddReaction(Snowflake emojiId, const std::string& emojiName, bool animated, bool me)
+{
+	for (auto& reaction : m_reactions)
+	{
+		if (!reaction.IsEmoji(emojiId, emojiName))
+			continue;
+		if (me && reaction.m_bMe)
+			return; // already counted
+		reaction.m_count++;
+		reaction.m_bMe = reaction.m_bMe || me;
+		return;
+	}
+
+	Reaction reaction;
+	reaction.m_emojiId = emojiId;
+	reaction.m_emojiName = emojiName;
+	reaction.m_bAnimated = animated;
+	reaction.m_count = 1;
+	reaction.m_bMe = me;
+	m_reactions.push_back(reaction);
+}
+
+void Message::RemoveReaction(Snowflake emojiId, const std::string& emojiName, bool me)
+{
+	for (auto it = m_reactions.begin(); it != m_reactions.end(); ++it)
+	{
+		if (!it->IsEmoji(emojiId, emojiName))
+			continue;
+		if (me && !it->m_bMe)
+			return; // already removed
+		it->m_count--;
+		if (me)
+			it->m_bMe = false;
+		if (it->m_count <= 0)
+			m_reactions.erase(it);
+		return;
+	}
 }
 
 void Message::Load(Json& data, Snowflake guild)
@@ -302,6 +359,26 @@ void Message::Load(Json& data, Snowflake guild)
 		}
 	}
 
+	// Updates without a "reactions" field keep the known reactions.
+	if (data.contains("reactions") && data["reactions"].is_array())
+	{
+		m_reactions.clear();
+		for (auto& reactionData : data["reactions"])
+		{
+			Reaction reaction;
+			auto& emoji = reactionData["emoji"];
+			if (emoji.is_object()) {
+				reaction.m_emojiId = GetSnowflake(emoji, "id");
+				reaction.m_emojiName = GetFieldSafe(emoji, "name");
+				reaction.m_bAnimated = GetFieldSafeBool(emoji, "animated", false);
+			}
+			reaction.m_count = GetFieldSafeInt(reactionData, "count");
+			reaction.m_bMe = GetFieldSafeBool(reactionData, "me", false);
+			if (reaction.m_count > 0)
+				m_reactions.push_back(reaction);
+		}
+	}
+
 	if (data["embeds"].is_array())
 	{
 		m_embeds.clear();
@@ -315,6 +392,59 @@ void Message::Load(Json& data, Snowflake guild)
 
 	if (data.contains("poll"))
 		m_pMessagePoll = std::make_shared<MessagePoll>(data["poll"]);
+
+	m_stickers.clear();
+	if (data.contains("sticker_items") && data["sticker_items"].is_array())
+	{
+		for (auto& st : data["sticker_items"])
+		{
+			StickerItem sticker;
+			sticker.m_id = GetSnowflake(st, "id");
+			sticker.m_name = GetFieldSafe(st, "name");
+			sticker.m_format = GetFieldSafeInt(st, "format_type");
+			m_stickers.push_back(sticker);
+		}
+	}
+
+	if (data.contains("call") && data["call"].is_object())
+	{
+		Json& call = data["call"];
+		m_bHasCall = true;
+		m_callParticipants.clear();
+		if (call.contains("participants") && call["participants"].is_array()) {
+			for (auto& p : call["participants"])
+				if (p.is_string())
+					m_callParticipants.push_back(GetIntFromString(p.get<std::string>()));
+		}
+		const std::string ended = GetFieldSafe(call, "ended_timestamp");
+		m_callEnded = ended.empty() ? 0 : ParseTime(ended);
+	}
+
+	// interaction_metadata replaced the older "interaction" object; both
+	// carry the user, only the older one always has the command name.
+	for (const char* key : { "interaction_metadata", "interaction" })
+	{
+		if (!data.contains(key) || !data[key].is_object())
+			continue;
+		Json& in = data[key];
+		if (m_interactionName.empty())
+			m_interactionName = GetFieldSafe(in, "name");
+		if (!m_interactionUser && in.contains("user") && in["user"].is_object()) {
+			Json& user = in["user"];
+			m_interactionUser = GetSnowflake(user, "id");
+			m_interactionUserName = GetGlobalName(user);
+			if (m_interactionUserName.empty())
+				m_interactionUserName = GetUsername(user);
+		}
+	}
+
+	if (data.contains("role_subscription_data") && data["role_subscription_data"].is_object())
+	{
+		Json& sub = data["role_subscription_data"];
+		m_roleSubscriptionTier = GetFieldSafe(sub, "tier_name");
+		m_roleSubscriptionMonths = GetFieldSafeInt(sub, "total_months_subscribed");
+		m_bRoleSubscriptionRenewal = GetFieldSafeBool(sub, "is_renewal", false);
+	}
 
 	Json& msgRef = data["message_reference"];
 	Json& refdMsg = data["referenced_message"];

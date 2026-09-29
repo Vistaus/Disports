@@ -25,6 +25,18 @@ below are where the two differ structurally.
   `Close`, `SendMsg`) instead of a websocketpp/asio wrapper;
   `WebsocketClient.cpp` is gone. Close codes use `WsCloseStatus`.
 - `DiscordInstance::HandleRequest` no longer dumps OpenSSL's error queue.
+- Reactions: `Message::m_reactions`, the `MESSAGE_REACTION_*` gateway events
+  and `RequestAddReaction` / `RequestRemoveReaction`.
+- Embeds carry their video (`RichEmbed::m_bHasVideo`, used for GIFs).
+- Embed fields are parsed, and a missing embed timestamp stays 0.
+- Sending :name: of an animated server emoji keeps the "a" prefix (<a:name:id>).
+- `MessageType` lists every Discord type up to 68; the cache's own row types
+  (gaps, pending messages) moved to 10000+, as they collided with 60-69.
+- Messages carry stickers, call details, the command that produced them and
+  role subscription data. Polls: vote events, `RequestPollVote`, and poll
+  answers no longer all get id 0.
+- Video attachments are recognised (`ContentType::MP4` / `VIDEO`,
+  `Attachment::IsVideo`).
 - Guild folders carry their colour (`AbstractGuildItem::GetColor`, parsed
   in `SettingsManager::GetGuildFoldersEx`).
 

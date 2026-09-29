@@ -74,6 +74,13 @@ struct RichEmbed
 	std::string m_imageProxiedUrl;
 	int m_imageWidth = 0;
 	int m_imageHeight = 0;
+	// video, e.g. the MP4 behind a GIF from Tenor ("gifv")
+	bool m_bHasVideo = false;
+	std::string m_videoUrl;
+	std::string m_videoProxiedUrl;
+	int m_videoWidth = 0;
+	int m_videoHeight = 0;
+
 	// thumbnail image
 	bool m_bHasThumbnail = false;
 	std::string m_thumbnailUrl;
@@ -86,6 +93,33 @@ struct RichEmbed
 	std::vector<RichEmbedField> m_fields;
 
 	void Load(nlohmann::json& j);
+};
+
+struct Reaction
+{
+	Snowflake m_emojiId = 0;   // 0 for a Unicode emoji
+	std::string m_emojiName;   // the Unicode emoji itself, or the custom emoji's name
+	bool m_bAnimated = false;
+	int m_count = 0;
+	bool m_bMe = false;        // the current user reacted with this
+
+	bool IsEmoji(Snowflake id, const std::string& name) const {
+		return m_emojiId ? m_emojiId == id : (id == 0 && m_emojiName == name);
+	}
+
+	// "name" or "name:id", as used in the reaction endpoints.
+	std::string GetApiString() const {
+		return m_emojiId ? m_emojiName + ":" + std::to_string(m_emojiId) : m_emojiName;
+	}
+};
+
+struct StickerItem
+{
+	enum Format { PNG = 1, APNG = 2, LOTTIE = 3, GIF = 4 };
+
+	Snowflake m_id = 0;
+	std::string m_name;
+	int m_format = PNG;
 };
 
 class Message
@@ -118,9 +152,23 @@ public:
 	Snowflake m_refMessageChannel = 0;
 	Snowflake m_refMessageSnowflake = 0;
 	std::vector<RichEmbed> m_embeds;
+	std::vector<Reaction> m_reactions;
 	Snowflake m_webhookId = 0;
 	std::shared_ptr<MessagePoll> m_pMessagePoll;
 	std::shared_ptr<ReferenceMessage> m_pReferencedMessage;
+	std::vector<StickerItem> m_stickers;
+	// CALL messages
+	bool m_bHasCall = false;
+	std::vector<Snowflake> m_callParticipants;
+	time_t m_callEnded = 0; // 0 while the call is going on
+	// Messages from slash and context menu commands: who ran which command.
+	std::string m_interactionName;
+	Snowflake m_interactionUser = 0;
+	std::string m_interactionUserName;
+	// ROLE_SUBSCRIPTION_PURCHASE messages
+	std::string m_roleSubscriptionTier;
+	int m_roleSubscriptionMonths = 0;
+	bool m_bRoleSubscriptionRenewal = false;
 
 public:
 	Message() {}
@@ -150,6 +198,8 @@ public:
 	void UpdateTimestamp();
 
 	bool CheckWasMentioned(Snowflake user, Snowflake guild, bool bSuppressEveryone = false, bool bSuppressRoles = false) const;
+	void AddReaction(Snowflake emojiId, const std::string& emojiName, bool animated, bool me);
+	void RemoveReaction(Snowflake emojiId, const std::string& emojiName, bool me);
 
 	void Load(nlohmann::json& j, Snowflake guild);
 };

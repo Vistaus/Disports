@@ -36,7 +36,14 @@ public:
         HasReplyRole,
         ReplyAuthorRole,
         ReplyBodyRole,
-        AttachmentsRole,   // list of {url, fileName, isImage, width, height}
+        MediaRole,         // attachments and media embeds, see mediaOf()
+        ReactionsRole,     // list of {emoji, text, imageUrl, count, me}
+        EmbedsRole,        // link previews and bot embeds, see embedsOf()
+        SystemIconRole,    // Suru icon of a system message
+        InteractionRole,   // "Alice used /ping" above a command's response
+        ForwardedRole,     // the body is a forwarded message
+        StickersRole,      // list of {name, url, animated, lottie}
+        PollRole,          // see pollOf(), or null
     };
 
     using QAbstractListModel::QAbstractListModel;

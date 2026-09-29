@@ -1,3 +1,4 @@
+#include <QDir>
 #include <QGuiApplication>
 #include <QNetworkInformation>
 #include <QQmlEngine>
@@ -83,12 +84,23 @@ int main(int argc, char* argv[])
     QCoreApplication::setApplicationName(QStringLiteral("disports.jukfiuu"));
     QCoreApplication::setApplicationVersion(QStringLiteral(DISPORTS_VERSION));
 
+    // Qt pieces that are not part of every Ubuntu Touch image yet ship with
+    // the click: QML modules (QtMultimedia) in lib/<triplet>, plugins (WebP
+    // images, the multimedia backend) in lib/<triplet>/plugins. See
+    // clickable.yaml and third_party/CMakeLists.txt.
+    const QString bundledLibs = QDir(QCoreApplication::applicationDirPath())
+                                    .absoluteFilePath(QStringLiteral("../lib/" DISPORTS_ARCH_TRIPLET));
+    if (QDir(bundledLibs).exists())
+        QCoreApplication::addLibraryPath(bundledLibs + QStringLiteral("/plugins"));
+
     Session session;
     qmlRegisterSingletonInstance("Disports.Core", 1, 0, "Session", &session);
     qmlRegisterUncreatableType<Session>("Disports.Core", 1, 0, "SessionPhase",
                                         QStringLiteral("Use the Session singleton"));
 
     QQuickView view;
+    if (QDir(bundledLibs).exists())
+        view.engine()->addImportPath(bundledLibs);
     view.setResizeMode(QQuickView::SizeRootObjectToView);
     view.setTitle(QStringLiteral("Disports"));
     QObject::connect(view.engine(), &QQmlEngine::quit, &app, &QCoreApplication::quit);

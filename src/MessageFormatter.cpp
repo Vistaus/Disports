@@ -4,6 +4,9 @@
 #include <QLocale>
 #include <QRegularExpression>
 #include <QStringList>
+#include <QTextDocumentFragment>
+
+#include <algorithm>
 
 #include "discord/DiscordInstance.hpp"
 #include "discord/models/Message.hpp"
@@ -127,6 +130,14 @@ QString replaceTokens(QString text, Snowflake guild, bool rich, Protected* store
         return rich ? html(QStringLiteral("<b>%1</b>").arg(label.toHtmlEscaped())) : label;
     };
 
+    // Masked links, [label](https://...), used a lot by embeds and bots.
+    static const QRegularExpression maskedLink(
+        QStringLiteral("\\[([^\\]\\n]+)\\]\\((?:&lt;)?(https?://[^\\s)<>&]+(?:&amp;[^\\s)<>&]+)*)(?:&gt;)?\\)"));
+    replaceAll(maskedLink, [&](const QRegularExpressionMatch& m) {
+        return rich ? html(QStringLiteral("<a href=\"%1\">%2</a>").arg(m.captured(2), m.captured(1)))
+                    : m.captured(1);
+    });
+
     if (rich) {
         replaceAll(link, [&](const QRegularExpressionMatch& m) {
             return html(QStringLiteral("<a href=\"%1\">%1</a>").arg(m.captured(0)));
@@ -245,27 +256,260 @@ QString plainText(const QString& content, Snowflake guild)
     return text;
 }
 
-QString systemText(const Message& message)
+namespace {
+
+QString bold(const QString& text)
+{
+    return QStringLiteral("<b>%1</b>").arg(text.toHtmlEscaped());
+}
+
+// "a few seconds", "5 minutes", "2 hours", like Discord's call durations.
+QString humanDuration(qint64 seconds)
+{
+    if (seconds < 60)
+        return QStringLiteral("a few seconds");
+    if (seconds < 3600) {
+        const qint64 minutes = seconds / 60;
+        return minutes == 1 ? QStringLiteral("a minute") : QStringLiteral("%1 minutes").arg(minutes);
+    }
+    const qint64 hours = seconds / 3600;
+    return hours == 1 ? QStringLiteral("an hour") : QStringLiteral("%1 hours").arg(hours);
+}
+
+QString guildName(Snowflake guild)
+{
+    DiscordInstance* instance = GetDiscordInstance();
+    Guild* g = instance && guild ? instance->GetGuild(guild) : nullptr;
+    return g ? QString::fromStdString(g->m_name) : QStringLiteral("the server");
+}
+
+// A field of an embed, by name; system embeds (poll results, AutoMod)
+// carry their data this way.
+QString embedField(const Message& m, const char* name)
+{
+    for (const RichEmbed& e : m.m_embeds)
+        for (const RichEmbedField& f : e.m_fields)
+            if (f.m_title == name)
+                return QString::fromStdString(f.m_value);
+    return QString();
+}
+
+// Discord's USER_JOIN greetings; which one is picked by the message's
+// timestamp in milliseconds, modulo 13.
+const char* const JoinMessages[] = {
+    "%1 joined the party.",
+    "%1 is here.",
+    "Welcome, %1. We hope you brought pizza.",
+    "A wild %1 appeared.",
+    "%1 just landed.",
+    "%1 just slid into the server.",
+    "%1 just showed up!",
+    "Welcome %1. Say hi!",
+    "%1 hopped into the server.",
+    "Everyone welcome %1!",
+    "Glad you're here, %1.",
+    "Good to see you, %1.",
+    "Yay you made it, %1!",
+};
+
+}
+
+SystemMessage systemMessage(const Message& m, Snowflake guild)
 {
     using namespace MessageType;
-    switch (message.m_type) {
-    case RECIPIENT_ADD:          return QStringLiteral("added someone to the group.");
-    case RECIPIENT_REMOVE:       return QStringLiteral("removed someone from the group.");
-    case CALL:                   return QStringLiteral("started a call.");
-    case CHANNEL_NAME_CHANGE:    return QStringLiteral("changed the channel name.");
-    case CHANNEL_ICON_CHANGE:    return QStringLiteral("changed the channel icon.");
-    case CHANNEL_PINNED_MESSAGE: return QStringLiteral("pinned a message to this channel.");
-    case USER_JOIN:              return QStringLiteral("joined the server.");
+    const QString author = bold(QString::fromStdString(m.m_author));
+    const QString content = QString::fromStdString(m.m_message);
+    const QString mention = m.m_userMentions.empty()
+                                ? QStringLiteral("someone")
+                                : bold(userName(*m.m_userMentions.begin(), guild));
+    const QString place = guild ? QStringLiteral("the thread") : QStringLiteral("the group");
+    auto line = [](const char* icon, const QString& text) {
+        return SystemMessage{QString::fromLatin1(icon), text};
+    };
+
+    switch (m.m_type) {
+    case RECIPIENT_ADD:
+        return line("contact-new", QStringLiteral("%1 added %2 to %3.").arg(author, mention, place));
+    case RECIPIENT_REMOVE:
+        if (!m.m_userMentions.empty() && *m.m_userMentions.begin() == m.m_author_snowflake)
+            return line("remove-from-group", QStringLiteral("%1 left %2.").arg(author, place));
+        return line("remove-from-group", QStringLiteral("%1 removed %2 from %3.").arg(author, mention, place));
+    case CALL: {
+        DiscordInstance* instance = GetDiscordInstance();
+        const Snowflake me = instance ? instance->GetUserID() : 0;
+        if (!m.m_bHasCall || m.m_callEnded == 0)
+            return line("call-start", QStringLiteral("%1 started a call.").arg(author));
+        const QString duration = humanDuration(qint64(m.m_callEnded) - qint64(m.m_dateTime));
+        const bool joined = std::find(m.m_callParticipants.begin(), m.m_callParticipants.end(), me)
+                            != m.m_callParticipants.end();
+        if (!joined && m.m_author_snowflake != me)
+            return line("missed-call", QStringLiteral("You missed a call from %1 that lasted %2.").arg(author, duration));
+        return line("call-end", QStringLiteral("%1 started a call that lasted %2.").arg(author, duration));
+    }
+    case CHANNEL_NAME_CHANGE:
+        if (content.isEmpty())
+            return line("edit", QStringLiteral("%1 removed the custom group name.").arg(author));
+        return line("edit", QStringLiteral("%1 changed the channel name: %2").arg(author, bold(content)));
+    case CHANNEL_ICON_CHANGE:
+        return line("insert-image", QStringLiteral("%1 changed the channel icon.").arg(author));
+    case CHANNEL_PINNED_MESSAGE:
+        return line("pinned", QStringLiteral("%1 pinned a message to this channel.").arg(author));
+    case USER_JOIN: {
+        const quint64 ms = (quint64(m.m_snowflake) >> 22) + 1420070400000ULL;
+        return line("contact-new", QString::fromLatin1(JoinMessages[ms % 13]).arg(author));
+    }
     case GUILD_BOOST:
     case GUILD_BOOST_TIER_1:
     case GUILD_BOOST_TIER_2:
-    case GUILD_BOOST_TIER_3:     return QStringLiteral("boosted the server!");
-    case CHANNEL_FOLLOW_ADD:     return QStringLiteral("followed a channel.");
-    case THREAD_CREATED:         return QStringLiteral("started a thread.");
-    case STAGE_START:            return QStringLiteral("started a stage.");
-    case STAGE_END:              return QStringLiteral("ended the stage.");
-    default:                     return QString();
+    case GUILD_BOOST_TIER_3: {
+        QString text = content.toInt() > 1
+                           ? QStringLiteral("%1 just boosted the server %2 times!").arg(author, bold(content))
+                           : QStringLiteral("%1 just boosted the server!").arg(author);
+        if (m.m_type != GUILD_BOOST)
+            text += QStringLiteral(" %1 has achieved %2!")
+                        .arg(bold(guildName(guild)), bold(QStringLiteral("Level %1").arg(int(m.m_type) - int(GUILD_BOOST))));
+        return line("starred", text);
     }
+    case CHANNEL_FOLLOW_ADD:
+        return line("share", QStringLiteral("%1 has added %2 to this channel. Its most important updates will show up here.")
+                                 .arg(author, bold(content)));
+    case GUILD_STREAM:
+        return line("stock_video", QStringLiteral("%1 started streaming.").arg(author));
+    case GUILD_DISCOVERY_DISQUALIFIED:
+        return line("info", QStringLiteral("This server has been removed from Server Discovery because it no longer "
+                                           "passes all the requirements."));
+    case GUILD_DISCOVERY_REQUALIFIED:
+        return line("info", QStringLiteral("This server is eligible for Server Discovery again and has been "
+                                           "automatically relisted!"));
+    case GUILD_DISCOVERY_GRACE_PERIOD_INITIAL_WARNING:
+        return line("dialog-warning-symbolic", QStringLiteral("This server has failed Discovery activity requirements for 1 week."));
+    case GUILD_DISCOVERY_GRACE_PERIOD_FINAL_WARNING:
+        return line("dialog-warning-symbolic", QStringLiteral("This server has failed Discovery activity requirements "
+                                                              "for 3 weeks in a row."));
+    case THREAD_CREATED:
+        return line("message", QStringLiteral("%1 started a thread: %2").arg(author, bold(content)));
+    case GUILD_INVITE_REMINDER:
+        return line("contact-group", QStringLiteral("Wondering who to invite? Start by inviting anyone who can help "
+                                                    "you build the server!"));
+    case AUTO_MODERATION_ACTION: {
+        const QString rule = embedField(m, "rule_name");
+        const QString blocked = m.m_embeds.empty() ? QString()
+                                                   : QString::fromStdString(m.m_embeds.front().m_description);
+        QString text = QStringLiteral("AutoMod blocked a message from %1").arg(author);
+        if (!rule.isEmpty())
+            text += QStringLiteral(" (%1)").arg(rule.toHtmlEscaped());
+        if (!blocked.isEmpty())
+            text += QStringLiteral(": <i>%1</i>").arg(blocked.toHtmlEscaped());
+        return line("security-alert", text);
+    }
+    case ROLE_SUBSCRIPTION_PURCHASE: {
+        const int months = qMax(1, m.m_roleSubscriptionMonths);
+        return line("starred", QStringLiteral("%1 %2 %3 and has been a subscriber of %4 for %5 %6!")
+                                   .arg(author,
+                                        m.m_bRoleSubscriptionRenewal ? QStringLiteral("renewed") : QStringLiteral("joined"),
+                                        bold(QString::fromStdString(m.m_roleSubscriptionTier)),
+                                        bold(guildName(guild)))
+                                   .arg(months)
+                                   .arg(months == 1 ? QStringLiteral("month") : QStringLiteral("months")));
+    }
+    case STAGE_START:
+        return line("speaker", QStringLiteral("%1 started %2").arg(author, bold(content)));
+    case STAGE_END:
+        return line("speaker", QStringLiteral("%1 ended %2").arg(author, bold(content)));
+    case STAGE_SPEAKER:
+        return line("audio-input-microphone-high-symbolic", QStringLiteral("%1 is now a speaker.").arg(author));
+    case STAGE_RAISE_HAND:
+        return line("dialog-question-symbolic", QStringLiteral("%1 requested to speak.").arg(author));
+    case STAGE_TOPIC:
+        return line("speaker", QStringLiteral("%1 changed the Stage topic: %2").arg(author, bold(content)));
+    case GUILD_APPLICATION_PREMIUM_SUBSCRIPTION:
+        return line("starred", QStringLiteral("%1 upgraded an app to premium for this server!").arg(author));
+    case PRIVATE_CHANNEL_INTEGRATION_ADDED:
+        return line("stock_application", QStringLiteral("%1 added an app to %2.").arg(author, place));
+    case PRIVATE_CHANNEL_INTEGRATION_REMOVED:
+        return line("stock_application", QStringLiteral("%1 removed an app from %2.").arg(author, place));
+    case GUILD_INCIDENT_ALERT_MODE_ENABLED: {
+        const QDateTime until = QDateTime::fromString(content, Qt::ISODateWithMs);
+        const QString when = until.isValid() ? QLocale().toString(until.toLocalTime(), QLocale::ShortFormat) : content;
+        return line("lock", QStringLiteral("%1 enabled security actions until %2.").arg(author, bold(when)));
+    }
+    case GUILD_INCIDENT_ALERT_MODE_DISABLED:
+        return line("lock-broken", QStringLiteral("%1 disabled security actions.").arg(author));
+    case GUILD_INCIDENT_REPORT_RAID:
+        return line("security-alert", QStringLiteral("%1 reported a raid in %2.").arg(author, bold(guildName(guild))));
+    case GUILD_INCIDENT_REPORT_FALSE_ALARM:
+        return line("security-alert", QStringLiteral("%1 reported a false alarm in %2.").arg(author, bold(guildName(guild))));
+    case PURCHASE_NOTIFICATION:
+        return line("stock_store", QStringLiteral("%1 made a purchase in the server shop!").arg(author));
+    case POLL_RESULT: {
+        const QString question = embedField(m, "poll_question_text");
+        const QString winner = embedField(m, "victor_answer_text");
+        const QString votes = embedField(m, "victor_answer_votes");
+        const QString total = embedField(m, "total_votes");
+        QString text = QStringLiteral("%1's poll %2 has closed.").arg(author, bold(question));
+        if (!winner.isEmpty())
+            text += QStringLiteral(" Winner: %1 (%2 of %3 votes)").arg(bold(winner), votes, total);
+        else
+            text += total.toInt() > 0 ? QStringLiteral(" It ended in a tie.") : QStringLiteral(" Nobody voted.");
+        return line("like", text);
+    }
+    case IN_GAME_MESSAGE_NUX:
+        return line("stock_application", QStringLiteral("%1 messaged you from a game.").arg(author));
+    case GUILD_JOIN_REQUEST_ACCEPT_NOTIFICATION:
+        return line("contact-new", QStringLiteral("An application to %1 was approved! Welcome!").arg(bold(content)));
+    case GUILD_JOIN_REQUEST_REJECT_NOTIFICATION:
+        return line("remove-from-group", QStringLiteral("An application to %1 was rejected.").arg(bold(content)));
+    case GUILD_JOIN_REQUEST_WITHDRAWN_NOTIFICATION:
+        return line("remove-from-group", QStringLiteral("An application to %1 has been withdrawn.").arg(bold(content)));
+    case HD_STREAMING_UPGRADED:
+        return line("stock_video", QStringLiteral("%1 activated HD streaming.").arg(author));
+    case CHAT_WALLPAPER_SET:
+        return line("preferences-desktop-wallpaper-symbolic", QStringLiteral("%1 changed the DM wallpaper.").arg(author));
+    case CHAT_WALLPAPER_REMOVE:
+        return line("preferences-desktop-wallpaper-symbolic", QStringLiteral("%1 removed the DM wallpaper.").arg(author));
+    case REPORT_TO_MOD_DELETED_MESSAGE:
+        return line("security-alert", QStringLiteral("%1 deleted the message.").arg(author));
+    case REPORT_TO_MOD_TIMEOUT_USER:
+        return line("security-alert", QStringLiteral("%1 timed out %2.").arg(author, mention));
+    case REPORT_TO_MOD_KICK_USER:
+        return line("security-alert", QStringLiteral("%1 kicked %2.").arg(author, mention));
+    case REPORT_TO_MOD_BAN_USER:
+        return line("security-alert", QStringLiteral("%1 banned %2.").arg(author, mention));
+    case REPORT_TO_MOD_CLOSED_REPORT:
+        return line("security-alert", QStringLiteral("%1 resolved this flag.").arg(author));
+    case EMOJI_ADDED:
+        return line("ayatana-indicator-keyboard-emoji",
+                    QStringLiteral("%1 added a new emoji, %2").arg(author, richText(content, guild)));
+    case VOICE_SESSION:
+        return line("speaker", QStringLiteral("%1 started a voice hangout.").arg(author));
+    case FRIEND_REQUEST_ACCEPTED:
+        return line("contact", QStringLiteral("%1 accepted your friend request.").arg(author));
+    // Messages Discord draws as a special card (gifts, Nitro offers, invites
+    // to hang out): not supported yet, say so instead of showing nothing.
+    case CUSTOM_GIFT:
+    case VOICE_HANGOUT_INVITE:
+    case NITRO_NOTIFICATION:
+    case GIFTING_PROMPT:
+    case PREMIUM_GROUP_INVITE:
+    case GUILD_BOOST_UPSELL:
+        if (!content.isEmpty())
+            return {};
+        return line("info", QStringLiteral("%1 sent a message Disports can't show yet.").arg(author));
+    default:
+        // Types newer than this list, when there is nothing else to show.
+        if (int(m.m_type) > int(MEDIA_MENTION_MESSAGE) && int(m.m_type) < int(GAP_UP)
+                && content.isEmpty() && m.m_attachments.empty() && m.m_embeds.empty())
+            return line("info", QStringLiteral("%1 sent a message Disports can't show yet.").arg(author));
+        return {};
+    }
+}
+
+QString systemText(const Message& message, Snowflake guild)
+{
+    const SystemMessage system = systemMessage(message, guild);
+    if (system.text.isEmpty())
+        return QString();
+    return QTextDocumentFragment::fromHtml(system.text).toPlainText();
 }
 
 }

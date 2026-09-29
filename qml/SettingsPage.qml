@@ -10,98 +10,118 @@ Page {
         title: i18n.tr("Settings")
     }
 
-    Column {
+    Flickable {
         anchors {
             top: settingsPage.header.bottom
             left: parent.left
             right: parent.right
-            margins: units.gu(2)
+            bottom: parent.bottom
         }
-        spacing: units.gu(2)
+        contentHeight: settingsColumn.height
+        clip: true
 
-        Row {
-            spacing: units.gu(2)
+        Column {
+            id: settingsColumn
+            width: parent.width
 
-            SidebarIcon {
-                width: units.gu(6)
-                height: width
-                imageSource: Session.avatarUrl
+            ListItem {
+                height: accountLayout.height + (divider.visible ? divider.height : 0)
+
+                ListItemLayout {
+                    id: accountLayout
+                    title.text: Session.username
+                    title.font.bold: true
+
+                    SidebarIcon {
+                        SlotsLayout.position: SlotsLayout.Leading
+                        width: units.gu(5)
+                        height: width
+                        imageSource: Session.avatarUrl
+                    }
+                }
+            }
+
+            ListItem {
+                height: dmHeader.height
+                divider.visible: false
+                ListItemLayout {
+                    id: dmHeader
+                    title.text: i18n.tr("Direct messages")
+                    title.font.bold: true
+                }
+            }
+
+            ListItem {
+                height: picturesLayout.height + (divider.visible ? divider.height : 0)
+                onClicked: picturesSwitch.trigger()
+
+                ListItemLayout {
+                    id: picturesLayout
+                    title.text: i18n.tr("Show profile pictures")
+                    summary.text: i18n.tr("Off: icons and status only, which loads fewer images")
+                    summary.wrapMode: Text.WordWrap
+                    summary.maximumLineCount: 3
+
+                    Switch {
+                        id: picturesSwitch
+                        SlotsLayout.position: SlotsLayout.Trailing
+                        checked: Session.preferences.dmProfilePictures
+                        onTriggered: Session.preferences.dmProfilePictures = checked
+                    }
+                }
+            }
+
+            ListItem {
+                height: chatHeader.height
+                divider.visible: false
+                ListItemLayout {
+                    id: chatHeader
+                    title.text: i18n.tr("Chat")
+                    title.font.bold: true
+                }
+            }
+
+            ListItem {
+                height: gifLayout.height + (divider.visible ? divider.height : 0)
+                onClicked: gifSwitch.trigger()
+
+                ListItemLayout {
+                    id: gifLayout
+                    title.text: i18n.tr("Play GIFs in the chat")
+                    summary.text: i18n.tr("Off: GIFs play when you open them, which saves data and battery")
+                    summary.wrapMode: Text.WordWrap
+                    summary.maximumLineCount: 3
+
+                    Switch {
+                        id: gifSwitch
+                        SlotsLayout.position: SlotsLayout.Trailing
+                        checked: Session.preferences.autoplayGifs
+                        onTriggered: Session.preferences.autoplayGifs = checked
+                    }
+                }
+            }
+
+            Item {
+                width: parent.width
+                height: units.gu(2)
+            }
+
+            Button {
+                anchors { left: parent.left; right: parent.right; margins: units.gu(2) }
+                text: i18n.tr("Log out")
+                color: theme.palette.normal.negative
+                onClicked: Popups.PopupUtils.open(logoutDialog)
             }
 
             Label {
-                anchors.verticalCenter: parent.verticalCenter
-                text: Session.username
-                font.pixelSize: units.gu(2)
-                font.bold: true
+                anchors { left: parent.left; right: parent.right; margins: units.gu(2) }
+                topPadding: units.gu(2)
+                bottomPadding: units.gu(2)
+                text: i18n.tr("Disports %1 — built on Discord Messenger's client core.").arg(Qt.application.version)
+                wrapMode: Text.WordWrap
+                textSize: Label.Small
+                color: theme.palette.normal.backgroundSecondaryText
             }
-        }
-
-        Rectangle {
-            width: parent.width
-            height: units.dp(1)
-            color: theme.palette.normal.base
-        }
-
-        Label {
-            text: i18n.tr("Direct messages")
-            font.pixelSize: units.gu(1.6)
-            font.bold: true
-        }
-
-        Item {
-            width: parent.width
-            height: units.gu(4.5)
-
-            Column {
-                anchors {
-                    left: parent.left
-                    right: picturesSwitch.left
-                    rightMargin: units.gu(2)
-                    verticalCenter: parent.verticalCenter
-                }
-                spacing: units.gu(0.5)
-
-                Label {
-                    width: parent.width
-                    text: i18n.tr("Show profile pictures")
-                }
-
-                Label {
-                    width: parent.width
-                    text: i18n.tr("Off: icons and status only, which loads fewer images")
-                    font.pixelSize: units.gu(1.4)
-                    color: theme.palette.normal.backgroundSecondaryText
-                    wrapMode: Text.WordWrap
-                }
-            }
-
-            Switch {
-                id: picturesSwitch
-                anchors { right: parent.right; verticalCenter: parent.verticalCenter }
-                checked: Session.preferences.dmProfilePictures
-                onClicked: Session.preferences.dmProfilePictures = checked
-            }
-        }
-
-        Rectangle {
-            width: parent.width
-            height: units.dp(1)
-            color: theme.palette.normal.base
-        }
-
-        Button {
-            width: parent.width
-            text: i18n.tr("Log out")
-            color: theme.palette.normal.negative
-            onClicked: Popups.PopupUtils.open(logoutDialog)
-        }
-
-        Label {
-            width: parent.width
-            text: i18n.tr("Disports %1 — built on Discord Messenger's client core.").arg(Qt.application.version)
-            wrapMode: Text.WordWrap
-            font.pixelSize: units.gu(1.3)
-            color: theme.palette.normal.backgroundSecondaryText
         }
     }
 
