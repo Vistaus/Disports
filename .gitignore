@@ -1,0 +1,32 @@
+# Build output
+/build/
+/.clickable/
+*.click
+
+# CMake and Qt Creator
+CMakeLists.txt.user*
+CMakeCache.txt
+CMakeFiles/
+compile_commands.json
+.qmlls.ini
+*.qmlc
+*.jsc
+
+# Editors and OS clutter
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+
+# Python (tools/test, and leftovers from the old version on main)
+__pycache__/
+*.py[cod]
+
+# Local stuff
+/help/
+.envrc
+.tmp/
+
+# Made by tools/test/check.sh
+/.clickable-asan.yaml

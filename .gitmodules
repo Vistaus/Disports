@@ -1,0 +1,11 @@
+[submodule "third_party/nlohmann-json"]
+	path = third_party/nlohmann-json
+	url = https://github.com/nlohmann/json.git
+	shallow = true
+[submodule "third_party/boost-regex"]
+	path = third_party/boost-regex
+	url = https://github.com/boostorg/regex.git
+	shallow = true
+[submodule "third_party/qrcodegen/upstream"]
+	path = third_party/qrcodegen/upstream
+	url = https://github.com/nayuki/QR-Code-generator.git
