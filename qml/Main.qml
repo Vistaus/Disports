@@ -37,7 +37,46 @@ MainView {
         }
     }
 
-    Component.onCompleted: showPhase()
+    Component.onCompleted: {
+        showPhase()
+        if (testVideoUrl !== "")
+            testVideoTimer.start()
+    }
+
+    Component {
+        id: testPreviewPage
+
+        Page {
+            property string url
+            header: PageHeader { title: "Preview" }
+
+            MediaPreview {
+                anchors.centerIn: parent
+                maxWidth: parent.width - units.gu(4)
+                playing: true
+                media: ({ "kind": "gif", "viewType": "video", "viewUrl": parent.url, "previewUrl": "",
+                          "width": 498, "height": 374 })
+            }
+        }
+    }
+
+    // Test hook, see DISPORTS_PLAY_VIDEO in main.cpp.
+    Timer {
+        id: testVideoTimer
+        interval: 1500
+        // "gif:<url>" opens it as a GIF (looping, muted); "preview:<url>"
+        // shows the chat's preview of such a GIF instead.
+        onTriggered: {
+            if (testVideoUrl.startsWith("preview:")) {
+                stack.push(testPreviewPage, { "url": testVideoUrl.substring(8) })
+                return
+            }
+            const gif = testVideoUrl.startsWith("gif:")
+            const url = gif ? testVideoUrl.substring(4) : testVideoUrl
+            stack.push(Qt.resolvedUrl("MediaViewerPage.qml"), { "media": {
+                "kind": gif ? "gif" : "video", "viewType": "video", "viewUrl": url, "openUrl": url } })
+        }
+    }
 
     readonly property string currentPageName: stack.currentPage ? stack.currentPage.objectName : ""
 

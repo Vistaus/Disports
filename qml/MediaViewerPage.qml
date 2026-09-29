@@ -117,8 +117,7 @@ Page {
         }
     }
 
-    // Videos, and GIFs that Discord serves as video. A separate file: it
-    // needs QtMultimedia, which may be missing on the device.
+    // Videos, and GIFs that Discord serves as video.
     Component {
         id: videoView
 
@@ -131,8 +130,8 @@ Page {
                 active: parent.canPlay
                 source: Qt.resolvedUrl("VideoPlayer.qml")
                 onLoaded: {
-                    item.source = viewer.media.viewUrl
                     item.looping = viewer.looping
+                    item.source = viewer.media.viewUrl
                 }
             }
 

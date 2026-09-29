@@ -1,6 +1,7 @@
 #include <QDir>
 #include <QGuiApplication>
 #include <QNetworkInformation>
+#include <QQmlContext>
 #include <QQmlEngine>
 #include <QQuickView>
 #include <QTimer>
@@ -8,6 +9,7 @@
 #include <memory>
 
 #include "Session.h"
+#include "media/GstVideoPlayer.h"
 
 namespace {
 
@@ -45,7 +47,10 @@ void scheduleScreenshot(QQuickView* view)
 
 // Test hooks for headless runs: DISPORTS_OPEN_CHANNEL=<id> opens a channel
 // once connected, DISPORTS_SEND_MESSAGE=<text> then sends a message to it,
-// DISPORTS_EXPAND_FOLDER=<id> expands a server folder.
+// DISPORTS_EXPAND_FOLDER=<id> expands a server folder. DISPORTS_PLAY_VIDEO=<url>
+// (read by Main.qml) opens the media viewer with a video, logged in or not;
+// "gif:<url>" opens it as a looping GIF, "preview:<url>" shows the chat's
+// preview of a GIF (with "Play GIFs in the chat" on).
 void scheduleTestActions(Session* session)
 {
     const QString folder = qEnvironmentVariable("DISPORTS_EXPAND_FOLDER");
@@ -84,10 +89,9 @@ int main(int argc, char* argv[])
     QCoreApplication::setApplicationName(QStringLiteral("disports.jukfiuu"));
     QCoreApplication::setApplicationVersion(QStringLiteral(DISPORTS_VERSION));
 
-    // Qt pieces that are not part of every Ubuntu Touch image yet ship with
-    // the click: QML modules (QtMultimedia) in lib/<triplet>, plugins (WebP
-    // images, the multimedia backend) in lib/<triplet>/plugins. See
-    // clickable.yaml and third_party/CMakeLists.txt.
+    // Qt plugins that are not part of the Ubuntu Touch images yet (WebP
+    // images) ship with the click in lib/<triplet>/plugins; see
+    // third_party/CMakeLists.txt.
     const QString bundledLibs = QDir(QCoreApplication::applicationDirPath())
                                     .absoluteFilePath(QStringLiteral("../lib/" DISPORTS_ARCH_TRIPLET));
     if (QDir(bundledLibs).exists())
@@ -95,12 +99,13 @@ int main(int argc, char* argv[])
 
     Session session;
     qmlRegisterSingletonInstance("Disports.Core", 1, 0, "Session", &session);
+    qmlRegisterType<GstVideoPlayer>("Disports.Core", 1, 0, "GstVideoPlayer");
     qmlRegisterUncreatableType<Session>("Disports.Core", 1, 0, "SessionPhase",
                                         QStringLiteral("Use the Session singleton"));
 
     QQuickView view;
-    if (QDir(bundledLibs).exists())
-        view.engine()->addImportPath(bundledLibs);
+    view.rootContext()->setContextProperty(QStringLiteral("testVideoUrl"),
+                                           qEnvironmentVariable("DISPORTS_PLAY_VIDEO"));
     view.setResizeMode(QQuickView::SizeRootObjectToView);
     view.setTitle(QStringLiteral("Disports"));
     QObject::connect(view.engine(), &QQmlEngine::quit, &app, &QCoreApplication::quit);

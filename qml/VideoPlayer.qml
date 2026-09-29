@@ -1,43 +1,40 @@
 import QtQuick
-import QtMultimedia
 import Lomiri.Components
+import Disports.Core
 
 // The media viewer's video player: tap to pause or resume. GIFs served as
-// video loop muted. Loaded by MediaViewerPage through a Loader, so the viewer
-// still opens when QtMultimedia is missing.
+// video loop muted.
 Item {
-    id: player
+    id: videoPlayer
 
     property url source
     property bool looping: false
 
-    readonly property bool loading: video.playbackState !== MediaPlayer.PlayingState
-                                    && video.bufferProgress < 1 && video.error === MediaPlayer.NoError
+    readonly property bool loading: !player.hasFrame && player.errorString === ""
 
-    Video {
-        id: video
+    GstVideoPlayer {
+        id: player
         anchors.fill: parent
-        source: player.source
-        fillMode: VideoOutput.PreserveAspectFit
-        loops: player.looping ? MediaPlayer.Infinite : 1
-        muted: player.looping
+        fillMode: GstVideoPlayer.PreserveAspectFit
+        source: videoPlayer.source
+        loops: videoPlayer.looping
+        muted: videoPlayer.looping
         autoPlay: true
     }
 
     MouseArea {
         anchors.fill: parent
         onClicked: {
-            if (video.playbackState === MediaPlayer.PlayingState)
-                video.pause()
+            if (player.playing)
+                player.pause()
             else
-                video.play()
+                player.play()
         }
     }
 
     Rectangle {
         anchors.centerIn: parent
-        visible: video.playbackState !== MediaPlayer.PlayingState && !player.loading
-                 && video.error === MediaPlayer.NoError
+        visible: !player.playing && !videoPlayer.loading && player.errorString === ""
         width: units.gu(8)
         height: width
         radius: width / 2
@@ -56,7 +53,7 @@ Item {
     Label {
         anchors.centerIn: parent
         width: parent.width - units.gu(4)
-        visible: video.error !== MediaPlayer.NoError
+        visible: player.errorString !== ""
         horizontalAlignment: Text.AlignHCenter
         wrapMode: Text.WordWrap
         text: i18n.tr("This video can't be played here. Use \"Open in browser\".")

@@ -1,6 +1,6 @@
 #include "Session.h"
 
-#include <QMediaPlayer>
+#include "media/GstVideoPlayer.h"
 
 #include <QDateTime>
 #include <QGuiApplication>
@@ -812,11 +812,7 @@ void Session::votePoll(const QString& messageId, const QVariantList& answerIds)
 
 bool Session::videoPlaybackAvailable()
 {
-    if (m_videoAvailable < 0) {
-        QMediaPlayer probe;
-        m_videoAvailable = probe.isAvailable() ? 1 : 0;
-    }
-    return m_videoAvailable == 1;
+    return GstVideoPlayer::isAvailable();
 }
 
 void Session::notifyTyping()

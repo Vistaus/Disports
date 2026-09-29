@@ -137,8 +137,7 @@ public:
     Q_INVOKABLE void toggleReaction(const QString& messageId, const QString& emoji, bool reacted);
     // Replaces the user's votes on a poll; an empty list removes them.
     Q_INVOKABLE void votePoll(const QString& messageId, const QVariantList& answerIds);
-    // Whether QtMultimedia can play video here (its backend loads). Checked
-    // once, on first use.
+    // Whether GStreamer can play video here (see GstVideoPlayer).
     Q_INVOKABLE bool videoPlaybackAvailable();
 
     // Called by QtFrontend.
@@ -221,7 +220,6 @@ private:
     std::unique_ptr<QtFrontend> m_frontend;
     DiscordInstance* m_instance = nullptr;
 
-    int m_videoAvailable = -1; // -1: not checked yet
     QTimer m_heartbeatTimer;
     bool m_heartbeatAcked = true;
     QTimer m_reconnectTimer;

@@ -58,7 +58,6 @@ Item {
         height: preview.height
         active: preview.animate && preview.media.viewType === "video" && (preview.media.viewUrl || "") !== ""
                 && Session.videoPlaybackAvailable()
-        // A separate file: it needs QtMultimedia, which may be missing.
         source: active ? Qt.resolvedUrl("GifVideo.qml") : ""
         onLoaded: item.source = preview.media.viewUrl
     }

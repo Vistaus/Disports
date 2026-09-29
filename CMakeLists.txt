@@ -9,7 +9,7 @@ set(APP_ID "disports.jukfiuu")
 
 option(CLICK_MODE "Install as an Ubuntu Touch click package" ON)
 
-find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Qml Quick Network WebSockets Multimedia)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Qml Quick Network WebSockets)
 find_package(OpenSSL REQUIRED)
 
 qt_standard_project_setup(REQUIRES 6.8)
@@ -35,7 +35,13 @@ qt_add_executable(disports
     src/models/GuildListModel.cpp src/models/GuildListModel.h
     src/models/MessageListModel.cpp src/models/MessageListModel.h
     src/models/UnreadDmListModel.cpp src/models/UnreadDmListModel.h
+    src/media/GstVideoPlayer.cpp src/media/GstVideoPlayer.h
 )
+
+# Video goes through GStreamer (hardware decoders on the phone via
+# gstreamer1.0-droid), see src/media/GstVideoPlayer.h.
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GST REQUIRED IMPORTED_TARGET gstreamer-1.0 gstreamer-app-1.0 gstreamer-video-1.0)
 
 qt_add_qml_module(disports
     URI Disports
@@ -91,7 +97,7 @@ target_link_libraries(disports PRIVATE
     Qt6::Quick
     Qt6::Network
     Qt6::WebSockets
-    Qt6::Multimedia
+    PkgConfig::GST
     OpenSSL::Crypto
     discord
     qrcodegen
