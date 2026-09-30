@@ -55,6 +55,7 @@ void VoiceStates::clear()
     m_channelUsers.clear();
     m_channelGuild.clear();
     m_dmCalls.clear();
+    m_flags.clear();
     emit changed(0, 0);
 }
 
@@ -83,6 +84,29 @@ void VoiceStates::setUserChannel(Snowflake guild, Snowflake user, Snowflake chan
     }
 }
 
+void VoiceStates::setUserFlags(Snowflake user, const nlohmann::json& state, bool notify)
+{
+    if (!user)
+        return;
+    auto flag = [&state](const char* key) { return state.contains(key) && state[key].is_boolean() && state[key].get<bool>(); };
+    int flags = 0;
+    if (flag("self_mute") || flag("mute"))
+        flags |= Muted;
+    if (flag("self_deaf") || flag("deaf"))
+        flags |= Deafened;
+    // Left the call.
+    if (state.contains("channel_id") && state["channel_id"].is_null())
+        flags = 0;
+    if (flags == m_flags.value(user))
+        return;
+    if (flags)
+        m_flags.insert(user, flags);
+    else
+        m_flags.remove(user);
+    if (notify)
+        emit userFlagsChanged(user);
+}
+
 void VoiceStates::loadGuildStates(Snowflake guild, const nlohmann::json& states)
 {
     if (!states.is_array())
@@ -94,6 +118,7 @@ void VoiceStates::loadGuildStates(Snowflake guild, const nlohmann::json& states)
         if (!user || !channel)
             continue;
         setUserChannel(guild, user, channel, false);
+        setUserFlags(user, state, false);
         users.append(user);
     }
     requestUnknownMembers(guild, users);
@@ -126,6 +151,7 @@ void VoiceStates::gatewayDispatch(const std::string& type, const nlohmann::json&
     const nlohmann::json& d = message["d"];
 
     if (type == "READY") {
+        m_flags.clear();
         m_userChannel.clear();
         m_channelUsers.clear();
         m_channelGuild.clear();
@@ -155,6 +181,7 @@ void VoiceStates::gatewayDispatch(const std::string& type, const nlohmann::json&
             }
         }
         setUserChannel(guild, user, snowflakeOf(d, "channel_id"));
+        setUserFlags(user, d);
     } else if (type == "CALL_CREATE" || type == "CALL_UPDATE") {
         const Snowflake channel = snowflakeOf(d, "channel_id");
         if (!channel)
@@ -164,8 +191,11 @@ void VoiceStates::gatewayDispatch(const std::string& type, const nlohmann::json&
         else if (!m_dmCalls.contains(channel))
             m_dmCalls.insert(channel, 0);
         if (d.contains("voice_states") && d["voice_states"].is_array()) {
-            for (const nlohmann::json& state : d["voice_states"])
-                setUserChannel(0, snowflakeOf(state, "user_id"), channel, false);
+            for (const nlohmann::json& state : d["voice_states"]) {
+                const Snowflake user = snowflakeOf(state, "user_id");
+                setUserChannel(0, user, channel, false);
+                setUserFlags(user, state);
+            }
         }
         emit changed(0, channel);
     } else if (type == "CALL_DELETE") {

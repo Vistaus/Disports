@@ -33,16 +33,25 @@ public:
     // When a DM / group call started (its call message), in ms since the
     // epoch; 0 when not known (server voice channels).
     qint64 callStartedMs(Snowflake channel) const;
+    // Muted or deafened, by themselves or by a moderator.
+    bool isMuted(Snowflake user) const { return m_flags.value(user) & Muted; }
+    bool isDeafened(Snowflake user) const { return m_flags.value(user) & Deafened; }
 
 signals:
     // Something changed in this channel (guild 0: a DM or group), or, for
     // a 0 channel, everywhere (READY).
     void changed(Snowflake guild, Snowflake channel);
+    // Someone muted, unmuted, deafened or undeafened.
+    void userFlagsChanged(Snowflake user);
 
 private:
+    enum Flag { Muted = 1, Deafened = 2 };
+
     void loadGuildStates(Snowflake guild, const nlohmann::json& states);
     // A user is now in `channel` (0: none) in `guild` (0: DMs and groups).
     void setUserChannel(Snowflake guild, Snowflake user, Snowflake channel, bool notify = true);
+    // From a voice state object.
+    void setUserFlags(Snowflake user, const nlohmann::json& state, bool notify = true);
     // Names of people seen only by id: ask Discord for them.
     void requestUnknownMembers(Snowflake guild, const QList<Snowflake>& users);
 
@@ -50,4 +59,5 @@ private:
     QHash<Snowflake, QList<Snowflake>> m_channelUsers;            // channel -> users
     QHash<Snowflake, Snowflake> m_channelGuild;                   // channel -> guild
     QHash<Snowflake, Snowflake> m_dmCalls;                        // DM / group -> call message
+    QHash<Snowflake, int> m_flags;                                // user -> Flag bits
 };

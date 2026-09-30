@@ -138,6 +138,11 @@ scenario_dmcall() {     # a DM with a call going on
     STEPS="sleep 5" "$HERE/run.sh" dmcall 7000 DISPORTS_OPEN_CHANNEL=2001 "${WIDE[@]}"
     expect dmcall 'REST history 2001'
 }
+scenario_call() {       # join the voice channel: the call screen, Bob muted, Carol deafened
+    STEPS="sleep 6" "$HERE/run.sh" call 8000 DISPORTS_OPEN_CHANNEL=1107 DISPORTS_START_CALL=1
+    expect call 'VOICE join 1107'
+}
+
 scenario_reply() {      # tap a reply to a message 390 back: five pages, the question, keep looking
     STEPS="sleep 6;click 560 702;sleep 8;click 500 417;sleep 4" \
         "$HERE/run.sh" reply 20000 DISPORTS_OPEN_CHANNEL=1110 "${WIDE[@]}"
@@ -154,7 +159,7 @@ scenario_permissions() { # read-only, no history, no files, slowmode
     done
 }
 
-ALL=(channels mentions upload zoom nicknames dmcall reply permissions)
+ALL=(channels mentions upload zoom nicknames dmcall call reply permissions)
 SCENARIOS=("${@:-${ALL[@]}}")
 [ $# -eq 0 ] && SCENARIOS=("${ALL[@]}")
 

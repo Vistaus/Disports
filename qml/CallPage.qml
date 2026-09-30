@@ -3,7 +3,7 @@ import Lomiri.Components
 import Disports.Core
 
 // The call screen: everyone's picture, ringed in green while talking, and
-// the dialer's round controls. Incoming calls look like the dialer's.
+// the dialer's controls. Incoming calls look like the dialer's.
 Page {
     id: callPage
     objectName: "callPage"
@@ -17,42 +17,40 @@ Page {
         subtitle: callPage.call.statusText
     }
 
-    // Round button with a caption, like the dialer's.
-    component CallButton: AbstractButton {
-        id: button
+    // An icon that toggles, as in the dialer's call controls.
+    component ControlButton: AbstractButton {
+        id: control
         property string iconName
-        property string caption
-        property bool checked: false
-        property color color: checked ? theme.palette.normal.backgroundText : theme.palette.normal.base
-        property color iconColor: checked ? theme.palette.normal.background : theme.palette.normal.backgroundText
 
-        width: units.gu(8)
-        height: units.gu(9)
+        width: units.gu(7)
+        height: units.gu(7)
+        opacity: !enabled ? 0.2 : pressed ? 0.5 : 1
 
-        LomiriShape {
-            id: circle
-            anchors.horizontalCenter: parent.horizontalCenter
-            width: units.gu(6.5)
+        Icon {
+            anchors.centerIn: parent
+            width: units.gu(3)
             height: width
-            aspect: LomiriShape.Flat
-            radius: "large"
-            backgroundColor: button.color
-            opacity: button.pressed ? 0.8 : 1
-
-            Icon {
-                anchors.centerIn: parent
-                width: units.gu(3)
-                height: width
-                name: button.iconName
-                color: button.iconColor
-            }
+            name: control.iconName
+            color: theme.palette.normal.baseText
         }
+    }
 
-        Label {
-            anchors { top: circle.bottom; topMargin: units.gu(0.5); horizontalCenter: parent.horizontalCenter }
-            text: button.caption
-            textSize: Label.Small
-            color: theme.palette.normal.backgroundSecondaryText
+    // Everyone's state on their picture: deafened, else muted.
+    component StateBadge: LomiriShape {
+        property string iconName
+
+        width: units.gu(3.5)
+        height: width
+        aspect: LomiriShape.Flat
+        radius: "large"
+        backgroundColor: theme.palette.normal.negative
+
+        Icon {
+            anchors.centerIn: parent
+            width: units.gu(2)
+            height: width
+            name: parent.iconName
+            color: "white"
         }
     }
 
@@ -146,23 +144,10 @@ Page {
                                     ring: modelData.speaking
                                 }
 
-                                // Muted: a badge in the corner.
-                                LomiriShape {
-                                    visible: modelData.muted
+                                StateBadge {
+                                    visible: modelData.deafened || modelData.muted
                                     anchors { right: parent.right; bottom: parent.bottom }
-                                    width: units.gu(3.5)
-                                    height: width
-                                    aspect: LomiriShape.Flat
-                                    radius: "large"
-                                    backgroundColor: theme.palette.normal.negative
-
-                                    Icon {
-                                        anchors.centerIn: parent
-                                        width: units.gu(2)
-                                        height: width
-                                        name: "microphone-mute"
-                                        color: "white"
-                                    }
+                                    iconName: modelData.deafened ? "system-suspend" : "microphone-mute"
                                 }
                             }
 
@@ -202,52 +187,85 @@ Page {
         }
     }
 
-    Item {
+    Column {
         id: controls
-        anchors { left: parent.left; right: parent.right; bottom: parent.bottom; bottomMargin: units.gu(2) }
-        height: callPage.incoming ? units.gu(8) : units.gu(9)
+        anchors { left: parent.left; right: parent.right; bottom: parent.bottom; bottomMargin: units.gu(4) }
+        spacing: units.gu(2)
+        visible: !callPage.incoming
 
         Row {
-            anchors.centerIn: parent
-            visible: !callPage.incoming
-            spacing: units.gu(0.5)
+            anchors.horizontalCenter: parent.horizontalCenter
+            visible: callPage.call.deafened
+            spacing: units.gu(0.75)
 
-            CallButton {
-                iconName: callPage.call.muted ? "microphone-mute" : "microphone"
-                caption: i18n.tr("Mute")
-                checked: callPage.call.muted
-                // No "Speak" permission: muted for good (tapping says why).
-                opacity: callPage.call.canSpeak ? 1 : 0.5
-                onClicked: callPage.call.toggleMute()
+            Icon {
+                anchors.verticalCenter: parent.verticalCenter
+                width: units.gu(2)
+                height: width
+                name: "system-suspend"
+                color: theme.palette.normal.backgroundSecondaryText
             }
 
-            CallButton {
-                iconName: "speaker-mute"
-                caption: i18n.tr("Deafen")
-                checked: callPage.call.deafened
-                onClicked: callPage.call.toggleDeafen()
-            }
-
-            CallButton {
-                iconName: "speaker"
-                caption: i18n.tr("Speaker")
-                visible: callPage.call.speakerAvailable
-                checked: callPage.call.speaker
-                onClicked: callPage.call.toggleSpeaker()
-            }
-
-            CallButton {
-                iconName: "call-end"
-                caption: i18n.tr("Leave")
-                color: theme.palette.normal.negative
-                iconColor: "white"
-                onClicked: callPage.call.hangUp()
+            Label {
+                anchors.verticalCenter: parent.verticalCenter
+                text: i18n.tr("You are deafened")
+                textSize: Label.Small
+                color: theme.palette.normal.backgroundSecondaryText
             }
         }
 
         Row {
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: units.gu(2)
+
+            ControlButton {
+                iconName: callPage.call.muted ? "microphone-mute" : "microphone"
+                onClicked: callPage.call.toggleMute()
+            }
+
+            ControlButton {
+                iconName: callPage.call.speaker ? "speaker" : "speaker-mute"
+                enabled: callPage.call.speakerAvailable
+                onClicked: callPage.call.toggleSpeaker()
+            }
+
+            ControlButton {
+                iconName: callPage.call.deafened ? "system-suspend" : "media-preview-start"
+                onClicked: callPage.call.toggleDeafen()
+            }
+        }
+
+        AbstractButton {
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: units.gu(21)
+            height: units.gu(4.5)
+            onClicked: callPage.call.hangUp()
+
+            LomiriShape {
+                anchors.fill: parent
+                aspect: LomiriShape.Flat
+                radius: "medium"
+                backgroundColor: parent.pressed ? theme.palette.highlighted.negative : theme.palette.normal.negative
+            }
+
+            Icon {
+                anchors.centerIn: parent
+                width: units.gu(3)
+                height: width
+                name: "call-end"
+                color: theme.palette.normal.negativeText
+            }
+        }
+    }
+
+    Item {
+        id: incomingControls
+        anchors { left: parent.left; right: parent.right; bottom: parent.bottom; bottomMargin: units.gu(2) }
+        height: units.gu(8)
+        visible: callPage.incoming
+
+        Row {
             anchors.centerIn: parent
-            visible: callPage.incoming
             spacing: units.gu(2)
 
             WideCallButton {

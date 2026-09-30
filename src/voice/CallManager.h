@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QList>
 #include <QSet>
 #include <QString>
 #include <QTimer>
@@ -36,7 +37,8 @@ class CallManager : public QObject
     Q_PROPERTY(bool canSpeak READ canSpeak NOTIFY stateChanged)
     Q_PROPERTY(bool speaker READ speaker NOTIFY speakerChanged)
     Q_PROPERTY(bool speakerAvailable READ speakerAvailable NOTIFY speakerChanged)
-    // [{id, name, avatarUrl, speaking, muted, self, joined}], us first.
+    // [{id, name, avatarUrl, speaking, muted, deafened, self, joined}], us
+    // first.
     // In DM calls, people still being rung have joined: false.
     Q_PROPERTY(QVariantList participants READ participants NOTIFY participantsChanged)
 
@@ -126,9 +128,8 @@ private:
     QString m_voiceEndpoint;
     bool m_voiceConnected = false;
 
-    QSet<Snowflake> m_participants;
+    QList<Snowflake> m_participants; // in the order they joined
     QSet<Snowflake> m_speaking;
-    QSet<Snowflake> m_mutedUsers;
     qint64 m_talkStartedMs = 0; // someone else joined / the channel was joined
     QTimer m_clock;
 

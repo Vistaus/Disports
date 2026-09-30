@@ -8,12 +8,13 @@
 #include <QThread>
 
 #include "discord/DiscordInstance.hpp"
-#include "DiscordUrls.h"
-#include "Session.h"
-#include "models/ChannelListModel.h"
 #include "discord/models/Permissions.hpp"
+
+#include "DiscordUrls.h"
 #include "Ringtone.h"
+#include "Session.h"
 #include "VoiceSession.h"
+#include "models/ChannelListModel.h"
 
 namespace {
 
@@ -53,6 +54,10 @@ CallManager::CallManager(Session* session)
 {
     m_clock.setInterval(1000);
     connect(&m_clock, &QTimer::timeout, this, &CallManager::statusTextChanged);
+    connect(session->voiceStates(), &VoiceStates::userFlagsChanged, this, [this](Snowflake user) {
+        if (m_participants.contains(user))
+            emit participantsChanged();
+    });
 }
 
 CallManager::~CallManager()
@@ -94,7 +99,7 @@ QVariantList CallManager::participants() const
     DiscordInstance* instance = m_session->instance();
     if (!instance || m_state == Idle)
         return list;
-    auto entry = [this](Snowflake id, bool self, bool joined, bool muted) {
+    auto entry = [this](Snowflake id, bool self, bool joined, bool muted, bool deafened) {
         Profile* profile = GetProfileCache()->LookupProfile(id, "", "", "", false);
         const QString name = !profile ? QString()
             : QString::fromStdString(profile->m_globalName.empty() ? profile->m_name : profile->m_globalName);
@@ -104,21 +109,23 @@ QVariantList CallManager::participants() const
             {QStringLiteral("avatarUrl"), DiscordUrls::userAvatar(id, profile ? profile->m_avatarlnk : std::string(), 256)},
             {QStringLiteral("speaking"), joined && m_speaking.contains(id)},
             {QStringLiteral("muted"), muted},
+            {QStringLiteral("deafened"), deafened},
             {QStringLiteral("self"), self},
             {QStringLiteral("joined"), joined},
         };
     };
     const Snowflake me = instance->GetUserID();
     if (m_state != Incoming)
-        list.append(entry(me, true, m_voiceConnected, m_muted));
+        list.append(entry(me, true, m_voiceConnected, m_muted, m_deafened));
+    VoiceStates* states = m_session->voiceStates();
     for (Snowflake id : m_participants)
-        list.append(entry(id, false, true, m_mutedUsers.contains(id)));
+        list.append(entry(id, false, true, states->isMuted(id), states->isDeafened(id)));
     // DM calls: the others who have not picked up (yet).
     if (m_direct) {
         if (Channel* channel = instance->GetChannel(m_channel)) {
             for (Snowflake id : channel->m_recipients) {
                 if (id != me && !m_participants.contains(id))
-                    list.append(entry(id, false, false, false));
+                    list.append(entry(id, false, false, false, false));
             }
         }
     }
@@ -250,7 +257,6 @@ void CallManager::endCall(const QString& reason)
     }
     m_participants.clear();
     m_speaking.clear();
-    m_mutedUsers.clear();
     m_channel = 0;
     m_guild = 0;
     emit participantsChanged();
@@ -336,15 +342,7 @@ void CallManager::gatewayDispatch(const std::string& type, const nlohmann::json&
             m_voiceSessionId = stringOf(d, "session_id");
             maybeConnect();
         } else if (m_channel && channel == m_channel && m_state != Incoming) {
-            const bool muted = d.value("self_mute", false) || d.value("mute", false);
-            const bool changed = muted != m_mutedUsers.contains(user);
-            if (muted)
-                m_mutedUsers.insert(user);
-            else
-                m_mutedUsers.remove(user);
             addParticipant(user);
-            if (changed)
-                emit participantsChanged();
         } else {
             removeParticipant(user);
         }
@@ -397,7 +395,7 @@ void CallManager::addParticipant(Snowflake user)
 {
     if (!user || user == m_session->instance()->GetUserID() || m_participants.contains(user))
         return;
-    m_participants.insert(user);
+    m_participants.append(user);
     if (m_direct && m_voiceConnected && !m_talkStartedMs) {
         m_talkStartedMs = QDateTime::currentMSecsSinceEpoch();
         m_clock.start();
@@ -408,10 +406,9 @@ void CallManager::addParticipant(Snowflake user)
 
 void CallManager::removeParticipant(Snowflake user)
 {
-    if (!m_participants.remove(user))
+    if (!m_participants.removeOne(user))
         return;
     m_speaking.remove(user);
-    m_mutedUsers.remove(user);
     emit participantsChanged();
     emit statusTextChanged();
     // A DM call ends when the others hang up, like a phone call.

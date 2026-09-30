@@ -86,6 +86,10 @@ CHANNELS = [
 ]
 # Seven people in the Lounge: five are listed, then "and 2 more".
 LOUNGE_PEOPLE = [ALICE, BOB, CAROL, DAVE] + EXTRA[:3]
+# Bob is muted, Carol deafened (and so muted too).
+def lounge_state(u):
+    return {"guild_id": GUILD, "user_id": u["id"], "channel_id": LOUNGE, "session_id": "x",
+            "self_mute": u in (BOB, CAROL), "self_deaf": u is CAROL}
 
 
 def snowflake_at(ms):
@@ -212,8 +216,7 @@ def ready():
         "user_settings_proto": "",
         "guilds": [{"id": GUILD, "properties": {"name": "Test Server", "icon": None, "owner_id": "300"},
                     "channels": CHANNELS, "roles": roles, "emojis": [], "member_count": 9,
-                    "voice_states": [{"user_id": u["id"], "channel_id": LOUNGE, "session_id": "x",
-                                      "self_mute": False, "self_deaf": False} for u in LOUNGE_PEOPLE]},
+                    "voice_states": [lounge_state(u) for u in LOUNGE_PEOPLE]},
                    {"id": QUIET, "properties": {"name": "Quiet Server", "icon": None, "owner_id": "300"},
                     "channels": [{"id": QUIET_CHAN, "type": 0, "name": "chat", "position": 0}],
                     "roles": [dict(roles[0], id=QUIET)], "emojis": [], "voice_states": []}]
@@ -273,6 +276,15 @@ async def gateway(ws):
                 await dispatch(ws, "CALL_CREATE", {"channel_id": DM, "message_id": DM_CALL_MESSAGE,
                                "region": "x", "ringing": [], "voice_states": [
                                    {"user_id": "200", "channel_id": DM, "session_id": "y"}]})
+            elif op == 4:
+                # Joining a voice channel: our voice state, and who is there.
+                # (No voice server: the call stays connecting.)
+                log("VOICE join", d.get("channel_id"))
+                if d.get("channel_id") == LOUNGE:
+                    await dispatch(ws, "VOICE_STATE_UPDATE", dict(guild_id=GUILD, user_id=ME["id"], channel_id=LOUNGE,
+                                   session_id="me", self_mute=d.get("self_mute", False), self_deaf=d.get("self_deaf", False)))
+                    for u in LOUNGE_PEOPLE[:4]:
+                        await dispatch(ws, "VOICE_STATE_UPDATE", lounge_state(u))
             elif op == 8:
                 query = (d.get("query") or "").lower()
                 ids = d.get("user_ids") or []
