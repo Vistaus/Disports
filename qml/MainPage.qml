@@ -66,6 +66,9 @@ Page {
                     anchors.fill: parent
                     anchors.leftMargin: units.dp(1)
                     visible: Session.currentChannelId !== ""
+                    onInfoRequested: function(channelId) {
+                        mainPage.pageStack.push(Qt.resolvedUrl("ChannelInfoPage.qml"), { "channelId": channelId })
+                    }
                     onMediaOpened: function(media) {
                         if (media.viewType === "none")
                             Qt.openUrlExternally(media.openUrl || media.viewUrl)

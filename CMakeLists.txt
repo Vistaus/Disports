@@ -72,6 +72,7 @@ qt_add_qml_module(disports
         qml/StickerView.qml
         qml/PollCard.qml
         qml/MediaViewerPage.qml
+        qml/ChannelInfoPage.qml
 )
 
 qt_add_resources(disports "assets"

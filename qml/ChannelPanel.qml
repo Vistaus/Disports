@@ -38,6 +38,7 @@ Item {
             required property string iconUrl
             required property bool indented
             required property string status
+            required property bool blocked
 
             readonly property bool conversation: kind === "dm" || kind === "group"
             readonly property bool pictures: Session.preferences.dmProfilePictures
@@ -107,7 +108,18 @@ Item {
 
                             StatusDot {
                                 anchors.centerIn: parent
+                                visible: !row.blocked
                                 status: row.status
+                            }
+
+                            // Blocked, as in the Qt 5 version
+                            Icon {
+                                anchors.centerIn: parent
+                                visible: row.blocked
+                                width: units.gu(1.3)
+                                height: width
+                                name: "cancel"
+                                color: theme.palette.normal.negative
                             }
                         }
                     }
@@ -115,8 +127,17 @@ Item {
                     // Direct messages with icons only
                     StatusDot {
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: row.kind === "dm" && !row.pictures
+                        visible: row.kind === "dm" && !row.pictures && !row.blocked
                         status: row.status
+                    }
+
+                    Icon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: row.kind === "dm" && !row.pictures && row.blocked
+                        width: units.gu(1.5)
+                        height: width
+                        name: "cancel"
+                        color: theme.palette.normal.negative
                     }
 
                     Icon {
@@ -155,8 +176,9 @@ Item {
                         text: row.name
                         font.pixelSize: units.gu(row.conversation && row.pictures ? 1.8 : 1.7)
                         font.bold: row.unread || row.mentions > 0
-                        color: emphasized ? theme.palette.normal.backgroundText
-                                          : theme.palette.normal.backgroundSecondaryText
+                        font.strikeout: row.blocked
+                        color: emphasized && !row.blocked ? theme.palette.normal.backgroundText
+                                                          : theme.palette.normal.backgroundSecondaryText
                         elide: Text.ElideRight
                     }
 

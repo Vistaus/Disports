@@ -125,6 +125,10 @@ QVariant ChannelListModel::data(const QModelIndex& index, int role) const
                && channel->m_parentCateg != 0 && channel->m_parentCateg != channel->m_snowflake;
     case IconUrlRole:    return iconUrl(*channel);
     case StatusRole:     return statusOf(*channel);
+    case BlockedRole: {
+        DiscordInstance* instance = GetDiscordInstance();
+        return channel->m_channelType == Channel::DM && instance && instance->IsUserBlocked(channel->GetDMRecipient());
+    }
     }
     return QVariant();
 }
@@ -143,6 +147,7 @@ QHash<int, QByteArray> ChannelListModel::roleNames() const
         {TopicRole, "topic"},
         {IndentedRole, "indented"},
         {StatusRole, "status"},
+        {BlockedRole, "blocked"},
     };
 }
 

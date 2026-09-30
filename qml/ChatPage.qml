@@ -10,6 +10,14 @@ Page {
         title: Session.currentChannelName
         // Channel topics can have several lines; the header has room for one.
         subtitle: Session.currentChannelTopic.replace(/\s*\n+\s*/g, "  ")
+        trailingActionBar.actions: [
+            Action {
+                iconName: "info"
+                text: i18n.tr("Info")
+                onTriggered: chatPage.pageStack.push(Qt.resolvedUrl("ChannelInfoPage.qml"),
+                                                     { "channelId": Session.currentChannelId })
+            }
+        ]
     }
 
     ChatPanel {

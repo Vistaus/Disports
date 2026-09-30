@@ -28,6 +28,7 @@ public:
         TopicRole,
         IndentedRole,    // belongs to a category
         StatusRole,      // 1:1 direct messages: "online", "idle", "dnd" or "offline"
+        BlockedRole,     // 1:1 direct messages with a user the account blocked
     };
 
     using QAbstractListModel::QAbstractListModel;

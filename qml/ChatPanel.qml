@@ -11,6 +11,61 @@ Item {
     property bool showHeader: true
     property string replyToId: ""
     property string replyToAuthor: ""
+    // Editing one of the user's messages: its id, and the text it had.
+    property string editingId: ""
+    property string editingOriginal: ""
+
+    // Discord's limit for a message (without Nitro).
+    readonly property int maxMessageLength: 2000
+
+    signal infoRequested(string channelId)
+
+    function startEditing(messageId, text) {
+        closeEmoji()
+        replyToId = ""
+        editingId = messageId
+        editingOriginal = text
+        input.text = text
+        input.forceActiveFocus()
+        input.cursorPosition = input.length
+    }
+
+    function stopEditing() {
+        if (editingId === "")
+            return
+        editingId = ""
+        editingOriginal = ""
+        input.text = ""
+    }
+
+    function confirmDelete(messageId) {
+        PopupUtils.open(deleteDialog, chatPanel, { "messageId": messageId })
+    }
+
+    Component {
+        id: deleteDialog
+
+        Dialog {
+            id: dialog
+            property string messageId: ""
+            title: i18n.tr("Delete message")
+            text: i18n.tr("Are you sure you want to permanently delete this message?")
+
+            Button {
+                text: i18n.tr("Cancel")
+                onClicked: PopupUtils.close(dialog)
+            }
+
+            Button {
+                text: i18n.tr("Delete")
+                color: theme.palette.normal.negative
+                onClicked: {
+                    Session.deleteMessage(dialog.messageId)
+                    PopupUtils.close(dialog)
+                }
+            }
+        }
+    }
 
     // The emoji panel under the composer: "" (closed) or "compose".
     property string emojiMode: ""
@@ -73,6 +128,12 @@ Item {
         const text = input.text
         if (text.trim() === "")
             return
+        if (editingId !== "") {
+            // Unchanged: nothing to send.
+            if (text.trim() === editingOriginal.trim() || Session.editMessage(editingId, text))
+                stopEditing()
+            return
+        }
         Session.sendMessage(text, chatPanel.replyToId)
         messageList.followNewest = true
         messageList.scrollToNewest()
@@ -99,6 +160,8 @@ Item {
         function onCurrentChannelChanged() {
             chatPanel.closeEmoji()
             chatPanel.replyToId = ""
+            chatPanel.editingId = ""
+            chatPanel.editingOriginal = ""
             input.text = ""
             messageList.followNewest = true
             messageList.scrollToNewest()
@@ -117,6 +180,8 @@ Item {
         height: visible ? units.gu(5) : 0
         title: Session.currentChannelName
         subtitle: Session.currentChannelTopic
+        actionIcon: "info"
+        onActionTriggered: chatPanel.infoRequested(Session.currentChannelId)
     }
 
     ListView {
@@ -156,12 +221,15 @@ Item {
             width: messageList.width
             onReplyRequested: function(messageId, author) {
                 chatPanel.closeEmoji()
+                chatPanel.stopEditing()
                 chatPanel.replyToId = messageId
                 chatPanel.replyToAuthor = author
                 input.forceActiveFocus()
             }
             onReactRequested: function(messageId, caller) { chatPanel.openReactionPicker(messageId, caller) }
             onMediaOpened: function(media) { chatPanel.mediaOpened(media) }
+            onEditRequested: function(messageId, text) { chatPanel.startEditing(messageId, text) }
+            onDeleteRequested: function(messageId) { chatPanel.confirmDelete(messageId) }
         }
 
         // With a bottom-to-top view the footer sits above the oldest message.
@@ -219,13 +287,14 @@ Item {
     Rectangle {
         id: replyBar
         anchors { left: parent.left; right: parent.right; bottom: composer.top }
-        height: chatPanel.replyToId !== "" ? units.gu(4) : 0
+        height: chatPanel.replyToId !== "" || chatPanel.editingId !== "" ? units.gu(4) : 0
         visible: height > 0
         color: theme.palette.normal.base
 
         Label {
             anchors { left: parent.left; leftMargin: units.gu(2); verticalCenter: parent.verticalCenter }
-            text: i18n.tr("Replying to %1").arg(chatPanel.replyToAuthor)
+            text: chatPanel.editingId !== "" ? i18n.tr("Editing message")
+                                             : i18n.tr("Replying to %1").arg(chatPanel.replyToAuthor)
             font.pixelSize: units.gu(1.4)
         }
 
@@ -238,7 +307,10 @@ Item {
             MouseArea {
                 anchors.fill: parent
                 anchors.margins: -units.gu(1)
-                onClicked: chatPanel.replyToId = ""
+                onClicked: {
+                    chatPanel.replyToId = ""
+                    chatPanel.stopEditing()
+                }
             }
         }
     }
@@ -300,27 +372,45 @@ Item {
                 }
             }
 
-            TextArea {
-                id: input
+            // autoSize grows the TextArea's own height (its implicit height
+            // stays one line), which RowLayout would override: let it size
+            // itself here, and the row follow it.
+            Item {
                 Layout.fillWidth: true
-                autoSize: true
-                maximumLineCount: Session.preferences.composerMaxLines
-                placeholderText: Session.connected ? i18n.tr("Message %1").arg(Session.currentChannelName)
-                                                   : i18n.tr("Waiting for connection…")
-                readOnly: !Session.connected
-                wrapMode: TextEdit.Wrap
-                textFormat: TextEdit.PlainText
-                onTextChanged: if (text !== "") Session.notifyTyping()
-                onActiveFocusChanged: if (activeFocus && chatPanel.emojiMode === "compose") chatPanel.closeEmoji()
-                Keys.onReturnPressed: function(event) {
-                    // Enter sends on a hardware keyboard; the on-screen
-                    // keyboard's Enter inserts a line break.
-                    if (Qt.inputMethod.visible || (event.modifiers & Qt.ShiftModifier)) {
-                        event.accepted = false
-                        return
+                Layout.preferredHeight: input.height
+
+                TextArea {
+                    id: input
+                    width: parent.width
+                    autoSize: true
+                    maximumLineCount: Session.preferences.composerMaxLines
+                    placeholderText: Session.connected ? i18n.tr("Message %1").arg(Session.currentChannelName)
+                                                       : i18n.tr("Waiting for connection…")
+                    readOnly: !Session.connected
+                    wrapMode: TextEdit.Wrap
+                    textFormat: TextEdit.PlainText
+                    onTextChanged: {
+                        if (length > chatPanel.maxMessageLength) {
+                            // As the Qt 5 version: cut it, and say why.
+                            text = text.substring(0, chatPanel.maxMessageLength)
+                            cursorPosition = length
+                            Session.showNotice(i18n.tr("Messages cannot exceed %1 characters. Your text has been truncated to fit the limit.")
+                                               .arg(chatPanel.maxMessageLength))
+                        }
+                        if (text !== "" && chatPanel.editingId === "")
+                            Session.notifyTyping()
                     }
-                    chatPanel.send()
-                    event.accepted = true
+                    onActiveFocusChanged: if (activeFocus && chatPanel.emojiMode === "compose") chatPanel.closeEmoji()
+                    Keys.onReturnPressed: function(event) {
+                        // Enter sends on a hardware keyboard; the on-screen
+                        // keyboard's Enter inserts a line break.
+                        if (Qt.inputMethod.visible || (event.modifiers & Qt.ShiftModifier)) {
+                            event.accepted = false
+                            return
+                        }
+                        chatPanel.send()
+                        event.accepted = true
+                    }
                 }
             }
 

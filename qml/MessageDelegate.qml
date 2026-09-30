@@ -14,6 +14,7 @@ ListItem {
     required property string timestamp
     required property bool edited
     required property bool isPending
+    required property bool isOwn
     required property bool isSystem
     required property bool grouped
     required property bool hasReply
@@ -32,6 +33,8 @@ ListItem {
     required property bool blocked
 
     signal replyRequested(string messageId, string author)
+    signal editRequested(string messageId, string text)
+    signal deleteRequested(string messageId)
     // caller: the item the reaction picker points at
     signal reactRequested(string messageId, Item caller)
     signal mediaOpened(var media)
@@ -86,9 +89,28 @@ ListItem {
                 onTriggered: bubble.reactRequested(bubble.messageId, bubble)
             },
             Action {
+                iconName: "edit"
+                text: i18n.tr("Edit")
+                visible: bubble.isOwn && !bubble.isPending && !bubble.isSystem
+                onTriggered: bubble.editRequested(bubble.messageId, bubble.plainBody)
+            },
+            Action {
                 iconName: "edit-copy"
                 text: i18n.tr("Copy")
                 onTriggered: Clipboard.push(bubble.plainBody)
+            }
+        ]
+    }
+
+    // Swiping the other way: delete, Lomiri's leading (destructive) action.
+    // Own messages, or anyone's for moderators.
+    leadingActions: ListItemActions {
+        actions: [
+            Action {
+                iconName: "delete"
+                text: i18n.tr("Delete")
+                visible: !bubble.isPending && (bubble.isOwn || Session.canManageMessages)
+                onTriggered: bubble.deleteRequested(bubble.messageId)
             }
         ]
     }

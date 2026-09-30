@@ -52,6 +52,8 @@ class Session : public QObject
     Q_PROPERTY(QString currentChannelName READ currentChannelName NOTIFY currentChannelChanged)
     Q_PROPERTY(QString currentChannelTopic READ currentChannelTopic NOTIFY currentChannelChanged)
     Q_PROPERTY(bool canSendMessages READ canSendMessages NOTIFY currentChannelChanged)
+    // May delete other people's messages here (moderators in servers).
+    Q_PROPERTY(bool canManageMessages READ canManageMessages NOTIFY currentChannelChanged)
     Q_PROPERTY(QString typingText READ typingText NOTIFY typingTextChanged)
     Q_PROPERTY(bool loadingMessages READ loadingMessages NOTIFY loadingMessagesChanged)
 
@@ -102,6 +104,7 @@ public:
     QString currentChannelId() const;
     QString currentChannelName() const;
     QString currentChannelTopic() const;
+    bool canManageMessages() const;
     bool canSendMessages() const;
     QString typingText() const { return m_typingText; }
     bool loadingMessages() const { return m_loadingMessages; }
@@ -128,6 +131,14 @@ public:
     Q_INVOKABLE void selectGuild(const QString& guildId);
     Q_INVOKABLE void openChannel(const QString& channelId);
     Q_INVOKABLE void sendMessage(const QString& text, const QString& replyToId = QString());
+    // Own messages in the current channel. False when it cannot be sent.
+    Q_INVOKABLE bool editMessage(const QString& messageId, const QString& text);
+    Q_INVOKABLE void deleteMessage(const QString& messageId);
+    // For the info page: name, topic, kind ("dm", "group", "channel"),
+    // typeName, category, server, id, nsfw, iconUrl and, for DMs and groups,
+    // members [{id, name, username, avatarUrl, blocked}].
+    Q_INVOKABLE QVariantMap channelInfo(const QString& channelId) const;
+    Q_INVOKABLE void showNotice(const QString& text) { setNotice(text); }
     Q_INVOKABLE void loadOlderMessages();
     Q_INVOKABLE void markCurrentChannelRead();
     Q_INVOKABLE void notifyTyping();

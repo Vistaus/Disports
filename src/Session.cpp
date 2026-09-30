@@ -600,6 +600,85 @@ bool Session::canSendMessages() const
     return channel->IsDM() || channel->HasPermission(PERM_SEND_MESSAGES);
 }
 
+bool Session::canManageMessages() const
+{
+    Channel* channel = m_instance ? m_instance->GetCurrentChannel() : nullptr;
+    return channel && !channel->IsDM() && channel->HasPermission(PERM_MANAGE_MESSAGES);
+}
+
+QVariantMap Session::channelInfo(const QString& channelId) const
+{
+    QVariantMap info;
+    Channel* channel = m_instance ? m_instance->GetChannel(DiscordUrls::fromId(channelId)) : nullptr;
+    if (!channel)
+        return info;
+
+    auto str = [](const std::string& s) { return QString::fromStdString(s); };
+    QString kind = QStringLiteral("channel"), typeName;
+    switch (channel->m_channelType) {
+    case Channel::DM:         kind = QStringLiteral("dm"); typeName = tr("Direct message"); break;
+    case Channel::GROUPDM:    kind = QStringLiteral("group"); typeName = tr("Group"); break;
+    case Channel::VOICE:      typeName = tr("Voice channel"); break;
+    case Channel::STAGEVOICE: typeName = tr("Stage channel"); break;
+    case Channel::NEWS:       typeName = tr("Announcement channel"); break;
+    case Channel::FORUM:      typeName = tr("Forum"); break;
+    case Channel::MEDIA:      typeName = tr("Media channel"); break;
+    case Channel::NEWSTHREAD:
+    case Channel::PUBTHREAD:
+    case Channel::PRIVTHREAD: typeName = tr("Thread"); break;
+    default:                  typeName = tr("Text channel"); break;
+    }
+
+    info.insert(QStringLiteral("id"), channelId);
+    info.insert(QStringLiteral("kind"), kind);
+    info.insert(QStringLiteral("typeName"), typeName);
+    info.insert(QStringLiteral("name"), ChannelListModel::displayName(*channel));
+    info.insert(QStringLiteral("topic"), str(channel->m_topic));
+    info.insert(QStringLiteral("nsfw"), channel->m_bNSFW);
+    info.insert(QStringLiteral("iconUrl"), ChannelListModel::iconUrl(*channel));
+
+    if (Channel* category = channel->m_parentCateg ? m_instance->GetChannel(channel->m_parentCateg) : nullptr)
+        info.insert(QStringLiteral("category"), str(category->m_name));
+    if (Guild* guild = channel->m_parentGuild ? m_instance->GetGuild(channel->m_parentGuild) : nullptr)
+        info.insert(QStringLiteral("server"), str(guild->m_name));
+
+    if (channel->IsDM()) {
+        QVariantList members;
+        for (Snowflake id : channel->m_recipients) {
+            Profile* profile = GetProfileCache()->LookupProfile(id, "", "", "", false);
+            const QString username = profile ? str(profile->m_name) : QString();
+            members.append(QVariantMap{
+                {QStringLiteral("id"), DiscordUrls::id(id)},
+                {QStringLiteral("name"), profile && !profile->m_globalName.empty() ? str(profile->m_globalName) : username},
+                {QStringLiteral("username"), username},
+                {QStringLiteral("avatarUrl"), DiscordUrls::userAvatar(id, profile ? profile->m_avatarlnk : std::string())},
+                {QStringLiteral("blocked"), m_instance->IsUserBlocked(id)},
+            });
+        }
+        info.insert(QStringLiteral("members"), members);
+    }
+    return info;
+}
+
+bool Session::editMessage(const QString& messageId, const QString& text)
+{
+    const QString content = text.trimmed();
+    if (!m_instance || !m_connected || content.isEmpty())
+        return false;
+    if (!m_instance->EditMessageInCurrentChannel(content.toStdString(), DiscordUrls::fromId(messageId))) {
+        setNotice(tr("The message could not be edited."));
+        return false;
+    }
+    return true;
+}
+
+void Session::deleteMessage(const QString& messageId)
+{
+    if (!m_instance || !m_connected || !m_messages->channel())
+        return;
+    m_instance->RequestDeleteMessage(m_messages->channel(), DiscordUrls::fromId(messageId));
+}
+
 void Session::selectDirectMessages()
 {
     if (!m_instance)

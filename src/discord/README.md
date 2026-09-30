@@ -38,6 +38,7 @@ below are where the two differ structurally.
   as connected (and never resumes its session), and
   `MessageCache::LoadCachedMessages` shows cached messages until the first
   fetch of the channel replaces them (`HasMessages` ignores gap rows).
+- Channels carry their age restriction (`Channel::m_bNSFW`).
 - Messages carry stickers, call details, the command that produced them and
   role subscription data. Polls: vote events, `RequestPollVote`, and poll
   answers no longer all get id 0.

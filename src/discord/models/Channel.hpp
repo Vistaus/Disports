@@ -37,6 +37,7 @@ struct Channel
 	std::vector<Snowflake> m_recipients; // valid only for DM and group DM channels
 	std::string m_name = "";
 	std::string m_topic = "";
+	bool m_bNSFW = false; // age-restricted
 	std::string m_avatarLnk = ""; // valid only for DM channels
 	int m_pos = 0;
 	std::map<Snowflake, Overwrite> m_overwrites;

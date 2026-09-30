@@ -6,6 +6,10 @@ Rectangle {
 
     property string title: ""
     property string subtitle: ""
+    // An icon button on the right, like a PageHeader action ("" for none).
+    property string actionIcon: ""
+
+    signal actionTriggered()
 
     height: units.gu(5)
     clip: true
@@ -17,7 +21,7 @@ Rectangle {
             right: parent.right
             verticalCenter: parent.verticalCenter
             leftMargin: units.gu(2)
-            rightMargin: units.gu(2)
+            rightMargin: panelHeader.actionIcon !== "" ? units.gu(6) : units.gu(2)
         }
 
         Label {
@@ -38,6 +42,21 @@ Rectangle {
             color: theme.palette.normal.backgroundSecondaryText
             elide: Text.ElideRight
             maximumLineCount: 1
+        }
+    }
+
+    AbstractButton {
+        visible: panelHeader.actionIcon !== ""
+        anchors { right: parent.right; top: parent.top; bottom: parent.bottom }
+        width: units.gu(6)
+        onClicked: panelHeader.actionTriggered()
+
+        Icon {
+            anchors.centerIn: parent
+            width: units.gu(2.5)
+            height: width
+            name: panelHeader.actionIcon
+            color: theme.palette.normal.backgroundText
         }
     }
 

@@ -2110,6 +2110,7 @@ void DiscordInstance::ParseChannel(Channel& c, nlohmann::json& chan, int& num)
 	c.m_lastSentMsg = GetSnowflake(chan, "last_message_id");
 	c.m_parentCateg = GetSnowflake(chan, "parent_id");
 	c.m_topic = GetFieldSafe(chan, "topic");
+	c.m_bNSFW = GetFieldSafeBool(chan, "nsfw", false);
 
 	ParsePermissionOverwrites(c, chan);
 
