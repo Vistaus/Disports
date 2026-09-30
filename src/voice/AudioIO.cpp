@@ -2,7 +2,7 @@
 
 #include <pulse/pulseaudio.h>
 #include <rnnoise.h>
-#include <webrtc/modules/audio_processing/include/audio_processing.h>
+#include <modules/audio_processing/include/audio_processing.h>
 
 #include <algorithm>
 #include <cstring>
@@ -171,7 +171,7 @@ void AudioIO::stop()
     }
     pa_threaded_mainloop_unlock(m_loop);
     pa_threaded_mainloop_stop(m_loop);
-    m_apm.reset();
+    m_apm = nullptr;
     if (m_denoise) {
         rnnoise_destroy(m_denoise);
         m_denoise = nullptr;
@@ -362,25 +362,23 @@ constexpr int ChunkSamples = AudioIO::SampleRate / 100; // WebRTC and RNNoise wo
 
 void AudioIO::setUpProcessing(bool denoise)
 {
-    webrtc::Config config;
-    // Loudspeaker, room and microphone delays are not known well on phones:
-    // the canceller finds the delay itself, and keeps a longer filter.
-    config.Set<webrtc::ExtendedFilter>(new webrtc::ExtendedFilter(true));
-    config.Set<webrtc::DelayAgnostic>(new webrtc::DelayAgnostic(true));
-    m_apm.reset(webrtc::AudioProcessing::Create(config));
+    m_apm = webrtc::AudioProcessingBuilder().Create();
     if (!m_apm)
         return;
-    m_apm->high_pass_filter()->Enable(true);
-    m_apm->echo_cancellation()->enable_drift_compensation(false);
-    m_apm->echo_cancellation()->set_suppression_level(webrtc::EchoCancellation::kHighSuppression);
-    m_apm->echo_cancellation()->Enable(true);
-    m_apm->noise_suppression()->set_level(webrtc::NoiseSuppression::kHigh);
-    m_apm->noise_suppression()->Enable(!denoise);
-    m_apm->gain_control()->set_mode(webrtc::GainControl::kAdaptiveDigital);
-    m_apm->gain_control()->set_target_level_dbfs(3);
-    m_apm->gain_control()->set_compression_gain_db(9);
-    m_apm->gain_control()->enable_limiter(true);
-    m_apm->gain_control()->Enable(true);
+    webrtc::AudioProcessing::Config config;
+    config.high_pass_filter.enabled = true;
+    // AEC3 (not the mobile mode, the older, weaker AECM): it finds the delay
+    // between loudspeaker and microphone itself.
+    config.echo_canceller.enabled = true;
+    config.echo_canceller.mobile_mode = false;
+    config.noise_suppression.enabled = !denoise;
+    config.noise_suppression.level = webrtc::AudioProcessing::Config::NoiseSuppression::kHigh;
+    // AGC2: digital gain that only follows speech (a voice detector), so it
+    // doesn't raise what is left of the echo or the noise.
+    config.gain_controller2.enabled = true;
+    config.gain_controller2.adaptive_digital.enabled = true;
+    config.residual_echo_detector.enabled = false;
+    m_apm->ApplyConfig(config);
 }
 
 int AudioIO::streamDelayMs()

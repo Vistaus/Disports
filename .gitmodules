@@ -22,3 +22,12 @@
 [submodule "third_party/rnnoise/upstream"]
 	path = third_party/rnnoise/upstream
 	url = https://github.com/xiph/rnnoise.git
+	shallow = true
+[submodule "third_party/webrtc-audio-processing/upstream"]
+	path = third_party/webrtc-audio-processing/upstream
+	url = https://gitlab.freedesktop.org/pulseaudio/webrtc-audio-processing.git
+	shallow = true
+[submodule "third_party/abseil-cpp"]
+	path = third_party/abseil-cpp
+	url = https://github.com/abseil/abseil-cpp.git
+	shallow = true

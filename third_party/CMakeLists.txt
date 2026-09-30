@@ -11,6 +11,16 @@ target_compile_definitions(boost_regex INTERFACE BOOST_REGEX_STANDALONE)
 add_subdirectory(qrcodegen)
 add_subdirectory(rnnoise)
 
+# Abseil, only for webrtc-audio-processing below (Ubuntu's libabsl-dev can't
+# be installed next to Clickable's cross compilers).
+set(ABSL_PROPAGATE_CXX_STD ON CACHE BOOL "" FORCE)
+set(ABSL_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+set(ABSL_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+add_subdirectory(abseil-cpp EXCLUDE_FROM_ALL)
+find_package(Threads REQUIRED)
+add_subdirectory(webrtc-audio-processing)
+
 # Qt's WebP image plugin, built against the system libwebp. Discord's media
 # proxy serves previews as WebP, and Ubuntu Touch has no WebP plugin for
 # its Qt 6 yet. The app loads it from lib/<triplet>/plugins/imageformats.

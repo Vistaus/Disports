@@ -61,9 +61,9 @@ qt_add_executable(disports
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GST REQUIRED IMPORTED_TARGET gstreamer-1.0 gstreamer-app-1.0 gstreamer-video-1.0)
 # Voice calls: Opus, PulseAudio (allowed to confined apps by the audio and
-# microphone policy groups) and WebRTC's audio processing (on Ubuntu Touch
-# already, for PulseAudio), see src/voice/.
-pkg_check_modules(VOICE REQUIRED IMPORTED_TARGET opus libpulse webrtc-audio-processing)
+# microphone policy groups), with WebRTC's audio processing and RNNoise from
+# third_party/, see src/voice/.
+pkg_check_modules(VOICE REQUIRED IMPORTED_TARGET opus libpulse)
 
 qt_add_qml_module(disports
     URI Disports
@@ -133,6 +133,7 @@ target_link_libraries(disports PRIVATE
     discord
     qrcodegen
     rnnoise
+    webrtc_audio_processing
 )
 
 install(TARGETS disports RUNTIME DESTINATION bin)

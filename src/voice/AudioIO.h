@@ -9,6 +9,8 @@
 #include <memory>
 #include <vector>
 
+#include <api/scoped_refptr.h>
+
 struct pa_threaded_mainloop;
 struct pa_context;
 struct pa_stream;
@@ -24,9 +26,9 @@ struct DenoiseState;
 // phones, the output switches between loudspeaker and earpiece through the
 // sink's ports.
 //
-// The microphone goes through WebRTC's audio processing (the library
-// PulseAudio uses too, already on Ubuntu Touch): echo cancellation, with
-// what we play as its reference, noise suppression, gain control. With
+// The microphone goes through WebRTC's audio processing (third_party/):
+// echo cancellation (AEC3), with what we play as its reference, noise
+// suppression, gain control. With
 // denoising on, RNNoise's neural suppression replaces WebRTC's, after the
 // echo canceller.
 class AudioIO
@@ -82,7 +84,7 @@ private:
 
     // WebRTC audio processing, used on PulseAudio's thread only; it works
     // on 10 ms chunks. The playback mix (mono) waits in m_renderBuffer.
-    std::unique_ptr<webrtc::AudioProcessing> m_apm;
+    rtc::scoped_refptr<webrtc::AudioProcessing> m_apm;
     std::vector<float> m_renderBuffer;
     DenoiseState* m_denoise = nullptr;
     std::string m_error;

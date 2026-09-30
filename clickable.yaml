@@ -21,7 +21,6 @@ dependencies_target:
   - nlohmann-json3-dev
   - libopus-dev
   - libpulse-dev
-  - libwebrtc-audio-processing-dev
   # QML runtime modules, so `clickable desktop` can run the app in the
   # container: one for each module the QML imports. On a device they come
   # with the OS image.
