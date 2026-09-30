@@ -4,11 +4,14 @@ import Disports.Core
 
 // The reactions under a message. Tapping one adds or removes yours; the
 // last chip (Suru's "bot" icon) opens the reaction picker to add another.
+// Without the permission (or on system messages) they are only shown.
 Flow {
     id: bar
 
     property string messageId: ""
     property var reactions: []
+    property bool canAdd: true
+    property bool canToggle: true
 
     signal addRequested(Item caller)
 
@@ -24,6 +27,7 @@ Flow {
 
             width: content.width + units.gu(1.5)
             height: units.gu(3.2)
+            enabled: bar.canToggle
             onClicked: Session.toggleReaction(bar.messageId, modelData.emoji, modelData.me)
 
             LomiriShape {
@@ -70,7 +74,7 @@ Flow {
 
     AbstractButton {
         id: addChip
-        visible: bar.reactions.length > 0
+        visible: bar.reactions.length > 0 && bar.canAdd
         width: units.gu(4)
         height: units.gu(3.2)
         onClicked: bar.addRequested(addChip)

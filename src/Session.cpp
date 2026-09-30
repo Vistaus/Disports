@@ -4,6 +4,7 @@
 
 #include <QDateTime>
 #include <QDir>
+#include <QLocale>
 #include <QGuiApplication>
 #include <QStandardPaths>
 
@@ -81,6 +82,7 @@ Session::Session(QObject* parent)
     m_offline = new OfflineCache(this);
     m_call = new CallManager(this);
     connect(m_call, &CallManager::callFailed, this, &Session::setNotice);
+    connect(m_call, &CallManager::notice, this, &Session::setNotice);
 
     m_qrLogin = new RemoteAuth(m_http->networkAccessManager(), this);
     connect(m_qrLogin, &RemoteAuth::tokenReceived, this, &Session::loginWithToken);
@@ -89,6 +91,18 @@ Session::Session(QObject* parent)
 
     m_reconnectTimer.setSingleShot(true);
     connect(&m_reconnectTimer, &QTimer::timeout, this, &Session::startGateway);
+
+    m_timeoutTimer.setSingleShot(true);
+    connect(&m_timeoutTimer, &QTimer::timeout, this, &Session::updatePermissions);
+    m_slowmodeTimer.setInterval(1000);
+    connect(&m_slowmodeTimer, &QTimer::timeout, this, [this]() {
+        const qint64 now = QDateTime::currentMSecsSinceEpoch();
+        for (auto it = m_slowmodeUntil.begin(); it != m_slowmodeUntil.end();)
+            it = it.value() <= now ? m_slowmodeUntil.erase(it) : std::next(it);
+        if (m_slowmodeUntil.isEmpty())
+            m_slowmodeTimer.stop();
+        emit slowmodeChanged();
+    });
 
     m_reconnectCountdown.setInterval(1000);
     connect(&m_reconnectCountdown, &QTimer::timeout, this, [this]() {
@@ -310,6 +324,7 @@ void Session::destroyInstance()
     setLoadingMessages(false);
     emit currentGuildChanged();
     emit currentChannelChanged();
+    updatePermissions();
     emit profileChanged();
 }
 
@@ -606,8 +621,98 @@ bool Session::canSendMessages() const
 
 bool Session::canManageMessages() const
 {
+    Channel* channel = currentServerChannel();
+    return channel && channel->HasPermission(PERM_MANAGE_MESSAGES);
+}
+
+// Permissions
+
+Channel* Session::currentServerChannel() const
+{
     Channel* channel = m_instance ? m_instance->GetCurrentChannel() : nullptr;
-    return channel && !channel->IsDM() && channel->HasPermission(PERM_MANAGE_MESSAGES);
+    return channel && !channel->IsDM() ? channel : nullptr;
+}
+
+bool Session::hasPermission(uint64_t permission) const
+{
+    // Direct messages and groups: no permissions to check.
+    Channel* channel = m_instance ? m_instance->GetCurrentChannel() : nullptr;
+    if (!channel)
+        return false;
+    return channel->IsDM() || channel->HasPermission(permission);
+}
+
+bool Session::canAddReactions() const
+{
+    return hasPermission(PERM_ADD_REACTIONS) && hasPermission(PERM_READ_MESSAGE_HISTORY);
+}
+
+bool Session::canUseReactions() const
+{
+    // Timeouts take reactions away too (see Channel::ComputePermissionOverwrites).
+    return hasPermission(PERM_READ_MESSAGE_HISTORY) && timeoutUntilMs() == 0;
+}
+
+bool Session::canReadHistory() const
+{
+    return hasPermission(PERM_READ_MESSAGE_HISTORY);
+}
+
+qint64 Session::timeoutUntilMs() const
+{
+    Channel* channel = currentServerChannel();
+    if (!channel || !m_instance)
+        return 0;
+    Profile* me = m_instance->GetProfile();
+    if (!me)
+        return 0;
+    auto it = me->m_guildMembers.find(channel->m_parentGuild);
+    if (it == me->m_guildMembers.end() || it->second.m_timeoutUntil <= time(nullptr))
+        return 0;
+    // Owners and administrators cannot be timed out.
+    if (channel->HasPermission(PERM_ADMINISTRATOR))
+        return 0;
+    return qint64(it->second.m_timeoutUntil) * 1000;
+}
+
+QString Session::timeoutText() const
+{
+    const qint64 until = timeoutUntilMs();
+    if (!until)
+        return QString();
+    const QDateTime end = QDateTime::fromMSecsSinceEpoch(until);
+    const QString when = end.date() == QDate::currentDate()
+        ? QLocale().toString(end.time(), QLocale::ShortFormat)
+        : QLocale().toString(end, QLocale::ShortFormat);
+    return tr("You're timed out until %1").arg(when);
+}
+
+int Session::slowmodeSeconds() const
+{
+    Channel* channel = currentServerChannel();
+    // Moderators are not slowed down.
+    if (!channel || channel->HasPermission(PERM_MANAGE_MESSAGES) || channel->HasPermission(PERM_MANAGE_CHANNELS))
+        return 0;
+    return channel->m_slowmodeSeconds;
+}
+
+int Session::slowmodeRemaining() const
+{
+    const qint64 until = m_slowmodeUntil.value(m_messages->channel());
+    const qint64 left = until - QDateTime::currentMSecsSinceEpoch();
+    return left > 0 ? int((left + 999) / 1000) : 0;
+}
+
+void Session::updatePermissions()
+{
+    // A timeout ends by itself: look again then.
+    const qint64 until = timeoutUntilMs();
+    if (until)
+        m_timeoutTimer.start(int(qBound(qint64(1000), until - QDateTime::currentMSecsSinceEpoch() + 500, qint64(3600000))));
+    else
+        m_timeoutTimer.stop();
+    emit permissionsChanged();
+    emit slowmodeChanged();
 }
 
 QVariantMap Session::channelInfo(const QString& channelId) const
@@ -744,13 +849,16 @@ void Session::coreSelectedChannelChanged()
     m_typingUntil.clear();
     updateTypingText();
     emit currentChannelChanged();
+    updatePermissions();
     ensureMessagesLoaded();
 }
 
 void Session::coreChannelListChanged()
 {
+    // Also after role, member and overwrite changes.
     m_channels->reload();
     refreshUnread();
+    updatePermissions();
 }
 
 void Session::coreChannelAcknowledged(Snowflake channel)
@@ -774,6 +882,7 @@ void Session::coreGuildListChanged()
         m_messages->setOwnUserId(m_instance->GetUserID());
     emit currentGuildChanged();
     emit currentChannelChanged();
+    updatePermissions();
     emit profileChanged();
 }
 
@@ -815,6 +924,9 @@ void Session::ensureMessagesLoaded()
         return;
     if (!channel || m_fetchedChannels.contains(channel))
         return;
+    // Without "Read Message History" Discord sends nothing back.
+    if (!canReadHistory())
+        return;
 
     m_fetchedChannels.insert(channel);
     setLoadingMessages(true);
@@ -826,7 +938,7 @@ void Session::ensureMessagesLoaded()
 
 void Session::loadOlderMessages()
 {
-    if (!m_instance || m_loadingMessages)
+    if (!m_instance || m_loadingMessages || !canReadHistory())
         return;
     const MessagePtr gap = m_messages->olderGap();
     if (!gap)
@@ -870,11 +982,21 @@ void Session::sendMessage(const QString& text, const QString& replyToId)
     if (content.isEmpty())
         return;
 
+    if (const int wait = slowmodeRemaining()) {
+        setNotice(tr("Slowmode is on: you can send another message in %n second(s).", nullptr, wait));
+        return;
+    }
+
     Snowflake tempId = 0;
     const Snowflake replyTo = replyToId.isEmpty() ? 0 : DiscordUrls::fromId(replyToId);
     if (!m_instance->SendMessageToCurrentChannel(content.toStdString(), tempId, replyTo, true)) {
         setNotice(tr("You can't send messages in this channel."));
         return;
+    }
+    if (const int seconds = slowmodeSeconds()) {
+        m_slowmodeUntil.insert(m_instance->GetCurrentChannelID(), QDateTime::currentMSecsSinceEpoch() + seconds * 1000);
+        m_slowmodeTimer.start();
+        emit slowmodeChanged();
     }
 
     // Show the message right away; the real one replaces it by nonce.
@@ -929,14 +1051,14 @@ void Session::coreMessageDeleted(Snowflake)
 
 void Session::addReaction(const QString& messageId, const QString& emoji)
 {
-    if (!m_instance || !m_connected || emoji.isEmpty() || !m_messages->channel())
+    if (!m_instance || !m_connected || emoji.isEmpty() || !m_messages->channel() || !canUseReactions())
         return;
     m_instance->RequestAddReaction(m_messages->channel(), DiscordUrls::fromId(messageId), emoji.toStdString());
 }
 
 void Session::toggleReaction(const QString& messageId, const QString& emoji, bool reacted)
 {
-    if (!m_instance || !m_connected || emoji.isEmpty() || !m_messages->channel())
+    if (!m_instance || !m_connected || emoji.isEmpty() || !m_messages->channel() || !canUseReactions())
         return;
     const Snowflake message = DiscordUrls::fromId(messageId);
     if (reacted)

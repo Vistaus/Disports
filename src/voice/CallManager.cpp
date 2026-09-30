@@ -154,6 +154,7 @@ void CallManager::describe(Snowflake channelId)
     m_channel = channelId;
     m_guild = channel && !channel->IsDM() ? channel->m_parentGuild : 0;
     m_direct = !channel || channel->IsDM();
+    m_canSpeak = !channel || channel->IsDM() || channel->HasPermission(PERM_SPEAK);
     m_title = channel ? ChannelListModel::displayName(*channel) : QString();
     m_avatarUrl = channel ? ChannelListModel::iconUrl(*channel) : QString();
     if (channel && channel->m_channelType == Channel::DM && channel->m_recipients.size() == 1) {
@@ -197,6 +198,11 @@ void CallManager::join(Snowflake channel)
     m_speaking.clear();
     m_talkStartedMs = 0;
     emit participantsChanged();
+    if (!m_canSpeak && !m_muted) {
+        m_muted = true;
+        m_mutedByPermission = true;
+        emit mutedChanged();
+    }
     setState(Connecting);
     m_session->instance()->SendVoiceStateUpdate(m_guild, channel, m_muted, m_deafened);
 }
@@ -235,6 +241,11 @@ void CallManager::endCall(const QString& reason)
             instance->SendVoiceStateUpdate(0, 0, m_muted, m_deafened);
     }
     m_clock.stop();
+    if (m_mutedByPermission) {
+        m_mutedByPermission = false;
+        m_muted = false;
+        emit mutedChanged();
+    }
     m_participants.clear();
     m_speaking.clear();
     m_mutedUsers.clear();
@@ -254,6 +265,10 @@ void CallManager::gatewayLost()
 
 void CallManager::toggleMute()
 {
+    if (m_muted && !m_canSpeak) {
+        emit notice(tr("You don't have permission to speak in this channel."));
+        return;
+    }
     m_muted = !m_muted;
     if (!m_muted)
         m_deafened = false;

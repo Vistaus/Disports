@@ -576,6 +576,10 @@ private:
 	void HandleCHANNEL_CREATE(nlohmann::json& j);
 	void HandleCHANNEL_DELETE(nlohmann::json& j);
 	void HandleCHANNEL_UPDATE(nlohmann::json& j);
+	void HandleGUILD_MEMBER_UPDATE(nlohmann::json& j);
+	void HandleGUILD_ROLE_CREATE(nlohmann::json& j);
+	void HandleGUILD_ROLE_UPDATE(nlohmann::json& j);
+	void HandleGUILD_ROLE_DELETE(nlohmann::json& j);
 	void HandleGUILD_MEMBER_LIST_UPDATE(nlohmann::json& j);
 	void HandleGUILD_MEMBERS_CHUNK(nlohmann::json& j);
 	void HandleTYPING_START(nlohmann::json& j);

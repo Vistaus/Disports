@@ -176,11 +176,13 @@ void ChannelListModel::reload()
         std::vector<Channel*> categories;
         std::vector<Channel*> children;
         for (Channel& channel : guild->m_channels) {
-            if (isThread(channel) || !channel.HasPermission(PERM_VIEW_CHANNEL))
+            if (isThread(channel))
                 continue;
+            // A category is listed when a channel in it can be seen, even if
+            // the category itself cannot (as on Discord); see below.
             if (channel.IsCategory())
                 categories.push_back(&channel);
-            else
+            else if (channel.HasPermission(PERM_VIEW_CHANNEL))
                 children.push_back(&channel);
         }
         std::sort(categories.begin(), categories.end(), byPosition);

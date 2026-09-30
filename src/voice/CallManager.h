@@ -35,6 +35,8 @@ class CallManager : public QObject
     Q_PROPERTY(QString statusText READ statusText NOTIFY statusTextChanged)
     Q_PROPERTY(bool muted READ muted NOTIFY mutedChanged)
     Q_PROPERTY(bool deafened READ deafened NOTIFY mutedChanged)
+    // False in voice channels without the "Speak" permission: muted.
+    Q_PROPERTY(bool canSpeak READ canSpeak NOTIFY stateChanged)
     Q_PROPERTY(bool speaker READ speaker NOTIFY speakerChanged)
     Q_PROPERTY(bool speakerAvailable READ speakerAvailable NOTIFY speakerChanged)
     // Everyone in the call, us first:
@@ -62,6 +64,7 @@ public:
     QString statusText() const;
     bool muted() const { return m_muted; }
     bool deafened() const { return m_deafened; }
+    bool canSpeak() const { return m_canSpeak; }
     bool speaker() const { return m_speaker; }
     bool speakerAvailable() const { return m_speakerAvailable; }
     QVariantList participants() const;
@@ -91,6 +94,8 @@ signals:
     void participantsChanged();
     // Something went wrong; shown as a notice.
     void callFailed(const QString& reason);
+    // Something to tell (not an error), shown as a notice.
+    void notice(const QString& text);
     // The call screen should be on screen (started, ringing, or asked for).
     void showRequested();
 
@@ -116,6 +121,8 @@ private:
     QString m_avatarUrl;
     bool m_muted = false;
     bool m_deafened = false;
+    bool m_canSpeak = true;
+    bool m_mutedByPermission = false; // unmuted again after the call
     bool m_speaker = true; // calls start on the loudspeaker
     bool m_speakerAvailable = false;
 

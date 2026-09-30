@@ -1,4 +1,5 @@
 #pragma once
+#include <ctime>
 #include <string>
 #include <vector>
 #include "Snowflake.hpp"
@@ -21,5 +22,6 @@ struct GuildMember
 	std::string m_pronouns;
 	std::string m_bio;
 	time_t m_joinedAt = 0;
+	time_t m_timeoutUntil = 0; // communication_disabled_until
 	bool m_bIsLoadedFromChunk = false;
 };

@@ -66,7 +66,8 @@ LomiriShape {
 
                 width: column.width
                 height: layout.height + (bar.visible ? bar.height + units.gu(1) : 0) + divider.height
-                enabled: !card.poll.closed
+                // Timeouts take voting away too.
+                enabled: !card.poll.closed && Session.timeoutText === ""
                 onClicked: card.vote(modelData.id)
 
                 // Pressed feedback, like a ListItem
@@ -108,7 +109,7 @@ LomiriShape {
                         SlotsLayout.position: SlotsLayout.Trailing
                         visible: card.poll.multiselect
                         checked: answer.modelData.me
-                        enabled: !card.poll.closed
+                        enabled: !card.poll.closed && Session.timeoutText === ""
                         onTriggered: {
                             checked = Qt.binding(function() { return answer.modelData.me })
                             card.vote(answer.modelData.id)

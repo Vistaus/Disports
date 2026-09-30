@@ -134,6 +134,11 @@ Item {
                 stopEditing()
             return
         }
+        // Slowmode: keep the text until it may go.
+        if (Session.slowmodeRemaining > 0) {
+            Session.showNotice(i18n.tr("Slowmode is on: you can send another message in %1 s").arg(Session.slowmodeRemaining))
+            return
+        }
         Session.sendMessage(text, chatPanel.replyToId)
         messageList.followNewest = true
         messageList.scrollToNewest()
@@ -198,6 +203,7 @@ Item {
         clip: true
         model: Session.messages
         verticalLayoutDirection: ListView.BottomToTop
+
         cacheBuffer: units.gu(60)
 
         // Stay on the newest message until the user scrolls away, and go
@@ -240,9 +246,20 @@ Item {
             width: messageList.width
             height: units.gu(6)
 
+            // Without "Read Message History", only what arrives from now on.
+            Label {
+                anchors.centerIn: parent
+                width: parent.width - units.gu(4)
+                visible: Session.currentChannelId !== "" && !Session.canReadHistory
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
+                text: i18n.tr("You don't have permission to read earlier messages in this channel")
+                color: theme.palette.normal.backgroundSecondaryText
+            }
+
             Button {
                 anchors.centerIn: parent
-                visible: Session.messages.hasOlder
+                visible: Session.messages.hasOlder && Session.canReadHistory
                 text: Session.loadingMessages ? i18n.tr("Loading…") : i18n.tr("Load older messages")
                 enabled: !Session.loadingMessages
                 onClicked: Session.loadOlderMessages()
@@ -250,7 +267,7 @@ Item {
 
             Label {
                 anchors.centerIn: parent
-                visible: Session.messages.reachedStart && messageList.count > 0
+                visible: Session.messages.reachedStart && messageList.count > 0 && Session.canReadHistory
                 text: Session.inDirectMessages
                       ? i18n.tr("This is the beginning of your conversation with %1").arg(Session.currentChannelName)
                       : i18n.tr("This is the beginning of #%1").arg(Session.currentChannelName)
@@ -333,7 +350,8 @@ Item {
         Label {
             anchors.centerIn: parent
             visible: !Session.canSendMessages
-            text: i18n.tr("You can't send messages in this channel")
+            text: Session.timeoutText !== "" ? Session.timeoutText
+                                              : i18n.tr("You can't send messages in this channel")
             color: theme.palette.normal.backgroundSecondaryText
         }
 
@@ -387,8 +405,10 @@ Item {
                     width: parent.width
                     autoSize: true
                     maximumLineCount: Session.preferences.composerMaxLines
-                    placeholderText: Session.connected ? i18n.tr("Message %1").arg(Session.currentChannelName)
-                                                       : i18n.tr("Waiting for connection…")
+                    placeholderText: !Session.connected ? i18n.tr("Waiting for connection…")
+                                   : Session.slowmodeRemaining > 0 ? i18n.tr("Slowmode: wait %1 s").arg(Session.slowmodeRemaining)
+                                   : Session.slowmodeSeconds > 0 ? i18n.tr("Message %1 (slowmode: %2 s)").arg(Session.currentChannelName).arg(Session.slowmodeSeconds)
+                                   : i18n.tr("Message %1").arg(Session.currentChannelName)
                     readOnly: !Session.connected
                     wrapMode: TextEdit.Wrap
                     textFormat: TextEdit.PlainText
@@ -422,6 +442,7 @@ Item {
                 Layout.preferredHeight: units.gu(4.5)
                 Layout.alignment: Qt.AlignBottom
                 enabled: Session.connected && input.text.trim() !== ""
+                         && (chatPanel.editingId !== "" || Session.slowmodeRemaining === 0)
                 opacity: enabled ? 1 : 0.4
                 onClicked: chatPanel.send()
 

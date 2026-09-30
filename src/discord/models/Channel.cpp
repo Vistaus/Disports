@@ -29,7 +29,7 @@ uint64_t Channel::ComputePermissionOverwrites(Snowflake Member, uint64_t BasePer
 			continue; // not found!
 
 		Allow |= roleIter->second.m_allow;
-		Deny  &= ~roleIter->second.m_deny;
+		Deny  |= roleIter->second.m_deny;
 	}
 
 	BasePermissions &= ~Deny;
@@ -42,6 +42,10 @@ uint64_t Channel::ComputePermissionOverwrites(Snowflake Member, uint64_t BasePer
 		BasePermissions &= ~memberIter->second.m_deny;
 		BasePermissions |= memberIter->second.m_allow;
 	}
+
+	// A timed out member can only look (administrators returned above).
+	if (gm.m_timeoutUntil > time(NULL))
+		BasePermissions &= PERM_VIEW_CHANNEL | PERM_READ_MESSAGE_HISTORY;
 
 	return BasePermissions;
 }

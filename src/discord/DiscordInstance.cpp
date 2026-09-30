@@ -2154,6 +2154,7 @@ void DiscordInstance::ParseChannel(Channel& c, nlohmann::json& chan, int& num)
 	c.m_parentCateg = GetSnowflake(chan, "parent_id");
 	c.m_topic = GetFieldSafe(chan, "topic");
 	c.m_bNSFW = GetFieldSafeBool(chan, "nsfw", false);
+	c.m_slowmodeSeconds = GetFieldSafeInt(chan, "rate_limit_per_user");
 
 	ParsePermissionOverwrites(c, chan);
 
@@ -2537,6 +2538,10 @@ void DiscordInstance::InitDispatchFunctions()
 	DECL(GUILD_MEMBERS_CHUNK);
 	DECL(TYPING_START);
 	DECL(PRESENCE_UPDATE);
+	DECL(GUILD_MEMBER_UPDATE);
+	DECL(GUILD_ROLE_CREATE);
+	DECL(GUILD_ROLE_UPDATE);
+	DECL(GUILD_ROLE_DELETE);
 	DECL(PASSIVE_UPDATE_V1);
 
 	m_dmGuild.m_name = GetFrontend()->GetDirectMessagesText();
@@ -2721,6 +2726,8 @@ void DiscordInstance::HandleREADY(Json& j)
 				GuildMember& gm = pf->m_guildMembers[guildIds[idx]];
 				gm.m_nick = GetFieldSafe(memesub, "nick");
 				gm.m_avatar = GetFieldSafe(memesub, "avatar");
+				const std::string timeoutUntil = GetFieldSafe(memesub, "communication_disabled_until");
+				gm.m_timeoutUntil = timeoutUntil.empty() ? 0 : ParseTime(timeoutUntil);
 
 				// add all roles
 				gm.m_roles.clear();
@@ -3070,6 +3077,46 @@ void DiscordInstance::HandleCHANNEL_UPDATE(Json& j)
 	}
 }
 
+// Roles and our own membership decide what we may do in each channel.
+
+void DiscordInstance::HandleGUILD_MEMBER_UPDATE(Json& j)
+{
+	Json& data = j["d"];
+	Snowflake guildId = GetSnowflake(data, "guild_id");
+	if (!GetGuild(guildId))
+		return;
+	Snowflake userId = ParseGuildMember(guildId, data, 0);
+	if (userId == m_mySnowflake)
+		GetFrontend()->UpdateChannelList();
+}
+
+void DiscordInstance::HandleGUILD_ROLE_CREATE(Json& j)
+{
+	Json& data = j["d"];
+	Guild* pGuild = GetGuild(GetSnowflake(data, "guild_id"));
+	if (!pGuild || !data.contains("role"))
+		return;
+	GuildRole role;
+	role.Load(data["role"]);
+	pGuild->m_roles[role.m_id] = role;
+	GetFrontend()->UpdateChannelList();
+}
+
+void DiscordInstance::HandleGUILD_ROLE_UPDATE(Json& j)
+{
+	HandleGUILD_ROLE_CREATE(j);
+}
+
+void DiscordInstance::HandleGUILD_ROLE_DELETE(Json& j)
+{
+	Json& data = j["d"];
+	Guild* pGuild = GetGuild(GetSnowflake(data, "guild_id"));
+	if (!pGuild)
+		return;
+	pGuild->m_roles.erase(GetSnowflake(data, "role_id"));
+	GetFrontend()->UpdateChannelList();
+}
+
 void DiscordInstance::HandleCHANNEL_DELETE(Json& j)
 {
 	Json& data = j["d"];
@@ -3192,6 +3239,10 @@ Snowflake DiscordInstance::ParseGuildMember(Snowflake guild, nlohmann::json& mem
 	gm.m_nick = nameOverride;
 	gm.m_user = pf->m_snowflake;
 	gm.m_joinedAt = ParseTime(GetFieldSafe(memb, "joined_at"));
+	if (memb.contains("communication_disabled_until")) {
+		const std::string until = GetFieldSafe(memb, "communication_disabled_until");
+		gm.m_timeoutUntil = until.empty() ? 0 : ParseTime(until);
+	}
 	gm.m_bIsLoadedFromChunk = true;
 	gm.m_groupId = 0; // to be filled in by the group layout
 

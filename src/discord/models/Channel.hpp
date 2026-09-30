@@ -38,6 +38,7 @@ struct Channel
 	std::string m_name = "";
 	std::string m_topic = "";
 	bool m_bNSFW = false; // age-restricted
+	int m_slowmodeSeconds = 0; // rate_limit_per_user
 	std::string m_avatarLnk = ""; // valid only for DM channels
 	int m_pos = 0;
 	std::map<Snowflake, Overwrite> m_overwrites;

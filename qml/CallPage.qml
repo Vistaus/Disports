@@ -218,6 +218,8 @@ Page {
                 iconName: callPage.call.muted ? "microphone-mute" : "microphone"
                 caption: i18n.tr("Mute")
                 checked: callPage.call.muted
+                // No "Speak" permission: muted for good (tapping says why).
+                opacity: callPage.call.canSpeak ? 1 : 0.5
                 onClicked: callPage.call.toggleMute()
             }
 

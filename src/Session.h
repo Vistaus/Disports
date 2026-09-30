@@ -21,6 +21,7 @@
 #include "models/UnreadDmListModel.h"
 #include "voice/CallManager.h"
 
+class Channel;
 class DiscordInstance;
 class Message;
 class QtFrontend;
@@ -52,9 +53,23 @@ class Session : public QObject
     Q_PROPERTY(QString currentChannelId READ currentChannelId NOTIFY currentChannelChanged)
     Q_PROPERTY(QString currentChannelName READ currentChannelName NOTIFY currentChannelChanged)
     Q_PROPERTY(QString currentChannelTopic READ currentChannelTopic NOTIFY currentChannelChanged)
-    Q_PROPERTY(bool canSendMessages READ canSendMessages NOTIFY currentChannelChanged)
+    // What the account may do in the open channel (server permissions,
+    // role and member overwrites, timeouts); always yes in DMs and groups.
+    Q_PROPERTY(bool canSendMessages READ canSendMessages NOTIFY permissionsChanged)
     // May delete other people's messages here (moderators in servers).
-    Q_PROPERTY(bool canManageMessages READ canManageMessages NOTIFY currentChannelChanged)
+    Q_PROPERTY(bool canManageMessages READ canManageMessages NOTIFY permissionsChanged)
+    // Add a new reaction / join in on an existing one (Discord lets people
+    // without "Add Reactions" do the latter).
+    Q_PROPERTY(bool canAddReactions READ canAddReactions NOTIFY permissionsChanged)
+    Q_PROPERTY(bool canUseReactions READ canUseReactions NOTIFY permissionsChanged)
+    // Earlier messages (only new ones arrive without it).
+    Q_PROPERTY(bool canReadHistory READ canReadHistory NOTIFY permissionsChanged)
+    // "You're timed out until 14:30", or empty.
+    Q_PROPERTY(QString timeoutText READ timeoutText NOTIFY permissionsChanged)
+    // Slowmode: seconds between messages here (0: none or exempt), and how
+    // long until the next one may be sent.
+    Q_PROPERTY(int slowmodeSeconds READ slowmodeSeconds NOTIFY permissionsChanged)
+    Q_PROPERTY(int slowmodeRemaining READ slowmodeRemaining NOTIFY slowmodeChanged)
     Q_PROPERTY(QString typingText READ typingText NOTIFY typingTextChanged)
     Q_PROPERTY(bool loadingMessages READ loadingMessages NOTIFY loadingMessagesChanged)
 
@@ -108,6 +123,12 @@ public:
     QString currentChannelTopic() const;
     bool canManageMessages() const;
     bool canSendMessages() const;
+    bool canAddReactions() const;
+    bool canUseReactions() const;
+    bool canReadHistory() const;
+    QString timeoutText() const;
+    int slowmodeSeconds() const;
+    int slowmodeRemaining() const;
     QString typingText() const { return m_typingText; }
     bool loadingMessages() const { return m_loadingMessages; }
     bool chatVisible() const { return m_chatVisible; }
@@ -200,6 +221,8 @@ signals:
     void loadingMessagesChanged();
     void chatVisibleChanged();
     void autoSelectChannelChanged();
+    void permissionsChanged();
+    void slowmodeChanged();
 
 private:
     void setPhase(Phase phase);
@@ -220,6 +243,11 @@ private:
     void updateTypingText();
     void afterGuildSelected();
     void refreshUnread();
+    // The open channel in a server (null in DMs), and a permission in it.
+    Channel* currentServerChannel() const;
+    bool hasPermission(uint64_t permission) const;
+    qint64 timeoutUntilMs() const;
+    void updatePermissions();
 
     Phase m_phase = Starting;
     bool m_connected = false;
@@ -248,6 +276,9 @@ private:
     QTimer m_noticeTimer;
     QHash<Snowflake, qint64> m_typingUntil; // user -> ms since epoch
     QSet<Snowflake> m_fetchedChannels;      // history requested since the last READY
+    QHash<Snowflake, qint64> m_slowmodeUntil; // channel -> ms since epoch
+    QTimer m_slowmodeTimer;
+    QTimer m_timeoutTimer; // the end of a timeout
 
     GuildListModel* m_guilds = nullptr;
     ChannelListModel* m_channels = nullptr;

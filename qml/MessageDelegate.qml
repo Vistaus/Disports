@@ -79,19 +79,20 @@ ListItem {
             Action {
                 iconName: "mail-reply"
                 text: i18n.tr("Reply")
-                visible: !bubble.isPending && !bubble.isSystem
+                visible: !bubble.isPending && !bubble.isSystem && Session.canSendMessages
                 onTriggered: bubble.replyRequested(bubble.messageId, bubble.author)
             },
             Action {
                 iconName: "bot"
                 text: i18n.tr("React")
-                visible: !bubble.isPending && !bubble.isSystem
+                visible: !bubble.isPending && !bubble.isSystem && Session.canAddReactions
                 onTriggered: bubble.reactRequested(bubble.messageId, bubble)
             },
             Action {
                 iconName: "edit"
                 text: i18n.tr("Edit")
-                visible: bubble.isOwn && !bubble.isPending && !bubble.isSystem
+                // Editing happens in the message box, there when sending is.
+                visible: bubble.isOwn && !bubble.isPending && !bubble.isSystem && Session.canSendMessages
                 onTriggered: bubble.editRequested(bubble.messageId, bubble.plainBody)
             },
             Action {
@@ -103,13 +104,14 @@ ListItem {
     }
 
     // Swiping the other way: delete, Lomiri's leading (destructive) action.
-    // Own messages, or anyone's for moderators.
+    // Own messages, or anyone's for moderators; not system messages (calls,
+    // pins, joins).
     leadingActions: ListItemActions {
         actions: [
             Action {
                 iconName: "delete"
                 text: i18n.tr("Delete")
-                visible: !bubble.isPending && (bubble.isOwn || Session.canManageMessages)
+                visible: !bubble.isPending && !bubble.isSystem && (bubble.isOwn || Session.canManageMessages)
                 onTriggered: bubble.deleteRequested(bubble.messageId)
             }
         ]
@@ -350,6 +352,9 @@ ListItem {
             visible: bubble.reactions.length > 0
             messageId: bubble.messageId
             reactions: bubble.reactions
+            // System messages' reactions are shown, not joined in on.
+            canAdd: !bubble.isSystem && Session.canAddReactions
+            canToggle: !bubble.isSystem && Session.canUseReactions
             onAddRequested: function(caller) { bubble.reactRequested(bubble.messageId, caller) }
         }
     }
