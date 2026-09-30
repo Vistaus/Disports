@@ -168,24 +168,33 @@ Item {
                         color: theme.palette.normal.backgroundSecondaryText
                     }
 
-                    Icon {
+                    // Channels: one slot for their sign (# or an icon), so
+                    // every name starts at the same place.
+                    Item {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: units.gu(2)
+                        visible: !row.conversation
+                        width: units.gu(2.5)
                         height: width
-                        visible: row.kind === "voice" || row.kind === "announcement" || row.kind === "forum"
-                        name: row.kind === "voice" ? "audio-speakers-symbolic"
-                                                   : (row.kind === "announcement" ? "notification" : "message")
-                        // A voice channel with people in it
-                        color: row.inCall ? theme.palette.normal.positive : theme.palette.normal.backgroundSecondaryText
-                    }
 
-                    Label {
-                        anchors.verticalCenter: parent.verticalCenter
-                        visible: row.kind === "text"
-                        text: "#"
-                        font.pixelSize: units.gu(1.8)
-                        font.bold: true
-                        color: theme.palette.normal.backgroundSecondaryText
+                        Icon {
+                            anchors.centerIn: parent
+                            width: units.gu(2)
+                            height: width
+                            visible: row.kind === "voice" || row.kind === "announcement" || row.kind === "forum"
+                            name: row.kind === "voice" ? "audio-speakers-symbolic"
+                                                       : (row.kind === "announcement" ? "notification" : "message")
+                            // A voice channel with people in it
+                            color: row.inCall ? theme.palette.normal.positive : theme.palette.normal.backgroundSecondaryText
+                        }
+
+                        Label {
+                            anchors.centerIn: parent
+                            visible: row.kind === "text"
+                            text: "#"
+                            font.pixelSize: units.gu(1.8)
+                            font.bold: true
+                            color: theme.palette.normal.backgroundSecondaryText
+                        }
                     }
 
                     Label {

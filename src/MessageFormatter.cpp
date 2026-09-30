@@ -11,6 +11,7 @@
 
 #include "discord/DiscordInstance.hpp"
 #include "discord/models/Message.hpp"
+#include "discord/state/ProfileCache.hpp"
 
 #include "DiscordUrls.h"
 
@@ -18,10 +19,7 @@ namespace {
 
 QString userName(Snowflake user, Snowflake guild)
 {
-    DiscordInstance* instance = GetDiscordInstance();
-    if (!instance)
-        return QStringLiteral("user");
-    return QString::fromStdString(instance->LookupUserNameGlobally(user, guild));
+    return MessageFormatter::displayName(user, guild, QStringLiteral("user"));
 }
 
 QString channelName(Snowflake channel)
@@ -213,6 +211,23 @@ QString applyBlocks(const QString& text)
 
 namespace MessageFormatter {
 
+QString displayName(Snowflake user, Snowflake guild, const QString& fallback)
+{
+    Profile* profile = user ? GetProfileCache()->LookupProfile(user, "", "", "", false) : nullptr;
+    if (!profile)
+        return fallback;
+    if (guild) {
+        auto member = profile->m_guildMembers.find(guild);
+        if (member != profile->m_guildMembers.end() && !member->second.m_nick.empty())
+            return QString::fromStdString(member->second.m_nick);
+    }
+    if (!profile->m_globalName.empty())
+        return QString::fromStdString(profile->m_globalName);
+    if (!profile->GetUsername().empty())
+        return QString::fromStdString(profile->GetUsername());
+    return fallback;
+}
+
 namespace {
 
 // Whether a grapheme cluster is an emoji: pictographs, symbols that have an
@@ -368,7 +383,8 @@ const char* const JoinMessages[] = {
 SystemMessage systemMessage(const Message& m, Snowflake guild)
 {
     using namespace MessageType;
-    const QString author = bold(QString::fromStdString(m.m_author));
+    const QString author = bold(m.IsWebHook() ? QString::fromStdString(m.m_author)
+                                              : displayName(m.m_author_snowflake, guild, QString::fromStdString(m.m_author)));
     const QString content = QString::fromStdString(m.m_message);
     const QString mention = m.m_userMentions.empty()
                                 ? QStringLiteral("someone")

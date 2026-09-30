@@ -24,6 +24,7 @@
 #include "discord/state/ProfileCache.hpp"
 
 #include "DiscordUrls.h"
+#include "MessageFormatter.h"
 #include "RemoteAuth.h"
 #include "backend/CoreGlobals.h"
 #include "backend/QtFrontend.h"
@@ -289,6 +290,7 @@ void Session::createInstance(const std::string& token)
     m_instance = new DiscordInstance(token);
     CoreGlobals::setInstance(m_instance);
     m_fetchedChannels.clear();
+    m_requestedMembers.clear();
     m_firstReadyPending = true;
     m_cachedStart = false;
 }
@@ -338,6 +340,7 @@ void Session::destroyInstance()
     m_guilds->clear();
     m_unreadDms->clear();
     m_fetchedChannels.clear();
+    m_requestedMembers.clear();
     m_typingUntil.clear();
     updateTypingText();
     setConnected(false);
@@ -469,6 +472,7 @@ void Session::coreConnected()
     m_cachedStart = false;
     m_reconnectDelay = 1;
     m_fetchedChannels.clear();
+    m_requestedMembers.clear();
     setErrorText(QString());
     setConnected(true);
     setPhase(Ready);
@@ -987,6 +991,7 @@ void Session::coreMessagesRefreshed()
 {
     setLoadingMessages(false);
     m_messages->sync();
+    requestMissingMembers();
     markCurrentChannelRead();
 }
 
@@ -1144,7 +1149,7 @@ void Session::updateTypingText()
     if (m_instance) {
         const Snowflake guild = m_instance->GetCurrentGuildID();
         for (auto it = m_typingUntil.constBegin(); it != m_typingUntil.constEnd(); ++it)
-            names.append(QString::fromStdString(m_instance->LookupUserNameGlobally(it.key(), guild)));
+            names.append(MessageFormatter::displayName(it.key(), guild, QStringLiteral("Someone")));
     }
     names.sort();
 
@@ -1421,9 +1426,37 @@ void Session::searchMembers(const QString& query)
     m_instance->RequestGuildMembers(channel->m_parentGuild, query.trimmed().toStdString(), false, 10);
 }
 
+void Session::requestMissingMembers()
+{
+    const Snowflake guild = m_messages->guild();
+    if (!m_instance || !m_connected || !guild)
+        return;
+    std::set<Snowflake> wanted;
+    for (Snowflake user : m_messages->unknownMembers()) {
+        if (!m_requestedMembers.contains(qMakePair(guild, user))) {
+            m_requestedMembers.insert(qMakePair(guild, user));
+            wanted.insert(user);
+        }
+    }
+    // Discord takes up to 100 ids a request.
+    std::set<Snowflake> batch;
+    for (Snowflake user : wanted) {
+        batch.insert(user);
+        if (batch.size() == 100) {
+            m_instance->RequestGuildMembers(guild, batch);
+            batch.clear();
+        }
+    }
+    if (!batch.empty())
+        m_instance->RequestGuildMembers(guild, batch);
+}
+
 void Session::coreMembersChanged()
 {
-    // Also names of people in voice channels.
+    // Nicknames: messages, replies, mentions, who is typing; also the
+    // names of people in voice channels.
+    m_messages->refreshNames();
+    updateTypingText();
     m_channels->refreshAll();
     emit membersChanged();
 }

@@ -128,6 +128,11 @@ PY
     expect_colour zoom 500 450 240 210 30
 }
 
+scenario_nicknames() {  # history has no member objects: the app asks, and shows "Ally"
+    STEPS="sleep 6" "$HERE/run.sh" nicknames 8000 DISPORTS_OPEN_CHANNEL=1101 "${WIDE[@]}"
+    expect nicknames 'member search \[.*"200".*\] -> \[.alice.\]'
+}
+
 scenario_dmcall() {     # a DM with a call going on
     STEPS="sleep 5" "$HERE/run.sh" dmcall 7000 DISPORTS_OPEN_CHANNEL=2001 "${WIDE[@]}"
     expect dmcall 'REST history 2001'
@@ -138,7 +143,7 @@ scenario_permissions() { # read-only, no history, no files, slowmode
     done
 }
 
-ALL=(channels mentions upload zoom dmcall permissions)
+ALL=(channels mentions upload zoom nicknames dmcall permissions)
 SCENARIOS=("${@:-${ALL[@]}}")
 [ $# -eq 0 ] && SCENARIOS=("${ALL[@]}")
 

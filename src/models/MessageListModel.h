@@ -1,5 +1,7 @@
 #pragma once
 
+#include <set>
+
 #include <QAbstractListModel>
 #include <QHash>
 
@@ -61,6 +63,12 @@ public:
 
     void setChannel(Snowflake guild, Snowflake channel);
     Snowflake channel() const { return m_channel; }
+    Snowflake guild() const { return m_guild; }
+    // Names changed (server nicknames arrived).
+    void refreshNames();
+    // Authors (and people replied to or mentioned) without a server member
+    // profile here yet: their nicknames are not known.
+    std::set<Snowflake> unknownMembers() const;
 
     // Re-reads the cache and applies the difference to the rows.
     void sync();

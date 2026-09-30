@@ -290,6 +290,9 @@ private:
     qint64 timeoutUntilMs() const;
     void updatePermissions();
     void updateCurrentCall();
+    // Asks Discord for the server members behind the messages shown whose
+    // nicknames are not known (history carries no member objects).
+    void requestMissingMembers();
 
     Phase m_phase = Starting;
     bool m_connected = false;
@@ -318,6 +321,7 @@ private:
     QTimer m_noticeTimer;
     QHash<Snowflake, qint64> m_typingUntil; // user -> ms since epoch
     QSet<Snowflake> m_fetchedChannels;      // history requested since the last READY
+    QSet<QPair<Snowflake, Snowflake>> m_requestedMembers; // (server, user) asked for since READY
     QHash<Snowflake, qint64> m_slowmodeUntil; // channel -> ms since epoch
     QTimer m_slowmodeTimer;
     QTimer m_timeoutTimer; // the end of a timeout

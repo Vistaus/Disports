@@ -507,6 +507,19 @@ void Message::Load(Json& data, Snowflake guild)
 				}
 			}
 
+			// A forwarded sticker: shown as the message's own, like its attachments.
+			if (msgShot.contains("sticker_items") && msgShot["sticker_items"].is_array())
+			{
+				for (auto& st : msgShot["sticker_items"])
+				{
+					StickerItem sticker;
+					sticker.m_id = GetSnowflake(st, "id");
+					sticker.m_name = GetFieldSafe(st, "name");
+					sticker.m_format = GetFieldSafeInt(st, "format_type");
+					m_stickers.push_back(sticker);
+				}
+			}
+
 			// TODO: This sucks, but I'll allow it for now.
 			if (msgShot["attachments"].is_array())
 			{

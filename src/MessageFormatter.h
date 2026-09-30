@@ -12,6 +12,10 @@ class Message;
 namespace MessageFormatter {
 
 // emojiSize: pixel size of custom emoji images.
+// How a person is called in a server: their nickname there, else their
+// display name, else their username; `fallback` when they are not known.
+QString displayName(Snowflake user, Snowflake guild, const QString& fallback = QString());
+
 QString richText(const QString& content, Snowflake guild, int emojiSize = 20);
 
 // The number of emoji when the content is nothing but emoji (Unicode or

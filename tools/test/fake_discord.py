@@ -43,6 +43,9 @@ BOB = user("300", "bob", "Bob")
 CAROL = user("400", "carol", "Carol")
 DAVE = user("500", "dave", "Dave")
 MEMBERS = [ALICE, BOB, CAROL, DAVE]
+# Server nicknames (Test Server). History carries no member objects, as on
+# Discord: the app must ask for the members to know them.
+NICKS = {"200": "Ally", "300": "Bobby"}
 # More people, for a full voice channel.
 EXTRA = [user(str(600 + i), "guest%d" % i, "Guest %d" % i) for i in range(4)]
 
@@ -225,7 +228,7 @@ async def gateway(ws):
                 log("GATEWAY member search", json.dumps(query or ids), "->", [m["username"] for m in found])
                 await dispatch(ws, "GUILD_MEMBERS_CHUNK", {
                     "guild_id": d.get("guild_id") if isinstance(d.get("guild_id"), str) else GUILD,
-                    "members": [{"user": m, "roles": [ROLE_MODS] if m is BOB else [], "nick": None,
+                    "members": [{"user": m, "roles": [ROLE_MODS] if m is BOB else [], "nick": NICKS.get(m["id"]),
                                  "joined_at": iso(0)} for m in found],
                     "not_found": [], "chunk_index": 0, "chunk_count": 1})
             else:

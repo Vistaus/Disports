@@ -411,7 +411,10 @@ QVariant MessageListModel::data(const QModelIndex& index, int role) const
     switch (role) {
     case MessageIdRole: return DiscordUrls::id(m.m_snowflake);
     case AuthorIdRole:  return DiscordUrls::id(m.m_author_snowflake);
-    case AuthorRole:    return QString::fromStdString(m.m_author);
+    // Server nicknames, as they are now (see Session::requestMissingMembers).
+    case AuthorRole:
+        return m.IsWebHook() ? QString::fromStdString(m.m_author)
+                             : MessageFormatter::displayName(m.m_author_snowflake, m_guild, QString::fromStdString(m.m_author));
     case AvatarUrlRole: return DiscordUrls::userAvatar(m.m_author_snowflake, m.m_avatar);
     case BodyRole:
         if (systemRow)
@@ -429,9 +432,16 @@ QVariant MessageListModel::data(const QModelIndex& index, int role) const
         if (m.m_bIsForward && m.m_pReferencedMessage)
             return str(m.m_pReferencedMessage->m_message);
         return str(m.m_message);
-    case TimestampRole:
-        return m.m_type == MessageType::SENDING_MESSAGE ? QStringLiteral("Sending…")
-                                                        : QString::fromStdString(m.m_dateCompact);
+    case TimestampRole: {
+        if (m.m_type == MessageType::SENDING_MESSAGE)
+            return QStringLiteral("Sending…");
+        if (!m.m_dateTime)
+            return QString::fromStdString(m.m_dateCompact);
+        // As the Qt 5 version: the time today, the date and time before.
+        const QDateTime when = QDateTime::fromSecsSinceEpoch(qint64(m.m_dateTime));
+        return when.date() == QDate::currentDate() ? when.toString(QStringLiteral("HH:mm"))
+                                                   : when.toString(QStringLiteral("yyyy-MM-dd HH:mm"));
+    }
     case EditedRole:    return m.m_timeEdited != 0;
     case IsOwnRole:     return m_ownUser != 0 && m.m_author_snowflake == m_ownUser;
     case IsPendingRole: return m.m_type == MessageType::SENDING_MESSAGE;
@@ -445,7 +455,10 @@ QVariant MessageListModel::data(const QModelIndex& index, int role) const
     }
     case HasReplyRole:  return m.IsReply() && m.m_type != MessageType::THREAD_STARTER_MESSAGE && !systemRow;
     case ReplyAuthorRole:
-        return m.m_pReferencedMessage ? QString::fromStdString(m.m_pReferencedMessage->m_author) : QString();
+        return !m.m_pReferencedMessage ? QString()
+             : (m.m_pReferencedMessage->m_webhook_id != 0) ? QString::fromStdString(m.m_pReferencedMessage->m_author)
+             : MessageFormatter::displayName(m.m_pReferencedMessage->m_author_snowflake, m_guild,
+                                             QString::fromStdString(m.m_pReferencedMessage->m_author));
     case ReplyBodyRole:
         return m.m_pReferencedMessage
                    ? MessageFormatter::plainText(QString::fromStdString(m.m_pReferencedMessage->m_message), m_guild)
@@ -712,6 +725,40 @@ void MessageListModel::setJumboEmojiSize(int size)
         return;
     m_jumboEmojiSize = size;
     refreshBodies();
+}
+
+// Members' names changed (nicknames arrived): authors, replies, and the
+// mentions baked into the rich text.
+void MessageListModel::refreshNames()
+{
+    m_bodyCache.clear();
+    if (!m_rows.empty())
+        emit dataChanged(index(0), index(int(m_rows.size()) - 1), {AuthorRole, ReplyAuthorRole, BodyRole});
+}
+
+std::set<Snowflake> MessageListModel::unknownMembers() const
+{
+    std::set<Snowflake> unknown;
+    if (!m_guild)
+        return unknown;
+    auto consider = [this, &unknown](Snowflake user) {
+        if (!user)
+            return;
+        Profile* profile = GetProfileCache()->LookupProfile(user, "", "", "", false);
+        if (!profile || !profile->HasGuildMemberProfile(m_guild))
+            unknown.insert(user);
+    };
+    for (const Row& row : m_rows) {
+        const Message& m = *row.message;
+        if (m.IsWebHook() || m.m_type >= MessageType::GAP_UP)
+            continue;
+        consider(m.m_author_snowflake);
+        if (m.m_pReferencedMessage && !(m.m_pReferencedMessage->m_webhook_id != 0))
+            consider(m.m_pReferencedMessage->m_author_snowflake);
+        for (Snowflake user : m.m_userMentions)
+            consider(user);
+    }
+    return unknown;
 }
 
 // The emoji sizes are baked into the rich text; render it again.
