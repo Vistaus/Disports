@@ -49,7 +49,7 @@ public:
         StickersRole,      // list of {name, url, animated, lottie}
         PollRole,          // see pollOf(), or null
         JumboRole,         // only 1-3 emoji: show them large
-        AuthorChangedRole, // the message above is from someone else: separator
+        SeparatedRole,     // not grouped with the message above: separator
         BlockedRole,       // from a user the account blocked
     };
 
@@ -89,7 +89,7 @@ private:
     struct Row {
         MessagePtr message;
         bool grouped = false;
-        bool authorChanged = false; // another author than the message above
+        bool separated = false; // not grouped with the message above: a separator
     };
 
     std::vector<Row> readCache(Snowflake& olderGap, bool& reachedStart) const;

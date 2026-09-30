@@ -23,6 +23,8 @@ qt_add_executable(disports
     src/main.cpp
     src/DiscordUrls.cpp src/DiscordUrls.h
     src/MessageFormatter.cpp src/MessageFormatter.h
+    src/OfflineCache.cpp src/OfflineCache.h
+    src/ImageCache.cpp src/ImageCache.h
     src/Preferences.cpp src/Preferences.h
     src/RemoteAuth.cpp src/RemoteAuth.h
     src/Session.cpp src/Session.h

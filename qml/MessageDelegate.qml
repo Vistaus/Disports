@@ -28,7 +28,7 @@ ListItem {
     required property var stickers
     required property var poll
     required property bool jumbo
-    required property bool authorChanged
+    required property bool separated
     required property bool blocked
 
     signal replyRequested(string messageId, string author)
@@ -93,9 +93,10 @@ ListItem {
         ]
     }
 
-    // A line where another author's messages start.
+    // A line above every message that is not grouped with the one above it
+    // (another author, or the same one after a while).
     Rectangle {
-        visible: bubble.authorChanged
+        visible: bubble.separated
         anchors { top: parent.top; left: parent.left; right: parent.right; leftMargin: units.gu(2); rightMargin: units.gu(2) }
         height: units.dp(1)
         color: theme.palette.normal.base

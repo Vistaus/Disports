@@ -182,6 +182,7 @@ public:
 	// Things we get on ready
 	std::string m_gatewayResumeUrl = "";
 	std::string m_sessionId = ""; // for resume
+	bool m_bReplayingCache = false; // LoadCachedReady is running
 	std::string m_sessionType = "";
 
 	// Last time we sent a typing indicator
@@ -465,6 +466,12 @@ public:
 	// Add or remove the current user's reaction. The emoji is a Unicode
 	// emoji or "name:id" for a custom one (Reaction::GetApiString). The
 	// message updates when the gateway confirms the change.
+	// Loads a READY (and READY_SUPPLEMENTAL) payload saved by an offline
+	// cache, so guilds, channels, DMs and profiles are there before the
+	// gateway connects. Does not count as connecting, and never resumes the
+	// cached session.
+	void LoadCachedReady(nlohmann::json& ready, nlohmann::json* supplemental);
+
 	void RequestAddReaction(Snowflake chan, Snowflake msg, const std::string& emoji);
 	void RequestRemoveReaction(Snowflake chan, Snowflake msg, const std::string& emoji);
 	// Replaces the current user's votes on a poll; no answers removes them.

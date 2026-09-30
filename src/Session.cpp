@@ -3,6 +3,7 @@
 #include "media/GstVideoPlayer.h"
 
 #include <QDateTime>
+#include <QDir>
 #include <QGuiApplication>
 #include <QStandardPaths>
 
@@ -77,6 +78,7 @@ Session::Session(QObject* parent)
     m_unreadDms = new UnreadDmListModel(this);
     m_preferences = new Preferences(this);
     m_emoji = new EmojiPickerModel(this);
+    m_offline = new OfflineCache(this);
 
     m_qrLogin = new RemoteAuth(m_http->networkAccessManager(), this);
     connect(m_qrLogin, &RemoteAuth::tokenReceived, this, &Session::loginWithToken);
@@ -146,8 +148,33 @@ void Session::start()
         return;
     }
     createInstance(token);
-    setPhase(Connecting);
+    loadCachedState();
+    // With cached data there is something to show: the app opens as it does
+    // while reconnecting, with the connection banner instead of the splash.
+    setPhase(m_cachedStart ? Ready : Connecting);
     startGateway();
+}
+
+void Session::loadCachedState()
+{
+    nlohmann::json ready, supplemental;
+    if (!m_instance || !m_offline->loadReady(ready, supplemental))
+        return;
+    try {
+        m_instance->LoadCachedReady(ready, supplemental.is_object() ? &supplemental : nullptr);
+    } catch (const std::exception& e) {
+        // A cache this build cannot read: start without it.
+        qWarning("Offline cache: %s; clearing it", e.what());
+        m_offline->clear();
+        destroyInstance();
+        createInstance(GetLocalSettings()->GetToken());
+        return;
+    }
+    m_cachedStart = true;
+    m_messages->setOwnUserId(m_instance->GetUserID());
+    emit profileChanged();
+    // As after the first real READY: start on direct messages.
+    selectDirectMessages();
 }
 
 // Session state
@@ -229,6 +256,7 @@ void Session::createInstance(const std::string& token)
     CoreGlobals::setInstance(m_instance);
     m_fetchedChannels.clear();
     m_firstReadyPending = true;
+    m_cachedStart = false;
 }
 
 void Session::setChatVisible(bool visible)
@@ -294,6 +322,8 @@ void Session::loginWithToken(const QString& token)
     GetLocalSettings()->SetToken(trimmed);
     GetLocalSettings()->Save();
 
+    // Another account's cache must not show up.
+    m_offline->clear();
     createInstance(trimmed);
     setPhase(Connecting);
     m_reconnectDelay = 1;
@@ -303,6 +333,9 @@ void Session::loginWithToken(const QString& token)
 void Session::logout()
 {
     destroyInstance();
+    m_offline->clear();
+    // The cached pictures belong to this account's contacts and servers.
+    QDir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + QStringLiteral("/pictures")).removeRecursively();
     GetLocalSettings()->SetToken("");
     GetLocalSettings()->Save();
     setPhase(LoggedOut);
@@ -388,6 +421,12 @@ void Session::coreConnecting()
 void Session::coreConnected()
 {
     // READY. Everything fetched before may be stale now.
+    // Called before the core handles READY, which selects its first server:
+    // remember what the cached state had open, to go back to it.
+    const bool restore = m_firstReadyPending && m_cachedStart && m_instance;
+    const QString keepGuild = restore && m_instance->GetCurrentGuildID() ? DiscordUrls::id(m_instance->GetCurrentGuildID()) : QString();
+    const QString keepChannel = restore && m_instance->GetCurrentChannelID() ? DiscordUrls::id(m_instance->GetCurrentChannelID()) : QString();
+    m_cachedStart = false;
     m_reconnectDelay = 1;
     m_fetchedChannels.clear();
     setErrorText(QString());
@@ -396,8 +435,17 @@ void Session::coreConnected()
     m_messages->setOwnUserId(m_instance ? m_instance->GetUserID() : 0);
 
     // Runs after the core has finished handling READY.
-    QTimer::singleShot(0, this, [this]() {
-        if (m_firstReadyPending) {
+    QTimer::singleShot(0, this, [this, restore, keepGuild, keepChannel]() {
+        if (m_firstReadyPending && restore && m_openAfterReady.isEmpty()) {
+            // Keep showing what was open with the cached state.
+            m_firstReadyPending = false;
+            if (!keepChannel.isEmpty())
+                openChannel(keepChannel);
+            else if (!keepGuild.isEmpty())
+                selectGuild(keepGuild);
+            else
+                selectDirectMessages();
+        } else if (m_firstReadyPending) {
             // The core opens the first server, as on a desktop; like the
             // Qt 5 app, start on direct messages instead, unless a channel
             // was asked for in the meantime (e.g. from a notification).
@@ -580,7 +628,7 @@ void Session::openChannel(const QString& channelId)
 {
     if (!m_instance)
         return;
-    if (m_firstReadyPending) {
+    if (m_firstReadyPending && !m_cachedStart) {
         // The core is still setting up the session; it would override this.
         m_openAfterReady = channelId;
         return;
@@ -665,9 +713,23 @@ void Session::coreUserChanged(Snowflake)
 
 void Session::ensureMessagesLoaded()
 {
-    if (!m_instance || !m_connected || !m_chatVisible)
+    if (!m_instance)
         return;
     const Snowflake channel = m_instance->GetCurrentChannelID();
+
+    // Nothing loaded yet: show the offline cache's messages meanwhile (the
+    // first fetch replaces them).
+    if (channel && !GetMessageCache()->HasMessages(channel)) {
+        nlohmann::json cached = m_offline->messages(channel);
+        if (!cached.empty()) {
+            Channel* info = m_instance->GetChannel(channel);
+            GetMessageCache()->LoadCachedMessages(channel, cached, info ? info->GetTypeSymbol() + info->m_name : std::string());
+            m_messages->sync();
+        }
+    }
+
+    if (!m_connected || !m_chatVisible)
+        return;
     if (!channel || m_fetchedChannels.contains(channel))
         return;
 

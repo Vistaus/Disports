@@ -18,6 +18,9 @@ public:
     void OnSessionClosed(int errorCode) override;
     void OnConnecting() override;
     void OnConnected() override;
+    void OnGatewayDispatch(const std::string& type, const nlohmann::json& message) override;
+    void OnMessagesFetched(Snowflake channel, ScrollDir::eScrollDir sd, Snowflake anchor,
+                           const nlohmann::json& messages) override;
     void OnAddMessage(Snowflake channelID, const Message& msg) override;
     void OnUpdateMessage(Snowflake channelID, const Message& msg) override;
     void OnDeleteMessage(Snowflake messageInCurrentChannel) override;

@@ -8,17 +8,13 @@ Page {
 
     header: PageHeader {
         title: Session.currentChannelName
-        subtitle: Session.currentChannelTopic
-    }
-
-    ConnectionBanner {
-        id: banner
-        anchors { top: chatPage.header.bottom; left: parent.left; right: parent.right }
+        // Channel topics can have several lines; the header has room for one.
+        subtitle: Session.currentChannelTopic.replace(/\s*\n+\s*/g, "  ")
     }
 
     ChatPanel {
         anchors {
-            top: banner.bottom
+            top: chatPage.header.bottom
             left: parent.left
             right: parent.right
             bottom: parent.bottom

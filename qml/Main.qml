@@ -112,9 +112,28 @@ MainView {
         function onPhaseChanged() { root.showPhase() }
     }
 
+    // Offline / reconnecting: above everything, the page title included.
+    ConnectionBanner {
+        id: connectionBanner
+        anchors { top: parent.top; left: parent.left; right: parent.right }
+        z: 2
+    }
+
+    // Something in progress (connecting, loading a conversation): Lomiri's
+    // indeterminate progress strip at the top, like the Qt 5 version's.
+    ProgressBar {
+        anchors { top: connectionBanner.bottom; left: parent.left; right: parent.right }
+        z: 2
+        indeterminate: true
+        visible: Session.networkOnline
+                 && ((connectionBanner.reconnecting && Session.reconnectSeconds === 0)
+                     || Session.loadingMessages)
+    }
+
     PageStack {
         id: stack
         anchors.fill: parent
+        anchors.topMargin: connectionBanner.height
         anchors.bottomMargin: root.keyboardHeight
 
         Behavior on anchors.bottomMargin {

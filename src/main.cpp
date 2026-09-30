@@ -8,6 +8,7 @@
 
 #include <memory>
 
+#include "ImageCache.h"
 #include "Session.h"
 #include "media/GstVideoPlayer.h"
 
@@ -104,6 +105,9 @@ int main(int argc, char* argv[])
                                         QStringLiteral("Use the Session singleton"));
 
     QQuickView view;
+    // Profile pictures and server icons are kept on disk; see ImageCache.h.
+    ImageCacheFactory imageCache;
+    view.engine()->setNetworkAccessManagerFactory(&imageCache);
     view.rootContext()->setContextProperty(QStringLiteral("testVideoUrl"),
                                            qEnvironmentVariable("DISPORTS_PLAY_VIDEO"));
     view.setResizeMode(QQuickView::SizeRootObjectToView);

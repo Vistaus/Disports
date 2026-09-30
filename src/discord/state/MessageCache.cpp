@@ -21,8 +21,31 @@ void MessageCache::GetLoadedMessages(Snowflake channel, Snowflake guild, std::li
 		out.push_back(msg.second);
 }
 
+bool MessageCache::HasMessages(Snowflake channel) const
+{
+	auto it = m_mapMessages.find(channel);
+	if (it == m_mapMessages.end())
+		return false;
+	for (const auto& entry : it->second.m_messages)
+		if (entry.second && entry.second->m_type < MessageType::GAP_UP)
+			return true;
+	return false;
+}
+
+void MessageCache::LoadCachedMessages(Snowflake channel, nlohmann::json& j, const std::string& channelName)
+{
+	m_mapMessages.erase(channel);
+	m_mapMessages[channel].ProcessRequest(ScrollDir::BEFORE, 0, j, channelName);
+	m_cachedChannels.insert(channel);
+}
+
 void MessageCache::ProcessRequest(Snowflake channel, ScrollDir::eScrollDir sd, Snowflake anchor, nlohmann::json& j, const std::string& channelName)
 {
+	// The newest messages of a channel shown from the offline cache: start
+	// over with the real ones (the cached ones may be edited or deleted).
+	if (sd == ScrollDir::BEFORE && anchor == 0 && m_cachedChannels.erase(channel))
+		m_mapMessages.erase(channel);
+
 	MessageChunkList& lst = m_mapMessages[channel];
 	lst.ProcessRequest(sd, anchor, j, channelName);
 }
@@ -50,6 +73,7 @@ int MessageCache::GetMentionCountSince(Snowflake channel, Snowflake message, Sno
 void MessageCache::ClearAllChannels()
 {
 	m_mapMessages.clear();
+	m_cachedChannels.clear();
 }
 
 bool MessageCache::IsMessageLoaded(Snowflake channel, Snowflake message)

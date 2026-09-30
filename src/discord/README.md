@@ -32,6 +32,12 @@ below are where the two differ structurally.
 - Sending :name: of an animated server emoji keeps the "a" prefix (<a:name:id>).
 - `MessageType` lists every Discord type up to 68; the cache's own row types
   (gaps, pending messages) moved to 10000+, as they collided with 60-69.
+- Offline cache support: `Frontend::OnGatewayDispatch` / `OnMessagesFetched`
+  hand raw gateway dispatches and fetched history to the front-end,
+  `DiscordInstance::LoadCachedReady` replays a saved READY without counting
+  as connected (and never resumes its session), and
+  `MessageCache::LoadCachedMessages` shows cached messages until the first
+  fetch of the channel replaces them (`HasMessages` ignores gap rows).
 - Messages carry stickers, call details, the command that produced them and
   role subscription data. Polls: vote events, `RequestPollVote`, and poll
   answers no longer all get id 0.

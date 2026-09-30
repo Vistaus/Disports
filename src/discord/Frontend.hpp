@@ -47,6 +47,12 @@ public:
 	virtual void OnGatewayConnectFailure() = 0;
 	virtual void OnProtobufError(Protobuf::ErrorCode code) = 0;
 
+	// Raw data, for front-ends that keep an offline cache. A gateway
+	// dispatch (the whole message, "t" and "d"), before the core handles it.
+	virtual void OnGatewayDispatch(const std::string& type, const nlohmann::json& message) {}
+	// Messages fetched over HTTP (newest first), before the core stores them.
+	virtual void OnMessagesFetched(Snowflake channel, ScrollDir::eScrollDir sd, Snowflake anchor, const nlohmann::json& messages) {}
+
 	// Update requests
 	virtual void UpdateSelectedGuild() = 0;
 	virtual void UpdateSelectedChannel() = 0;

@@ -438,7 +438,7 @@ QVariant MessageListModel::data(const QModelIndex& index, int role) const
     case IsSystemRole:  return systemRow;
     case SystemIconRole: return system.icon;
     case GroupedRole:   return row.grouped;
-    case AuthorChangedRole: return row.authorChanged;
+    case SeparatedRole: return row.separated;
     case BlockedRole: {
         DiscordInstance* instance = GetDiscordInstance();
         return instance && instance->IsUserBlocked(m.m_author_snowflake);
@@ -498,7 +498,7 @@ QHash<int, QByteArray> MessageListModel::roleNames() const
         {StickersRole, "stickers"},
         {PollRole, "poll"},
         {JumboRole, "jumbo"},
-        {AuthorChangedRole, "authorChanged"},
+        {SeparatedRole, "separated"},
         {BlockedRole, "blocked"},
     };
 }
@@ -560,20 +560,21 @@ void MessageListModel::computeGrouping(std::vector<Row>& rows)
 {
     for (size_t i = 0; i < rows.size(); ++i) {
         rows[i].grouped = false;
-        rows[i].authorChanged = false;
+        // A separator wherever a message is not grouped with the one above
+        // it: another author, or the same one after a while (or a reply).
+        rows[i].separated = i + 1 < rows.size();
         if (i + 1 >= rows.size())
             continue;
         const Message& current = *rows[i].message;
         const Message& older = *rows[i + 1].message;
-        if (current.m_author_snowflake != older.m_author_snowflake) {
-            rows[i].authorChanged = true;
+        if (current.m_author_snowflake != older.m_author_snowflake)
             continue;
-        }
         if (current.IsReply() || isSystem(current) || isSystem(older))
             continue;
         if (current.m_dateTime - older.m_dateTime > GroupWindowSeconds)
             continue;
         rows[i].grouped = true;
+        rows[i].separated = false;
     }
 }
 
@@ -635,7 +636,7 @@ void MessageListModel::sync()
             endRemoveRows();
         }
         if (!m_rows.empty())
-            emit dataChanged(index(0), index(int(m_rows.size()) - 1), {GroupedRole, AuthorChangedRole});
+            emit dataChanged(index(0), index(int(m_rows.size()) - 1), {GroupedRole, SeparatedRole});
         emit countChanged();
     } else if (!aligned) {
         beginResetModel();

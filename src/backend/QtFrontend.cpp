@@ -26,6 +26,17 @@ void QtFrontend::OnSessionClosed(int errorCode) { m_session->coreSessionClosed(e
 void QtFrontend::OnConnecting() { m_session->coreConnecting(); }
 void QtFrontend::OnConnected() { m_session->coreConnected(); }
 
+void QtFrontend::OnGatewayDispatch(const std::string& type, const nlohmann::json& message)
+{
+    m_session->offlineCache()->gatewayDispatch(type, message);
+}
+
+void QtFrontend::OnMessagesFetched(Snowflake channel, ScrollDir::eScrollDir sd, Snowflake anchor,
+                                   const nlohmann::json& messages)
+{
+    m_session->offlineCache()->messagesFetched(channel, sd, anchor, messages);
+}
+
 void QtFrontend::OnAddMessage(Snowflake channelID, const Message& msg)
 {
     // As on Windows, the frontend is the one that stores new messages.

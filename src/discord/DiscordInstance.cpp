@@ -797,6 +797,8 @@ void DiscordInstance::HandleRequest(NetRequest* pRequest)
 				}
 				DbgPrintF("Processing request %d (%c)", sd, pRequest->additional_data[0]);
 				uint64_t ts = GetTimeUs();
+				const Snowflake anchor = (Snowflake)GetIntFromString(pRequest->additional_data.substr(1));
+				GetFrontend()->OnMessagesFetched(pRequest->key, sd, anchor, j);
 				GetMessageCache()->ProcessRequest(
 					pRequest->key,
 					sd,
@@ -1290,6 +1292,8 @@ void DiscordInstance::HandleGatewayMessage(const std::string& payload)
 
 			std::string dispatchCode = j["t"];
 			m_heartbeatSequenceId = j["s"];
+
+			GetFrontend()->OnGatewayDispatch(dispatchCode, j);
 
 			DispatchFunction df = g_dispatchFunctions[dispatchCode];
 			if (!df)
@@ -2573,9 +2577,25 @@ void DiscordInstance::HandleREADY_SUPPLEMENTAL(Json& j)
 	}
 }
 
+void DiscordInstance::LoadCachedReady(Json& ready, Json* supplemental)
+{
+	m_bReplayingCache = true;
+	HandleREADY(ready);
+	if (supplemental)
+		HandleREADY_SUPPLEMENTAL(*supplemental);
+	m_bReplayingCache = false;
+
+	// The cached session is long gone: never try to resume it.
+	m_sessionId.clear();
+	m_gatewayResumeUrl.clear();
+	m_heartbeatSequenceId = -1;
+}
+
 void DiscordInstance::HandleREADY(Json& j)
 {
-	GetFrontend()->OnConnected();
+	// A cached READY is not a connection.
+	if (!m_bReplayingCache)
+		GetFrontend()->OnConnected();
 
 #ifdef _DEBUG
 	std::string str = j.dump();

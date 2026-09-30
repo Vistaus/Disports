@@ -1,5 +1,6 @@
 #pragma once
 
+#include <set>
 #include <map>
 #include <list>
 #include <nlohmann/json.hpp>
@@ -43,8 +44,16 @@ public:
 
 	MessagePtr GetLoadedMessage(Snowflake channel, Snowflake message);
 
+	// Whether any real messages of the channel are loaded (not just the
+	// cache's own rows, like the gap a channel starts with).
+	bool HasMessages(Snowflake channel) const;
+	// Messages from an offline cache: shown until the channel's newest
+	// messages are fetched, which then replace them.
+	void LoadCachedMessages(Snowflake channel, nlohmann::json& j, const std::string& channelName);
+
 private:
 	std::map <Snowflake, MessageChunkList> m_mapMessages;
+	std::set <Snowflake> m_cachedChannels;
 };
 
 MessageCache* GetMessageCache();

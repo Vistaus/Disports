@@ -27,14 +27,9 @@ Page {
         ]
     }
 
-    ConnectionBanner {
-        id: banner
-        anchors { top: mainPage.header.bottom; left: parent.left; right: parent.right }
-    }
-
     Row {
         anchors {
-            top: banner.bottom
+            top: mainPage.header.bottom
             left: parent.left
             right: parent.right
             bottom: parent.bottom

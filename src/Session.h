@@ -15,6 +15,7 @@
 #include "RemoteAuth.h"
 #include "models/ChannelListModel.h"
 #include "models/EmojiPickerModel.h"
+#include "OfflineCache.h"
 #include "models/GuildListModel.h"
 #include "models/MessageListModel.h"
 #include "models/UnreadDmListModel.h"
@@ -117,6 +118,8 @@ public:
     EmojiPickerModel* emoji() const { return m_emoji; }
     RemoteAuth* qrLogin() const { return m_qrLogin; }
 
+    OfflineCache* offlineCache() const { return m_offline; }
+
     Q_INVOKABLE void loginWithToken(const QString& token);
     Q_INVOKABLE void logout();
     Q_INVOKABLE void reconnect();
@@ -196,6 +199,8 @@ private:
     void scheduleReconnect();
     void dropGateway();
     void heartbeat();
+    // Shows the offline cache while connecting; see OfflineCache.
+    void loadCachedState();
     void ensureMessagesLoaded();
     void updateTypingText();
     void afterGuildSelected();
@@ -235,5 +240,8 @@ private:
     UnreadDmListModel* m_unreadDms = nullptr;
     Preferences* m_preferences = nullptr;
     EmojiPickerModel* m_emoji = nullptr;
+    OfflineCache* m_offline = nullptr;
+    // Showing the offline cache's READY until the real one arrives.
+    bool m_cachedStart = false;
     RemoteAuth* m_qrLogin = nullptr;
 };

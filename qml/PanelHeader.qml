@@ -8,6 +8,7 @@ Rectangle {
     property string subtitle: ""
 
     height: units.gu(5)
+    clip: true
     color: theme.palette.normal.background
 
     Column {
@@ -30,7 +31,9 @@ Rectangle {
         Label {
             width: parent.width
             visible: panelHeader.subtitle !== ""
-            text: panelHeader.subtitle
+            // Channel topics can have several lines; one line fits here.
+            text: panelHeader.subtitle.replace(/\s*\n+\s*/g, "  ")
+            wrapMode: Text.NoWrap
             font.pixelSize: units.gu(1.3)
             color: theme.palette.normal.backgroundSecondaryText
             elide: Text.ElideRight
