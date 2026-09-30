@@ -1,6 +1,7 @@
 import QtQuick
 import Lomiri.Components
 import Disports.Core
+import "MediaSize.js" as MediaSize
 
 // One attachment or media embed in the chat. A still picture by default:
 // GIFs show a badge and videos a play button, and nothing plays until
@@ -21,13 +22,13 @@ Item {
     readonly property bool isGif: media.kind === "gif"
     readonly property bool animate: playing && isGif && Session.preferences.autoplayGifs
     readonly property real maxHeight: units.gu(30)
-    readonly property real aspect: media.width > 0 && media.height > 0 ? media.height / media.width : 0.75
+    readonly property real fileHeight: units.gu(5)
+    readonly property real aspect: MediaSize.aspect(media)
 
     // Sized from the dimensions Discord reports, so the row never changes
-    // height while the picture loads.
-    width: isFile ? maxWidth
-                  : Math.min(maxWidth, media.width > 0 ? media.width : maxWidth, maxHeight / aspect)
-    height: isFile ? units.gu(5) : width * aspect
+    // height while the picture loads (MediaSize.js).
+    width: MediaSize.width(media, maxWidth, maxHeight, fileHeight)
+    height: MediaSize.height(media, maxWidth, maxHeight, fileHeight)
 
     Image {
         id: still

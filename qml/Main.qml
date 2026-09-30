@@ -110,6 +110,12 @@ MainView {
     Connections {
         target: Session
         function onPhaseChanged() { root.showPhase() }
+        // Test hook (DISPORTS_OPEN_CHANNEL): on a phone, show the chat too.
+        function onCurrentChannelChanged() {
+            if (testOpenChannel !== "" && Session.currentChannelId === testOpenChannel
+                    && !root.wideLayout && root.currentPageName === "mainPage")
+                stack.push(Qt.resolvedUrl("ChatPage.qml"))
+        }
     }
 
     // Calls: the call screen comes up when one starts or rings, and goes

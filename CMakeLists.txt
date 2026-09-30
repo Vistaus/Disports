@@ -98,6 +98,7 @@ qt_add_qml_module(disports
         qml/RoundedPicture.qml
         qml/ContentPickerPage.qml
         qml/CallBadge.qml
+        qml/MediaSize.js
 )
 
 qt_add_resources(disports "assets"

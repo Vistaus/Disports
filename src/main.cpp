@@ -2,6 +2,7 @@
 #include <QGuiApplication>
 #include <QNetworkInformation>
 #include <QQmlContext>
+#include <QQmlDebuggingEnabler>
 #include <QQmlEngine>
 #include <QQuickView>
 #include <QTimer>
@@ -95,7 +96,17 @@ void scheduleTestActions(Session* session)
 
 int main(int argc, char* argv[])
 {
+
     QGuiApplication app(argc, argv);
+
+    // DISPORTS_QML_PROFILE_PORT=<port>: waits for Qt's QML profiler
+    // (qmlprofiler --attach) there; for finding slow bindings (tools/test).
+    // After the application object, before the QML engine.
+    const int profilePort = qEnvironmentVariableIntValue("DISPORTS_QML_PROFILE_PORT");
+    if (profilePort > 0) {
+        QQmlDebuggingEnabler::enableDebugging(true);
+        QQmlDebuggingEnabler::startTcpDebugServer(profilePort, QQmlDebuggingEnabler::WaitForClient);
+    }
     // Data lives in ~/.local/share/disports.jukfiuu, the app's writable
     // namespace on Ubuntu Touch.
     QCoreApplication::setApplicationName(QStringLiteral("disports.jukfiuu"));
@@ -121,6 +132,16 @@ int main(int argc, char* argv[])
     // Profile pictures and server icons are kept on disk; see ImageCache.h.
     ImageCacheFactory imageCache;
     view.engine()->setNetworkAccessManagerFactory(&imageCache);
+    // DISPORTS_TEST_SCROLL=1: the open chat scrolls up by itself, and the
+    // frame rate, slowest frames and rows changing height are logged
+    // ("scroll-test: ..."), to measure scrolling (tools/test).
+    // DISPORTS_OPEN_CHANNEL also opens the chat page on narrow screens.
+    view.rootContext()->setContextProperty(QStringLiteral("testOpenChannel"),
+                                           qEnvironmentVariable("DISPORTS_OPEN_CHANNEL"));
+    view.rootContext()->setContextProperty(QStringLiteral("testScroll"),
+                                           qEnvironmentVariableIsSet("DISPORTS_TEST_SCROLL"));
+    if (qEnvironmentVariableIsSet("DISPORTS_TEST_SCROLL") && QGuiApplication::primaryScreen())
+        qInfo("scroll-test: the screen says it refreshes at %.1f Hz", QGuiApplication::primaryScreen()->refreshRate());
     view.rootContext()->setContextProperty(QStringLiteral("testVideoUrl"),
                                            qEnvironmentVariable("DISPORTS_PLAY_VIDEO"));
     view.setResizeMode(QQuickView::SizeRootObjectToView);

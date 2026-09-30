@@ -1,6 +1,7 @@
 import QtQuick
 import Lomiri.Components
 import Disports.Core
+import "MediaSize.js" as MediaSize
 
 ListItem {
     id: bubble
@@ -40,13 +41,15 @@ ListItem {
     signal mediaOpened(var media)
 
     // On screen with the app not hidden or suspended: GIFs may play (if
-    // enabled).
+    // enabled). Against the list's visible range, which follows scrolling
+    // a few times a second (ChatPanel): every row re-checking every frame
+    // was the chat's biggest cost while scrolling.
     readonly property bool onScreen: {
         const view = ListView.view
         return view !== null && visible
                && Qt.application.state !== Qt.ApplicationHidden
                && Qt.application.state !== Qt.ApplicationSuspended
-               && y + height > view.contentY && y < view.contentY + view.height
+               && y + height > view.visibleTop && y < view.visibleBottom
     }
 
     readonly property bool showAvatar: Session.preferences.chatProfilePictures
@@ -71,6 +74,19 @@ ListItem {
           // At least as tall as the avatar, so it never runs into the next row.
           : Math.max(content.height, avatar.visible ? avatar.height : 0) + units.gu(1.2)
     visible: !hiddenBlocked
+
+    // Scroll test: rows that change height once shown make scrolling jump.
+    property real shownHeight: 0
+    Component.onCompleted: if (testScroll) Qt.callLater(function() { bubble.shownHeight = bubble.height })
+    onHeightChanged: {
+        if (!testScroll)
+            return
+        const view = ListView.view
+        const onScreen = view && view.scrollTestStarted && y + shownHeight > view.contentY && y < view.contentY + view.height
+        if (shownHeight > 0 && onScreen && Math.abs(height - shownHeight) > 1)
+            console.log("scroll-test: row " + messageId + " changed height on screen " + shownHeight + " -> " + height)
+        shownHeight = height
+    }
     divider.visible: false
     opacity: isPending ? 0.5 : 1
 
@@ -303,15 +319,34 @@ ListItem {
             onLinkActivated: function(link) { Qt.openUrlExternally(link) }
         }
 
-        Repeater {
-            model: bubble.media
+        // Pictures and videos. The ListView builds rows ahead of time in
+        // steps, and these come after the row is placed: the room they
+        // take is kept from the start (their sizes are known, MediaSize.js),
+        // or the row would grow as they appear and scrolling would jump.
+        Item {
+            width: parent.width
+            height: MediaSize.totalHeight(bubble.media, mediaColumn.maxWidth, units.gu(30), units.gu(5),
+                                          mediaColumn.spacing)
+            visible: bubble.media.length > 0
 
-            delegate: MediaPreview {
-                required property var modelData
-                media: modelData
-                maxWidth: Math.min(content.width, units.gu(30))
-                playing: bubble.onScreen
-                onOpened: function(media) { bubble.mediaOpened(media) }
+            Column {
+                id: mediaColumn
+                // Before the row has its width (created on screen), the
+                // widest a preview gets: its size on a phone anyway.
+                readonly property real maxWidth: content.width > 0 ? Math.min(content.width, units.gu(30)) : units.gu(30)
+                spacing: content.spacing
+
+                Repeater {
+                    model: bubble.media
+
+                    delegate: MediaPreview {
+                        required property var modelData
+                        media: modelData
+                        maxWidth: mediaColumn.maxWidth
+                        playing: bubble.onScreen
+                        onOpened: function(media) { bubble.mediaOpened(media) }
+                    }
+                }
             }
         }
 
@@ -327,13 +362,25 @@ ListItem {
             }
         }
 
-        Repeater {
-            model: bubble.stickers
+        // Stickers: a fixed size each, room kept from the start too.
+        Item {
+            width: parent.width
+            height: bubble.stickers.length * units.gu(16) + Math.max(0, bubble.stickers.length - 1) * stickerColumn.spacing
+            visible: bubble.stickers.length > 0
 
-            delegate: StickerView {
-                required property var modelData
-                sticker: modelData
-                playing: bubble.onScreen
+            Column {
+                id: stickerColumn
+                spacing: content.spacing
+
+                Repeater {
+                    model: bubble.stickers
+
+                    delegate: StickerView {
+                        required property var modelData
+                        sticker: modelData
+                        playing: bubble.onScreen
+                    }
+                }
             }
         }
 
@@ -347,15 +394,21 @@ ListItem {
             }
         }
 
-        ReactionBar {
+        // Only built for messages with reactions (rows are built while
+        // scrolling; the less in each, the smoother).
+        Loader {
             width: parent.width
-            visible: bubble.reactions.length > 0
-            messageId: bubble.messageId
-            reactions: bubble.reactions
-            // System messages' reactions are shown, not joined in on.
-            canAdd: !bubble.isSystem && Session.canAddReactions
-            canToggle: !bubble.isSystem && Session.canUseReactions
-            onAddRequested: function(caller) { bubble.reactRequested(bubble.messageId, caller) }
+            active: bubble.reactions.length > 0
+            visible: active
+            sourceComponent: ReactionBar {
+                width: parent ? parent.width : 0
+                messageId: bubble.messageId
+                reactions: bubble.reactions
+                // System messages' reactions are shown, not joined in on.
+                canAdd: !bubble.isSystem && Session.canAddReactions
+                canToggle: !bubble.isSystem && Session.canUseReactions
+                onAddRequested: function(caller) { bubble.reactRequested(bubble.messageId, caller) }
+            }
         }
     }
 }

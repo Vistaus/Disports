@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Window
 import QtQuick.Layouts
 import Lomiri.Components
 import Lomiri.Components.Popups
@@ -162,9 +163,14 @@ Item {
         }
     }
 
+    // The message box's emoji picker is built when first opened.
+    property bool emojiOpenedOnce: false
+
     function openEmoji(mode) {
+        emojiOpenedOnce = true
         emojiMode = mode
-        emojiPicker.reset()
+        if (emojiLoader.item)
+            emojiLoader.item.reset()
         Qt.inputMethod.hide()
         input.focus = false
     }
@@ -348,7 +354,71 @@ Item {
         model: Session.messages
         verticalLayoutDirection: ListView.BottomToTop
 
-        cacheBuffer: units.gu(60)
+        // What part of the list is on screen, for the rows' onScreen (GIFs
+        // playing): updated a few times a second while scrolling, not on
+        // every frame.
+        property real visibleTop: 0
+        property real visibleBottom: 0
+        function updateVisibleRange() {
+            visibleTop = contentY
+            visibleBottom = contentY + height
+        }
+        // Jumps made by code (to the newest message) are followed at once.
+        onContentYChanged: if (!moving) updateVisibleRange()
+        Component.onCompleted: updateVisibleRange()
+        Timer {
+            running: messageList.moving
+            interval: 250
+            repeat: true
+            triggeredOnStart: true
+            onTriggered: messageList.updateVisibleRange()
+        }
+
+        // Rows are built ahead of the finger, in the background; built on
+        // the spot instead (when they come faster), each costs a frame.
+        cacheBuffer: units.gu(150)
+
+        // Scroll test (DISPORTS_TEST_SCROLL): flick towards older messages
+        // every 1.5 s, as a finger would.
+        property bool scrollTestStarted: false
+
+        // Scroll test: frames drawn while the list moves, and the longest
+        // wait between two of them, every second (idle time between flicks,
+        // when nothing needs drawing, does not count).
+        Connections {
+            id: frameStats
+            target: testScroll ? messageList.Window.window : null
+            property real last: 0
+            property int frames: 0
+            property real worst: 0
+            function onFrameSwapped() {
+                const now = Date.now()
+                if (messageList.moving && frameStats.last > 0)
+                    frameStats.worst = Math.max(frameStats.worst, now - frameStats.last)
+                if (messageList.moving)
+                    frameStats.frames++
+                frameStats.last = messageList.moving ? now : 0
+            }
+        }
+        Timer {
+            running: testScroll
+            interval: 1000
+            repeat: true
+            onTriggered: {
+                console.log("scroll-test: while moving: " + frameStats.frames + " frames, longest gap " + frameStats.worst + " ms")
+                frameStats.frames = 0
+                frameStats.worst = 0
+            }
+        }
+        Timer {
+            running: testScroll && messageList.count > 0
+            interval: 1500
+            repeat: true
+            onTriggered: {
+                messageList.scrollTestStarted = true
+                messageList.flick(0, units.gu(250))
+            }
+        }
 
         // Stay on the newest message until the user scrolls away, and go
         // back to it whenever the content grows (history arriving, images or
@@ -364,11 +434,20 @@ Item {
             })
         }
 
-        onMovementEnded: followNewest = atYEnd
+        onMovementEnded: {
+            followNewest = atYEnd
+            updateVisibleRange()
+        }
         onFlickEnded: followNewest = atYEnd
         onCountChanged: scrollToNewest()
-        onContentHeightChanged: scrollToNewest()
-        onHeightChanged: scrollToNewest()
+        onContentHeightChanged: {
+            scrollToNewest()
+            updateVisibleRange()
+        }
+        onHeightChanged: {
+            scrollToNewest()
+            updateVisibleRange()
+        }
 
         delegate: MessageDelegate {
             width: messageList.width
@@ -769,15 +848,14 @@ Item {
             LomiriNumberAnimation {}
         }
 
-        EmojiPicker {
-            id: emojiPicker
-            anchors {
-                top: parent.top
-                left: parent.left
-                right: parent.right
-                bottom: parent.bottom
+        // Built the first time it opens (hundreds of emoji), then kept.
+        Loader {
+            id: emojiLoader
+            anchors.fill: parent
+            active: chatPanel.emojiOpenedOnce
+            sourceComponent: EmojiPicker {
+                onPicked: function(emoji) { chatPanel.emojiPicked(emoji) }
             }
-            onPicked: function(emoji) { chatPanel.emojiPicked(emoji) }
         }
     }
 }

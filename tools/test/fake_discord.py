@@ -57,6 +57,8 @@ EVERYONE_PERMS = 0x400 | 0x800 | 0x10000 | 0x8000 | 0x40 | 0x100000 | 0x200000
 
 CATEGORY, GENERAL, HIDDEN, READONLY, NOHISTORY, SLOW, NOFILES = "1100", "1101", "1102", "1103", "1104", "1105", "1106"
 LOUNGE, EMPTY_VOICE = "1107", "1108"
+MEDIA = "1109"
+TEXT = "1110"
 QUIET, QUIET_CHAN = "5000", "5001"
 DM = "2001"
 
@@ -79,6 +81,8 @@ CHANNELS = [
      "permission_overwrites": [overwrite(GUILD, deny=ATTACH)]},
     {"id": LOUNGE, "type": 2, "name": "Lounge", "position": 6, "parent_id": CATEGORY},
     {"id": EMPTY_VOICE, "type": 2, "name": "Quiet room", "position": 7, "parent_id": CATEGORY},
+    {"id": MEDIA, "type": 0, "name": "media", "position": 8, "parent_id": CATEGORY},
+    {"id": TEXT, "type": 0, "name": "text", "position": 9, "parent_id": CATEGORY},
 ]
 # Seven people in the Lounge: five are listed, then "and 2 more".
 LOUNGE_PEOPLE = [ALICE, BOB, CAROL, DAVE] + EXTRA[:3]
@@ -124,6 +128,52 @@ def message(channel, author, content, **extra):
 
 for ch in (GENERAL, NOHISTORY, SLOW, NOFILES, READONLY, DM):
     HISTORY_MSGS[ch] = [message(ch, ALICE, "Hello from Alice in %s" % ch)]
+
+# #media: 200 messages of pictures, videos, several pictures, link previews,
+# for scrolling tests. The files are build/test/files/sticker.png (any
+# picture), served under /files/.
+def media_messages():
+    out = []
+    for i in range(200):
+        kind = i % 4
+        def att(n, w, h, video=False):
+            return {"id": new_id(), "filename": "file%d-%d.%s" % (i, n, "mp4" if video else "png"),
+                    "size": 1000, "width": w, "height": h,
+                    "url": "%s/files/media/%d-%d.png" % (BASE, i, n), "proxy_url": "%s/files/media/%d-%d.png" % (BASE, i, n),
+                    "content_type": "video/mp4" if video else "image/png"}
+        if kind == 0:
+            extra = {"attachments": [att(0, 1200, 800)]}
+        elif kind == 1:
+            extra = {"attachments": [att(0, 720, 1280, video=True)]}
+        elif kind == 2:
+            extra = {"attachments": [att(0, 800, 800), att(1, 640, 480), att(2, 480, 640)]}
+        else:
+            extra = {"embeds": [{"type": "link", "url": "https://example.com/%d" % i, "title": "A link %d" % i,
+                                 "description": "Some text about the link, long enough to wrap onto a second line.",
+                                 "thumbnail": {"url": "%s/files/media/%d-t.png" % (BASE, i),
+                                               "proxy_url": "%s/files/media/%d-t.png" % (BASE, i), "width": 400, "height": 300}}]}
+        out.append(message(MEDIA, [ALICE, BOB, CAROL][i % 3], "Message %d with media" % i, **extra))
+    return out
+
+
+HISTORY_MSGS[MEDIA] = media_messages()
+# #text: 200 plain messages, to compare scrolling with #media.
+HISTORY_MSGS[TEXT] = [message(TEXT, [ALICE, BOB, CAROL][i % 3],
+                              "Plain message %d, long enough to take a couple of lines on a phone screen." % i)
+                      for i in range(200)]
+
+# Stickers, one of each format (1 PNG, 2 APNG, 3 Lottie, 4 GIF), in the DM.
+# The fake CDN answers /stickers/<id>.png|gif with a small picture (and
+# nothing for Lottie, which only exists as JSON).
+STICKERS = [{"id": "7001", "name": "PNG sticker", "format_type": 1},
+            {"id": "7002", "name": "APNG sticker", "format_type": 2},
+            {"id": "7003", "name": "Wumpus wave", "format_type": 3},
+            {"id": "7004", "name": "GIF sticker", "format_type": 4}]
+HISTORY_MSGS[DM] += [message(DM, ALICE, "", sticker_items=[s]) for s in STICKERS]
+# ...and a forwarded one (its sticker is in the snapshot).
+HISTORY_MSGS[DM].append(message(DM, ALICE, "", message_reference={"type": 1, "channel_id": GENERAL, "message_id": "1"},
+                                message_snapshots=[{"message": {"content": "", "timestamp": iso(time.time()),
+                                                                "sticker_items": [STICKERS[0]]}}]))
 
 
 # MANY_SERVERS=<n>: that many more servers, to scroll the server rail.
@@ -261,9 +311,24 @@ class Rest(BaseHTTPRequestHandler):
             return self.reply(200, {"url": "ws://127.0.0.1:8812"})
         m = re.match(r"/api/v9/channels/(\d+)/messages$", path)
         if m:
+            # As Discord: newest first, at most `limit`, older than `before`.
             channel = m.group(1)
-            log("REST history", channel)
-            return self.reply(200, list(reversed(HISTORY_MSGS.get(channel, []))))
+            query = dict(q.split("=", 1) for q in self.path.split("?", 1)[1].split("&")) if "?" in self.path else {}
+            limit = int(query.get("limit", 50))
+            before = int(query.get("before", 0) or 0)
+            msgs = [x for x in HISTORY_MSGS.get(channel, []) if not before or int(x["id"]) < before]
+            page = list(reversed(msgs))[:limit]
+            log("REST history", channel, "before", before or "-", "->", len(page))
+            return self.reply(200, page)
+        m = re.match(r"/stickers/(\d+)\.(png|gif)$", path)
+        if m and m.group(1) in ("7001", "7002", "7004"):
+            picture = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "build", "test", "files", "sticker.png")
+            if os.path.exists(picture):
+                return self.reply(200, raw=open(picture, "rb").read(), content_type="image/png")
+        if path.startswith("/files/media/"):
+            picture = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "build", "test", "files", "sticker.png")
+            if os.path.exists(picture):
+                return self.reply(200, raw=open(picture, "rb").read(), content_type="image/png")
         m = re.match(r"/files/(\d+)/(.+)$", path)
         if m and m.group(1) in UPLOADS:
             return self.reply(200, raw=UPLOADS[m.group(1)]["data"], content_type="application/octet-stream")

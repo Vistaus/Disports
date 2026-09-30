@@ -5,6 +5,7 @@
 #include <QColor>
 #include <QDateTime>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
@@ -990,7 +991,12 @@ void Session::loadOlderMessages()
 void Session::coreMessagesRefreshed()
 {
     setLoadingMessages(false);
+    QElapsedTimer timer;
+    timer.start();
     m_messages->sync();
+    // Scroll test (DISPORTS_TEST_SCROLL): how long showing a page takes.
+    if (qEnvironmentVariableIsSet("DISPORTS_TEST_SCROLL"))
+        qInfo("scroll-test: history merged into the list in %lld ms", timer.elapsed());
     requestMissingMembers();
     markCurrentChannelRead();
 }

@@ -133,6 +133,18 @@ scenario_nicknames() {  # history has no member objects: the app asks, and shows
     expect nicknames 'member search \[.*"200".*\] -> \[.alice.\]'
 }
 
+scenario_scroll() {     # scroll up a channel full of media: no row grows on screen
+    STEPS="sleep 16" "$HERE/run.sh" scroll 18000 DISPORTS_OPEN_CHANNEL=1109 "${WIDE[@]}" DISPORTS_TEST_SCROLL=1
+    local grown
+    grown=$(grep -c "changed height on screen" "$ROOT/build/test/scroll/log.txt")
+    if [ "$grown" -gt 0 ]; then
+        echo "   FAIL scroll: $grown row(s) changed height on screen:"
+        grep "changed height on screen" "$ROOT/build/test/scroll/log.txt" | head -5 | sed 's/^/     /'
+        FAILED=1
+    fi
+    grep -q "scroll-test: while moving" "$ROOT/build/test/scroll/log.txt" || { echo "   FAIL scroll: the test did not run"; FAILED=1; }
+}
+
 scenario_dmcall() {     # a DM with a call going on
     STEPS="sleep 5" "$HERE/run.sh" dmcall 7000 DISPORTS_OPEN_CHANNEL=2001 "${WIDE[@]}"
     expect dmcall 'REST history 2001'
@@ -143,7 +155,7 @@ scenario_permissions() { # read-only, no history, no files, slowmode
     done
 }
 
-ALL=(channels mentions upload zoom nicknames dmcall permissions)
+ALL=(channels mentions upload zoom nicknames scroll dmcall permissions)
 SCENARIOS=("${@:-${ALL[@]}}")
 [ $# -eq 0 ] && SCENARIOS=("${ALL[@]}")
 

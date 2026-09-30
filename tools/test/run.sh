@@ -40,7 +40,9 @@ done
 wait $app
 echo "app exit: $?"
 INNER
-timeout 120 podman run --rm --network=host --cap-add SYS_PTRACE \
+# --timeout: podman kills the container itself (a `timeout` in front of
+# podman only stops the client, and the container would keep running).
+podman run --rm --timeout 150 --network=host --cap-add SYS_PTRACE \
     -v "$INSTALL":/app:ro -v "$OUT":/out:Z -v "$HERE":/tools:ro,Z -v "$ROOT/build/test/files":/files:ro,Z \
     -e LANG=C.UTF-8 -e QT_QPA_PLATFORM=xcb -e LIBGL_ALWAYS_SOFTWARE=1 \
     -e XDG_DATA_HOME=/out/data -e HOME=/out -e LD_LIBRARY_PATH=/app/lib/x86_64-linux-gnu \
