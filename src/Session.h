@@ -20,6 +20,7 @@
 #include "models/MessageListModel.h"
 #include "models/UnreadDmListModel.h"
 #include "voice/CallManager.h"
+#include "voice/VoiceStates.h"
 
 class Channel;
 class DiscordInstance;
@@ -75,6 +76,11 @@ class Session : public QObject
     Q_PROPERTY(bool canMentionEveryone READ canMentionEveryone NOTIFY permissionsChanged)
 
     // The file being uploaded (one at a time).
+    // A call going on in the open conversation (anyone's, see VoiceStates),
+    // and for how long ("12:34", or "" when not known).
+    Q_PROPERTY(bool currentChannelHasCall READ currentChannelHasCall NOTIFY currentCallChanged)
+    Q_PROPERTY(QString currentCallElapsed READ currentCallElapsed NOTIFY currentCallChanged)
+
     Q_PROPERTY(bool uploading READ uploading NOTIFY uploadChanged)
     Q_PROPERTY(QString uploadName READ uploadName NOTIFY uploadChanged)
     Q_PROPERTY(qreal uploadProgress READ uploadProgress NOTIFY uploadChanged)
@@ -139,6 +145,8 @@ public:
     int slowmodeRemaining() const;
     bool canAttachFiles() const;
     bool canMentionEveryone() const;
+    bool currentChannelHasCall() const;
+    QString currentCallElapsed() const;
     bool uploading() const { return m_uploading; }
     QString uploadName() const { return m_uploadName; }
     qreal uploadProgress() const { return m_uploadProgress; }
@@ -160,6 +168,7 @@ public:
     DiscordInstance* instance() const { return m_instance; }
 
     OfflineCache* offlineCache() const { return m_offline; }
+    VoiceStates* voiceStates() const { return m_voiceStates; }
 
     Q_INVOKABLE void loginWithToken(const QString& token);
     Q_INVOKABLE void logout();
@@ -253,6 +262,7 @@ signals:
     void permissionsChanged();
     void slowmodeChanged();
     void uploadChanged();
+    void currentCallChanged();
     void membersChanged();
 
 private:
@@ -279,6 +289,7 @@ private:
     bool hasPermission(uint64_t permission) const;
     qint64 timeoutUntilMs() const;
     void updatePermissions();
+    void updateCurrentCall();
 
     Phase m_phase = Starting;
     bool m_connected = false;
@@ -326,4 +337,6 @@ private:
     bool m_cachedStart = false;
     RemoteAuth* m_qrLogin = nullptr;
     CallManager* m_call = nullptr;
+    VoiceStates* m_voiceStates = nullptr;
+    QTimer m_callClock; // the open conversation's call time
 };

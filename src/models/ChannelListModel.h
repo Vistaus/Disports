@@ -1,5 +1,7 @@
 #pragma once
 
+class VoiceStates;
+
 #include <QAbstractListModel>
 
 #include <vector>
@@ -29,6 +31,9 @@ public:
         IndentedRole,    // belongs to a category
         StatusRole,      // 1:1 direct messages: "online", "idle", "dnd" or "offline"
         BlockedRole,     // 1:1 direct messages with a user the account blocked
+        InCallRole,      // a call in this conversation, or people in this voice channel
+        VoiceMembersRole, // voice channels: up to 5 {name, avatarUrl} of the people in it
+        VoiceCountRole,  // voice channels: how many people are in it
     };
 
     using QAbstractListModel::QAbstractListModel;
@@ -44,6 +49,7 @@ public:
     // Profile picture of a 1:1 conversation, or a group's icon.
     static QString iconUrl(const Channel& channel);
     void refreshAll();
+    void setVoiceStates(const VoiceStates* states) { m_voiceStates = states; }
     void clear();
 
 signals:
@@ -52,4 +58,5 @@ signals:
 private:
     Snowflake m_guild = 0;
     std::vector<Snowflake> m_ids;
+    const VoiceStates* m_voiceStates = nullptr;
 };

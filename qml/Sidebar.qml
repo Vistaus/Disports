@@ -131,6 +131,7 @@ Item {
             required property bool expanded
             required property var previews
             required property var guildIds
+            required property bool hasCall
 
             readonly property bool isFolder: kind === "folder"
             readonly property bool inFolder: !isFolder && folderId !== ""
@@ -211,6 +212,17 @@ Item {
                 height: width
                 name: "go-up"
                 color: theme.palette.normal.backgroundSecondaryText
+            }
+
+            // Someone is in a voice channel there.
+            CallBadge {
+                anchors {
+                    top: parent.top
+                    right: parent.right
+                    topMargin: units.gu(0.3)
+                    rightMargin: units.gu(0.3)
+                }
+                visible: row.hasCall && !(row.isFolder && row.expanded)
             }
 
             UnreadBadge {

@@ -7,6 +7,7 @@
 #include "discord/state/ProfileCache.hpp"
 
 #include "DiscordUrls.h"
+#include "voice/VoiceStates.h"
 
 namespace {
 
@@ -129,6 +130,32 @@ QVariant ChannelListModel::data(const QModelIndex& index, int role) const
         DiscordInstance* instance = GetDiscordInstance();
         return channel->m_channelType == Channel::DM && instance && instance->IsUserBlocked(channel->GetDMRecipient());
     }
+    case InCallRole:
+        return m_voiceStates && (channel->IsDM() || channel->IsVoice()) && m_voiceStates->hasCall(channel->m_snowflake);
+    case VoiceCountRole:
+        return m_voiceStates && channel->IsVoice() ? int(m_voiceStates->usersIn(channel->m_snowflake).size()) : 0;
+    case VoiceMembersRole: {
+        QVariantList members;
+        if (!m_voiceStates || !channel->IsVoice())
+            return members;
+        for (Snowflake id : m_voiceStates->usersIn(channel->m_snowflake)) {
+            Profile* profile = GetProfileCache()->LookupProfile(id, "", "", "", false);
+            QString name;
+            if (profile) {
+                auto member = profile->m_guildMembers.find(channel->m_parentGuild);
+                name = QString::fromStdString(member != profile->m_guildMembers.end() && !member->second.m_nick.empty()
+                    ? member->second.m_nick
+                    : !profile->m_globalName.empty() ? profile->m_globalName : profile->m_name);
+            }
+            members.append(QVariantMap{
+                {QStringLiteral("name"), name},
+                {QStringLiteral("avatarUrl"), DiscordUrls::userAvatar(id, profile ? profile->m_avatarlnk : std::string())},
+            });
+            if (members.size() == 5)
+                break;
+        }
+        return members;
+    }
     }
     return QVariant();
 }
@@ -148,6 +175,9 @@ QHash<int, QByteArray> ChannelListModel::roleNames() const
         {IndentedRole, "indented"},
         {StatusRole, "status"},
         {BlockedRole, "blocked"},
+        {InCallRole, "inCall"},
+        {VoiceMembersRole, "voiceMembers"},
+        {VoiceCountRole, "voiceCount"},
     };
 }
 

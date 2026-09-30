@@ -10,6 +10,7 @@ Rectangle {
     property string actionIcon: ""
     // A second one, left of it.
     property string secondActionIcon: ""
+    property color secondActionColor: theme.palette.normal.backgroundText
 
     signal actionTriggered()
     signal secondActionTriggered()
@@ -75,7 +76,7 @@ Rectangle {
             width: units.gu(2.5)
             height: width
             name: panelHeader.secondActionIcon
-            color: theme.palette.normal.backgroundText
+            color: panelHeader.secondActionColor
         }
     }
 

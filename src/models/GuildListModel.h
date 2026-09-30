@@ -1,5 +1,7 @@
 #pragma once
 
+class VoiceStates;
+
 #include <QAbstractListModel>
 #include <QSet>
 
@@ -29,6 +31,7 @@ public:
         ExpandedRole,                // folders only
         PreviewsRole,                // folders only: up to 4 {iconUrl, initials}
         GuildIdsRole,                // folders only: ids of the servers inside
+        HasCallRole,                 // someone is in a voice channel (in the folder)
     };
 
     using QAbstractListModel::QAbstractListModel;
@@ -46,6 +49,10 @@ public:
     Q_INVOKABLE void toggleFolder(const QString& folderId);
 
     int directMessageMentions() const;
+
+    void setVoiceStates(const VoiceStates* states) { m_voiceStates = states; }
+    // Who is in voice changed.
+    void refreshCalls();
 
 signals:
     void countChanged();
@@ -65,4 +72,5 @@ private:
 
     std::vector<Row> m_rows;
     QSet<Snowflake> m_expanded;
+    const VoiceStates* m_voiceStates = nullptr;
 };

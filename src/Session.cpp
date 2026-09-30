@@ -84,6 +84,20 @@ Session::Session(QObject* parent)
     m_preferences = new Preferences(this);
     m_emoji = new EmojiPickerModel(this);
     m_offline = new OfflineCache(this);
+    m_voiceStates = new VoiceStates(this);
+    // Call markers: servers, conversations, voice channels, the open chat.
+    connect(m_voiceStates, &VoiceStates::changed, this, [this](Snowflake, Snowflake channel) {
+        m_guilds->refreshCalls();
+        if (channel)
+            m_channels->refreshChannel(channel);
+        else
+            m_channels->refreshAll();
+        updateCurrentCall();
+    });
+    m_guilds->setVoiceStates(m_voiceStates);
+    m_channels->setVoiceStates(m_voiceStates);
+    m_callClock.setInterval(1000);
+    connect(&m_callClock, &QTimer::timeout, this, &Session::currentCallChanged);
     m_call = new CallManager(this);
     connect(m_call, &CallManager::callFailed, this, &Session::setNotice);
     connect(m_call, &CallManager::notice, this, &Session::setNotice);
@@ -309,6 +323,8 @@ void Session::destroyInstance()
 
     if (m_call)
         m_call->gatewayLost();
+    if (m_voiceStates)
+        m_voiceStates->clear();
     if (m_instance) {
         m_instance->CloseGatewaySession();
         CoreGlobals::setInstance(nullptr);
@@ -329,6 +345,7 @@ void Session::destroyInstance()
     emit currentGuildChanged();
     emit currentChannelChanged();
     updatePermissions();
+    updateCurrentCall();
     emit profileChanged();
 }
 
@@ -865,6 +882,7 @@ void Session::coreSelectedChannelChanged()
     updateTypingText();
     emit currentChannelChanged();
     updatePermissions();
+    updateCurrentCall();
     ensureMessagesLoaded();
 }
 
@@ -898,6 +916,7 @@ void Session::coreGuildListChanged()
     emit currentGuildChanged();
     emit currentChannelChanged();
     updatePermissions();
+    updateCurrentCall();
     emit profileChanged();
 }
 
@@ -1404,5 +1423,34 @@ void Session::searchMembers(const QString& query)
 
 void Session::coreMembersChanged()
 {
+    // Also names of people in voice channels.
+    m_channels->refreshAll();
     emit membersChanged();
+}
+
+// Calls in the open conversation
+
+bool Session::currentChannelHasCall() const
+{
+    return m_instance && m_voiceStates->hasCall(m_instance->GetCurrentChannelID());
+}
+
+QString Session::currentCallElapsed() const
+{
+    const qint64 started = m_instance ? m_voiceStates->callStartedMs(m_instance->GetCurrentChannelID()) : 0;
+    if (!started || !currentChannelHasCall())
+        return QString();
+    const qint64 seconds = qMax<qint64>(0, (QDateTime::currentMSecsSinceEpoch() - started) / 1000);
+    const QString mmss = QStringLiteral("%1:%2").arg(seconds / 60 % 60, 2, 10, QLatin1Char('0'))
+                                                .arg(seconds % 60, 2, 10, QLatin1Char('0'));
+    return seconds >= 3600 ? QStringLiteral("%1:%2").arg(seconds / 3600).arg(mmss) : mmss;
+}
+
+void Session::updateCurrentCall()
+{
+    if (currentChannelHasCall())
+        m_callClock.start();
+    else
+        m_callClock.stop();
+    emit currentCallChanged();
 }

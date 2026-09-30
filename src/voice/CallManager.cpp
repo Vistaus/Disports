@@ -177,8 +177,10 @@ void CallManager::start(const QString& channelId)
     if (m_state != Idle)
         endCall();
     describe(channel);
+    // Joining a call already going on does not ring everyone again.
+    const bool newCall = !m_session->voiceStates()->hasCall(channel);
     join(channel);
-    if (m_direct)
+    if (m_direct && newCall)
         m_session->instance()->RequestRingCall(channel);
     emit showRequested();
 }

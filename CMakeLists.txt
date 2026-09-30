@@ -44,6 +44,7 @@ qt_add_executable(disports
     src/voice/Ringtone.cpp src/voice/Ringtone.h
     src/voice/TransportCipher.cpp src/voice/TransportCipher.h
     src/voice/VoiceSession.cpp src/voice/VoiceSession.h
+    src/voice/VoiceStates.cpp src/voice/VoiceStates.h
 )
 
 # Video goes through GStreamer (hardware decoders on the phone via
@@ -87,6 +88,7 @@ qt_add_qml_module(disports
         qml/CallBanner.qml
         qml/RoundedPicture.qml
         qml/ContentPickerPage.qml
+        qml/CallBadge.qml
 )
 
 qt_add_resources(disports "assets"

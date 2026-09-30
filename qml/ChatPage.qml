@@ -10,10 +10,30 @@ Page {
         title: Session.currentChannelName
         // Channel topics can have several lines; the header has room for one.
         subtitle: Session.currentChannelTopic.replace(/\s*\n+\s*/g, "  ")
+        // As Lomiri's own, with the call icon green during a call.
+        trailingActionBar.delegate: AbstractButton {
+            id: headerButton
+            action: modelData
+            visible: action.visible
+            width: units.gu(4.5)
+            height: units.gu(6)
+
+            Icon {
+                anchors.centerIn: parent
+                width: units.gu(2.5)
+                height: width
+                name: headerButton.action.iconName
+                color: headerButton.action.objectName === "callAction" && Session.currentChannelHasCall
+                       ? theme.palette.normal.positive : theme.palette.normal.backgroundText
+                opacity: headerButton.pressed ? 0.6 : 1
+            }
+        }
         trailingActionBar.actions: [
             Action {
-                iconName: "call-start"
-                text: i18n.tr("Call")
+                objectName: "callAction"
+                // A call going on here: the active call icon, in green.
+                iconName: Session.currentChannelHasCall ? "active-call" : "call-start"
+                text: Session.currentChannelHasCall ? i18n.tr("Join call") : i18n.tr("Call")
                 visible: Session.connected && Session.currentChannelId !== ""
                          && Session.call.canCall(Session.currentChannelId)
                 onTriggered: Session.call.start(Session.currentChannelId)

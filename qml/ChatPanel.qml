@@ -268,15 +268,58 @@ Item {
         subtitle: Session.currentChannelTopic
         actionIcon: "info"
         onActionTriggered: chatPanel.infoRequested(Session.currentChannelId)
-        secondActionIcon: Session.connected && Session.currentChannelId !== ""
-                          && Session.call.canCall(Session.currentChannelId) ? "call-start" : ""
+        secondActionIcon: !(Session.connected && Session.currentChannelId !== ""
+                            && Session.call.canCall(Session.currentChannelId)) ? ""
+                          : Session.currentChannelHasCall ? "active-call" : "call-start"
+        secondActionColor: Session.currentChannelHasCall ? theme.palette.normal.positive
+                                                         : theme.palette.normal.backgroundText
         onSecondActionTriggered: Session.call.start(Session.currentChannelId)
+    }
+
+    // A call going on here (that we are not in): how long, and tap to join.
+    Rectangle {
+        id: callBar
+        readonly property bool inThisCall: Session.call.state !== CallState.Idle
+                                          && Session.call.channelId === Session.currentChannelId
+        anchors { top: header.bottom; left: parent.left; right: parent.right }
+        height: Session.currentChannelHasCall && !inThisCall ? units.gu(4) : 0
+        visible: height > 0
+        clip: true
+        color: theme.palette.normal.positive
+
+        Row {
+            anchors.centerIn: parent
+            spacing: units.gu(1)
+
+            Icon {
+                anchors.verticalCenter: parent.verticalCenter
+                width: units.gu(2)
+                height: width
+                // (Suru's "active-call" is green already, and would not show.)
+                name: "call-start"
+                color: theme.palette.normal.positiveText
+            }
+
+            Label {
+                anchors.verticalCenter: parent.verticalCenter
+                text: (Session.currentCallElapsed !== ""
+                       ? i18n.tr("Call in progress · %1").arg(Session.currentCallElapsed)
+                       : i18n.tr("Call in progress"))
+                      + (Session.call.canCall(Session.currentChannelId) ? " · " + i18n.tr("Tap to join") : "")
+                color: theme.palette.normal.positiveText
+            }
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: Session.call.start(Session.currentChannelId)
+        }
     }
 
     ListView {
         id: messageList
         anchors {
-            top: header.bottom
+            top: callBar.bottom
             left: parent.left
             right: parent.right
             bottom: typingLabel.top

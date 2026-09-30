@@ -39,13 +39,18 @@ Item {
             required property bool indented
             required property string status
             required property bool blocked
+            required property bool inCall
+            required property var voiceMembers
+            required property int voiceCount
 
             readonly property bool conversation: kind === "dm" || kind === "group"
             readonly property bool pictures: Session.preferences.dmProfilePictures
             readonly property bool active: Session.currentChannelId === channelId
+            readonly property real lineHeight: conversation && pictures ? units.gu(7) : units.gu(5.5)
 
             width: list.width
-            height: isCategory ? units.gu(4) : (conversation && pictures ? units.gu(7) : units.gu(5.5))
+            // Voice channels list who is in them under their name.
+            height: isCategory ? units.gu(4) : lineHeight + (kind === "voice" ? voiceList.height : 0)
 
             Label {
                 visible: row.isCategory
@@ -76,13 +81,19 @@ Item {
                 color: row.active ? theme.palette.highlighted.background : "transparent"
                 onClicked: joinable ? Session.call.start(row.channelId) : panel.channelOpened(row.channelId)
 
+                Item {
+                    id: mainLine
+                    anchors { top: parent.top; left: parent.left; right: parent.right }
+                    height: row.lineHeight
+                }
+
                 Row {
                     anchors {
                         left: parent.left
                         right: parent.right
                         leftMargin: units.gu(row.indented ? 3 : 2)
                         rightMargin: units.gu(2)
-                        verticalCenter: parent.verticalCenter
+                        verticalCenter: mainLine.verticalCenter
                     }
                     spacing: units.gu(row.conversation ? 1.25 : 1)
 
@@ -158,7 +169,8 @@ Item {
                         visible: row.kind === "voice" || row.kind === "announcement" || row.kind === "forum"
                         name: row.kind === "voice" ? "audio-speakers-symbolic"
                                                    : (row.kind === "announcement" ? "notification" : "message")
-                        color: theme.palette.normal.backgroundSecondaryText
+                        // A voice channel with people in it
+                        color: row.inCall ? theme.palette.normal.positive : theme.palette.normal.backgroundSecondaryText
                     }
 
                     Label {
@@ -175,6 +187,7 @@ Item {
 
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width - (row.conversation && row.pictures ? units.gu(10) : units.gu(7))
+                               - (callIcon.visible ? callIcon.width + parent.spacing : 0)
                         text: row.name
                         font.pixelSize: units.gu(row.conversation && row.pictures ? 1.8 : 1.7)
                         font.bold: row.unread || row.mentions > 0
@@ -184,10 +197,78 @@ Item {
                         elide: Text.ElideRight
                     }
 
+                    // A call going on in this conversation (shown, not a button).
+                    Icon {
+                        id: callIcon
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: row.conversation && row.inCall
+                        width: units.gu(2.2)
+                        height: width
+                        name: "call-start"
+                        color: theme.palette.normal.positive
+                    }
+
                     UnreadBadge {
                         anchors.verticalCenter: parent.verticalCenter
                         mentions: row.mentions
                         unread: row.unread && !row.conversation
+                    }
+                }
+
+                // Voice channels: up to 5 of the people in them.
+                Column {
+                    id: voiceList
+                    anchors {
+                        top: mainLine.bottom
+                        topMargin: -units.gu(1)
+                        left: parent.left
+                        right: parent.right
+                        leftMargin: units.gu(row.indented ? 6 : 5)
+                        rightMargin: units.gu(2)
+                    }
+                    visible: row.kind === "voice" && row.voiceCount > 0
+                    height: visible ? implicitHeight + units.gu(1.5) : 0
+                    spacing: units.gu(0.5)
+
+                    Repeater {
+                        model: row.kind === "voice" ? row.voiceMembers : []
+
+                        Row {
+                            required property var modelData
+                            spacing: units.gu(1)
+
+                            LomiriShape {
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: units.gu(2.8)
+                                height: width
+                                aspect: LomiriShape.Flat
+                                radius: "small"
+                                backgroundColor: theme.palette.normal.base
+                                sourceFillMode: LomiriShape.PreserveAspectCrop
+                                source: Image {
+                                    source: modelData.avatarUrl
+                                    sourceSize.width: units.gu(6)
+                                    sourceSize.height: units.gu(6)
+                                    asynchronous: true
+                                }
+                            }
+
+                            Label {
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: voiceList.width - units.gu(4)
+                                text: modelData.name !== "" ? modelData.name : i18n.tr("Loading…")
+                                font.pixelSize: units.gu(1.5)
+                                elide: Text.ElideRight
+                                color: theme.palette.normal.backgroundSecondaryText
+                            }
+                        }
+                    }
+
+                    Label {
+                        visible: row.voiceCount > 5
+                        text: i18n.tr("and %1 more").arg(row.voiceCount - 5)
+                        font.pixelSize: units.gu(1.4)
+                        color: theme.palette.normal.backgroundSecondaryText
                     }
                 }
             }

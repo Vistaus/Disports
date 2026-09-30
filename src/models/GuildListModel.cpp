@@ -1,11 +1,14 @@
 #include "GuildListModel.h"
 
+#include <algorithm>
+
 #include <QColor>
 #include <QVariantMap>
 
 #include "discord/DiscordInstance.hpp"
 
 #include "DiscordUrls.h"
+#include "voice/VoiceStates.h"
 
 namespace {
 
@@ -79,6 +82,9 @@ QVariant GuildListModel::data(const QModelIndex& index, int role) const
                 ids.append(DiscordUrls::id(id));
             return ids;
         }
+        case HasCallRole:
+            return m_voiceStates && std::any_of(row.guilds.begin(), row.guilds.end(),
+                [this](Snowflake id) { return m_voiceStates->guildHasCall(id); });
         default:
             return QVariant();
         }
@@ -101,6 +107,7 @@ QVariant GuildListModel::data(const QModelIndex& index, int role) const
     case ExpandedRole:    return false;
     case PreviewsRole:    return QVariantList();
     case GuildIdsRole:    return QStringList();
+    case HasCallRole:     return m_voiceStates && m_voiceStates->guildHasCall(row.id);
     }
     return QVariant();
 }
@@ -120,6 +127,7 @@ QHash<int, QByteArray> GuildListModel::roleNames() const
         {ExpandedRole, "expanded"},
         {PreviewsRole, "previews"},
         {GuildIdsRole, "guildIds"},
+        {HasCallRole, "hasCall"},
     };
 }
 
@@ -221,6 +229,12 @@ void GuildListModel::refreshUnread()
     if (!m_rows.empty())
         emit dataChanged(index(0), index(int(m_rows.size()) - 1), {UnreadRole, MentionsRole});
     emit unreadChanged();
+}
+
+void GuildListModel::refreshCalls()
+{
+    if (!m_rows.empty())
+        emit dataChanged(index(0), index(int(m_rows.size()) - 1), {HasCallRole});
 }
 
 void GuildListModel::clear()
