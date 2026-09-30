@@ -6,6 +6,7 @@
 
 #include "discord/config/DiscordClientConfig.hpp"
 #include "discord/config/LocalSettings.hpp"
+#include "Log.h"
 
 QtHttpClient::QtHttpClient(QObject* parent)
     : QObject(parent)
@@ -140,7 +141,7 @@ void QtHttpClient::PerformRequest(
         reply = m_nam.sendCustomRequest(request, "DELETE", body);
         break;
     default:
-        qWarning("QtHttpClient: unsupported request type %d for %s", int(type), url.c_str());
+        qCWarning(lcCore, "HTTP: unsupported request type %d for %s", int(type), url.c_str());
         delete req;
         return;
     }

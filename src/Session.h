@@ -1,6 +1,5 @@
 #pragma once
 
-#include <QHash>
 #include <QObject>
 #include <QSet>
 #include <QString>
@@ -11,11 +10,16 @@
 #include "discord/models/Snowflake.hpp"
 
 // Complete types: moc needs them for the QObject* properties below.
+#include "ChannelPermissions.h"
+#include "GatewayConnection.h"
+#include "MentionSuggester.h"
+#include "MessageSender.h"
+#include "OfflineCache.h"
 #include "Preferences.h"
 #include "RemoteAuth.h"
+#include "TypingIndicator.h"
 #include "models/ChannelListModel.h"
 #include "models/EmojiPickerModel.h"
-#include "OfflineCache.h"
 #include "models/GuildListModel.h"
 #include "models/MessageListModel.h"
 #include "models/UnreadDmListModel.h"
@@ -29,17 +33,14 @@ class QtFrontend;
 class QtHttpClient;
 class QtWebsocketClient;
 
-// The QML-facing session: owns the Discord client core (DiscordInstance),
-// the Qt transports and the list models, and exposes navigation and chat
-// actions to QML. Everything runs on the main thread.
+// The app's state for QML: signing in and out, the Discord client core
+// (DiscordInstance) with its Qt transports, what is open, and the models
+// and helpers for it. Everything runs on the main thread.
 class Session : public QObject
 {
     Q_OBJECT
 
     Q_PROPERTY(Phase phase READ phase NOTIFY phaseChanged)
-    Q_PROPERTY(bool connected READ connected NOTIFY connectedChanged)
-    Q_PROPERTY(bool networkOnline READ networkOnline WRITE setNetworkOnline NOTIFY networkOnlineChanged)
-    Q_PROPERTY(int reconnectSeconds READ reconnectSeconds NOTIFY reconnectSecondsChanged)
     Q_PROPERTY(QString errorText READ errorText NOTIFY errorTextChanged)
     Q_PROPERTY(QString noticeText READ noticeText NOTIFY noticeTextChanged)
 
@@ -50,49 +51,25 @@ class Session : public QObject
     Q_PROPERTY(bool inDirectMessages READ inDirectMessages NOTIFY currentGuildChanged)
     Q_PROPERTY(QString currentGuildId READ currentGuildId NOTIFY currentGuildChanged)
     Q_PROPERTY(QString currentGuildName READ currentGuildName NOTIFY currentGuildChanged)
-
     Q_PROPERTY(QString currentChannelId READ currentChannelId NOTIFY currentChannelChanged)
     Q_PROPERTY(QString currentChannelName READ currentChannelName NOTIFY currentChannelChanged)
     Q_PROPERTY(QString currentChannelTopic READ currentChannelTopic NOTIFY currentChannelChanged)
-    // What the account may do in the open channel (server permissions,
-    // role and member overwrites, timeouts); always yes in DMs and groups.
-    Q_PROPERTY(bool canSendMessages READ canSendMessages NOTIFY permissionsChanged)
-    // May delete other people's messages here (moderators in servers).
-    Q_PROPERTY(bool canManageMessages READ canManageMessages NOTIFY permissionsChanged)
-    // Add a new reaction / join in on an existing one (Discord lets people
-    // without "Add Reactions" do the latter).
-    Q_PROPERTY(bool canAddReactions READ canAddReactions NOTIFY permissionsChanged)
-    Q_PROPERTY(bool canUseReactions READ canUseReactions NOTIFY permissionsChanged)
-    // Earlier messages (only new ones arrive without it).
-    Q_PROPERTY(bool canReadHistory READ canReadHistory NOTIFY permissionsChanged)
-    // "You're timed out until 14:30", or empty.
-    Q_PROPERTY(QString timeoutText READ timeoutText NOTIFY permissionsChanged)
-    // Slowmode: seconds between messages here (0: none or exempt), and how
-    // long until the next one may be sent.
-    Q_PROPERTY(int slowmodeSeconds READ slowmodeSeconds NOTIFY permissionsChanged)
-    Q_PROPERTY(int slowmodeRemaining READ slowmodeRemaining NOTIFY slowmodeChanged)
-    Q_PROPERTY(bool canAttachFiles READ canAttachFiles NOTIFY permissionsChanged)
-    // @everyone / @here, and roles that are not mentionable.
-    Q_PROPERTY(bool canMentionEveryone READ canMentionEveryone NOTIFY permissionsChanged)
-
-    // The file being uploaded (one at a time).
-    // A call going on in the open conversation (anyone's, see VoiceStates),
-    // and for how long ("12:34", or "" when not known).
+    // Someone's call in the open conversation, and for how long ("12:34").
     Q_PROPERTY(bool currentChannelHasCall READ currentChannelHasCall NOTIFY currentCallChanged)
     Q_PROPERTY(QString currentCallElapsed READ currentCallElapsed NOTIFY currentCallChanged)
-
-    Q_PROPERTY(bool uploading READ uploading NOTIFY uploadChanged)
-    Q_PROPERTY(QString uploadName READ uploadName NOTIFY uploadChanged)
-    Q_PROPERTY(qreal uploadProgress READ uploadProgress NOTIFY uploadChanged)
-    Q_PROPERTY(QString typingText READ typingText NOTIFY typingTextChanged)
     Q_PROPERTY(bool loadingMessages READ loadingMessages NOTIFY loadingMessagesChanged)
 
-    // Set by the UI: a chat is on screen (fetch history, mark read), and
-    // whether picking a server should also open its first channel (wide
-    // layout) or only show the channel list (phone).
+    // Set by the UI: a chat is on screen (fetch history, mark it read), and
+    // whether picking a server also opens its first channel (wide layout)
+    // or only shows its channel list (phone).
     Q_PROPERTY(bool chatVisible READ chatVisible WRITE setChatVisible NOTIFY chatVisibleChanged)
     Q_PROPERTY(bool autoSelectChannel READ autoSelectChannel WRITE setAutoSelectChannel NOTIFY autoSelectChannelChanged)
 
+    Q_PROPERTY(GatewayConnection* connection READ connection CONSTANT)
+    Q_PROPERTY(ChannelPermissions* permissions READ permissions CONSTANT)
+    Q_PROPERTY(MessageSender* sender READ sender CONSTANT)
+    Q_PROPERTY(TypingIndicator* typing READ typing CONSTANT)
+    Q_PROPERTY(MentionSuggester* mentions READ mentions CONSTANT)
     Q_PROPERTY(GuildListModel* guilds READ guilds CONSTANT)
     Q_PROPERTY(ChannelListModel* channels READ channels CONSTANT)
     Q_PROPERTY(MessageListModel* messages READ messages CONSTANT)
@@ -106,22 +83,21 @@ public:
     enum Phase {
         Starting,   // loading settings
         LoggedOut,  // show the login page
-        Connecting, // signed in, waiting for READY the first time
-        Ready,      // READY received at least once; UI usable
+        Connecting, // signed in, waiting for the first READY
+        Ready,      // READY received at least once
     };
     Q_ENUM(Phase)
 
     explicit Session(QObject* parent = nullptr);
     ~Session() override;
 
+    // Another server than Discord's; before start().
+    void setServerUrls(const QString& api, const QString& cdn);
     // Loads the saved settings and signs in if a token is stored.
     void start();
 
     Phase phase() const { return m_phase; }
-    bool connected() const { return m_connected; }
-    bool networkOnline() const { return m_networkOnline; }
-    void setNetworkOnline(bool online);
-    int reconnectSeconds() const { return m_reconnectSeconds; }
+    bool connected() const { return m_connection->connected(); }
     QString errorText() const { return m_errorText; }
     QString noticeText() const { return m_noticeText; }
 
@@ -135,28 +111,19 @@ public:
     QString currentChannelId() const;
     QString currentChannelName() const;
     QString currentChannelTopic() const;
-    bool canManageMessages() const;
-    bool canSendMessages() const;
-    bool canAddReactions() const;
-    bool canUseReactions() const;
-    bool canReadHistory() const;
-    QString timeoutText() const;
-    int slowmodeSeconds() const;
-    int slowmodeRemaining() const;
-    bool canAttachFiles() const;
-    bool canMentionEveryone() const;
     bool currentChannelHasCall() const;
     QString currentCallElapsed() const;
-    bool uploading() const { return m_uploading; }
-    QString uploadName() const { return m_uploadName; }
-    qreal uploadProgress() const { return m_uploadProgress; }
-    QString typingText() const { return m_typingText; }
     bool loadingMessages() const { return m_loadingMessages; }
     bool chatVisible() const { return m_chatVisible; }
     void setChatVisible(bool visible);
     bool autoSelectChannel() const { return m_autoSelectChannel; }
     void setAutoSelectChannel(bool autoSelect);
 
+    GatewayConnection* connection() const { return m_connection; }
+    ChannelPermissions* permissions() const { return m_permissions; }
+    MessageSender* sender() const { return m_sender; }
+    TypingIndicator* typing() const { return m_typing; }
+    MentionSuggester* mentions() const { return m_mentions; }
     GuildListModel* guilds() const { return m_guilds; }
     ChannelListModel* channels() const { return m_channels; }
     MessageListModel* messages() const { return m_messages; }
@@ -165,171 +132,116 @@ public:
     EmojiPickerModel* emoji() const { return m_emoji; }
     RemoteAuth* qrLogin() const { return m_qrLogin; }
     CallManager* call() const { return m_call; }
-    DiscordInstance* instance() const { return m_instance; }
-
     OfflineCache* offlineCache() const { return m_offline; }
     VoiceStates* voiceStates() const { return m_voiceStates; }
+    DiscordInstance* instance() const { return m_instance; }
 
     Q_INVOKABLE void loginWithToken(const QString& token);
     Q_INVOKABLE void logout();
-    Q_INVOKABLE void reconnect();
 
     Q_INVOKABLE void selectDirectMessages();
     Q_INVOKABLE void selectGuild(const QString& guildId);
     Q_INVOKABLE void openChannel(const QString& channelId);
-    Q_INVOKABLE void sendMessage(const QString& text, const QString& replyToId = QString());
-    // Own messages in the current channel. False when it cannot be sent.
+    Q_INVOKABLE void loadOlderMessages();
+    Q_INVOKABLE void markCurrentChannelRead();
+    // See describeChannel() in ChannelInfo.h.
+    Q_INVOKABLE QVariantMap channelInfo(const QString& channelId) const;
+
+    // Actions on messages of the open channel. Own messages only for
+    // editing; false when it can't be done.
     Q_INVOKABLE bool editMessage(const QString& messageId, const QString& text);
     Q_INVOKABLE void deleteMessage(const QString& messageId);
-    // For the info page: name, topic, kind ("dm", "group", "channel"),
-    // typeName, category, server, id, nsfw, iconUrl and, for DMs and groups,
-    // members [{id, name, username, avatarUrl, blocked}].
-    Q_INVOKABLE QVariantMap channelInfo(const QString& channelId) const;
-    Q_INVOKABLE void showNotice(const QString& text) { setNotice(text); }
-    Q_INVOKABLE void loadOlderMessages();
-    // Sends a local file (a file:// URL, e.g. from Content Hub) with an
-    // optional message, to the open channel.
-    Q_INVOKABLE bool sendAttachment(const QString& fileUrl, const QString& text);
-    Q_INVOKABLE void cancelUpload();
-    // Suggestions for the word being typed: "@al" or "#gen". A list of
-    // {kind ("user", "role", "everyone", "channel"), label, detail,
-    // insert (the text that replaces the word), avatarUrl, color}.
-    Q_INVOKABLE QVariantList mentionSuggestions(const QString& word) const;
-    // Asks Discord for server members matching a name (they arrive
-    // later: membersChanged).
-    Q_INVOKABLE void searchMembers(const QString& query);
-    Q_INVOKABLE void markCurrentChannelRead();
-    Q_INVOKABLE void notifyTyping();
-    Q_INVOKABLE void clearNotice();
-
-    // Reactions on messages of the open channel. `emoji` is a Unicode emoji
-    // or "name:id" (the `reaction` role of the emoji picker and the `emoji`
-    // field of a message's reactions).
+    // `emoji` is a Unicode emoji or "name:id", as the emoji picker and a
+    // message's reactions give it.
     Q_INVOKABLE void addReaction(const QString& messageId, const QString& emoji);
     Q_INVOKABLE void toggleReaction(const QString& messageId, const QString& emoji, bool reacted);
-    // Replaces the user's votes on a poll; an empty list removes them.
+    // Replaces our votes on a poll; an empty list removes them.
     Q_INVOKABLE void votePoll(const QString& messageId, const QVariantList& answerIds);
-    // Whether GStreamer can play video here (see GstVideoPlayer).
-    Q_INVOKABLE bool videoPlaybackAvailable();
 
-    // Called by QtFrontend.
-    void coreConnecting();
+    // A short message at the bottom of the screen, gone after a few seconds.
+    Q_INVOKABLE void showNotice(const QString& text);
+    Q_INVOKABLE void clearNotice();
+    Q_INVOKABLE bool videoPlaybackAvailable() const;
+
+    // From the core (through QtFrontend).
     void coreConnected();
-    void coreLoginAgain();
     void coreLoggedOut();
-    void coreSessionClosed(int code);
-    void coreGatewayFailed(int gatewayId, const QString& reason);
-    void coreGatewayClosed(int gatewayId, int code);
-    void coreGatewayMessage(int gatewayId, const std::string& payload);
-    void coreSetHeartbeatInterval(int ms);
-    void coreMessageAdded(Snowflake channel, const Message& msg);
-    void coreMessageUpdated(Snowflake channel, const Message& msg);
-    void coreMessageDeleted(Snowflake message);
+    void coreMessageAdded(Snowflake channel, const Message& message);
+    void coreMessageUpdated(Snowflake channel);
+    void coreMessageDeleted();
     void coreFailedToSend(Snowflake channel, Snowflake nonce);
-    void coreTyping(Snowflake user, Snowflake guild, Snowflake channel);
     void coreSelectedGuildChanged();
     void coreSelectedChannelChanged();
     void coreChannelListChanged();
     void coreChannelAcknowledged(Snowflake channel);
     void coreGuildListChanged();
     void coreProfileChanged();
-    void coreUserChanged(Snowflake user);
+    void coreUserChanged();
     void coreMessagesRefreshed();
-    void coreError(const QString& message);
-    void coreUploadStarted(Snowflake key, const QString& name);
-    bool coreUploadProgress(Snowflake key, size_t offset, size_t length); // true: cancel
-    void coreUploadStopped(Snowflake key);
-    void coreUploadFailed(const QString& name, int error);
     void coreMembersChanged();
+    void coreError(const QString& message);
 
     QString configPath() const;
     bool applicationActive() const;
 
 signals:
     void phaseChanged();
-    void connectedChanged();
-    void networkOnlineChanged();
-    void reconnectSecondsChanged();
     void errorTextChanged();
     void noticeTextChanged();
     void profileChanged();
     void currentGuildChanged();
     void currentChannelChanged();
-    void typingTextChanged();
+    void currentCallChanged();
     void loadingMessagesChanged();
     void chatVisibleChanged();
     void autoSelectChannelChanged();
-    void permissionsChanged();
-    void slowmodeChanged();
-    void uploadChanged();
-    void currentCallChanged();
     void membersChanged();
 
 private:
     void setPhase(Phase phase);
-    void setConnected(bool connected);
     void setErrorText(const QString& text);
-    void setNotice(const QString& text);
     void setLoadingMessages(bool loading);
 
     void createInstance(const std::string& token);
     void destroyInstance();
-    void startGateway();
-    void scheduleReconnect();
-    void dropGateway();
-    void heartbeat();
     // Shows the offline cache while connecting; see OfflineCache.
     void loadCachedState();
+    void restoreAfterReady(const QString& guild, const QString& channel);
     void ensureMessagesLoaded();
-    void updateTypingText();
     void afterGuildSelected();
     void refreshUnread();
-    // The open channel in a server (null in DMs), and a permission in it.
-    Channel* currentServerChannel() const;
-    bool hasPermission(uint64_t permission) const;
-    qint64 timeoutUntilMs() const;
-    void updatePermissions();
     void updateCurrentCall();
     // Asks Discord for the server members behind the messages shown whose
-    // nicknames are not known (history carries no member objects).
+    // nicknames aren't known (history carries no member objects).
     void requestMissingMembers();
 
     Phase m_phase = Starting;
-    bool m_connected = false;
-    bool m_networkOnline = true;
-    int m_reconnectSeconds = 0;
-    int m_reconnectDelay = 1;
+    QString m_apiUrl;
+    QString m_cdnUrl;
     QString m_errorText;
     QString m_noticeText;
-    QString m_typingText;
+    QTimer m_noticeTimer;
     bool m_loadingMessages = false;
     bool m_chatVisible = false;
     bool m_autoSelectChannel = false;
+    // Until the core has set up the first READY; see coreConnected().
     bool m_firstReadyPending = false;
-    QString m_openAfterReady; // channel asked for before the first READY was handled
+    // Showing the offline cache's state until the real READY arrives.
+    bool m_cachedStart = false;
+    QString m_openAfterReady; // asked for before the first READY was handled
+    QSet<Snowflake> m_fetchedChannels; // history requested since READY
+    QSet<QPair<Snowflake, Snowflake>> m_requestedMembers; // (server, user) since READY
 
     QtHttpClient* m_http = nullptr;
-    QtWebsocketClient* m_ws = nullptr;
+    QtWebsocketClient* m_sockets = nullptr;
     std::unique_ptr<QtFrontend> m_frontend;
     DiscordInstance* m_instance = nullptr;
 
-    QTimer m_heartbeatTimer;
-    bool m_heartbeatAcked = true;
-    QTimer m_reconnectTimer;
-    QTimer m_reconnectCountdown;
-    QTimer m_typingTimer;
-    QTimer m_noticeTimer;
-    QHash<Snowflake, qint64> m_typingUntil; // user -> ms since epoch
-    QSet<Snowflake> m_fetchedChannels;      // history requested since the last READY
-    QSet<QPair<Snowflake, Snowflake>> m_requestedMembers; // (server, user) asked for since READY
-    QHash<Snowflake, qint64> m_slowmodeUntil; // channel -> ms since epoch
-    QTimer m_slowmodeTimer;
-    QTimer m_timeoutTimer; // the end of a timeout
-    bool m_uploading = false;
-    bool m_uploadCancelled = false;
-    QString m_uploadName;
-    qreal m_uploadProgress = 0;
-
+    GatewayConnection* m_connection = nullptr;
+    ChannelPermissions* m_permissions = nullptr;
+    MessageSender* m_sender = nullptr;
+    TypingIndicator* m_typing = nullptr;
+    MentionSuggester* m_mentions = nullptr;
     GuildListModel* m_guilds = nullptr;
     ChannelListModel* m_channels = nullptr;
     MessageListModel* m_messages = nullptr;
@@ -337,10 +249,8 @@ private:
     Preferences* m_preferences = nullptr;
     EmojiPickerModel* m_emoji = nullptr;
     OfflineCache* m_offline = nullptr;
-    // Showing the offline cache's READY until the real one arrives.
-    bool m_cachedStart = false;
     RemoteAuth* m_qrLogin = nullptr;
     CallManager* m_call = nullptr;
     VoiceStates* m_voiceStates = nullptr;
-    QTimer m_callClock; // the open conversation's call time
+    QTimer m_callClock; // ticks currentCallElapsed
 };

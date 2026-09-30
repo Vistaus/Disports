@@ -2,9 +2,8 @@ import QtQuick
 import Lomiri.Components
 import Disports.Core
 
-// About a channel, DM or group: what it is and where it belongs, its topic,
-// and for DMs and groups who is in it. Built from Lomiri list rows, like
-// Settings.
+// About a channel, DM or group: its type, server, topic and, for DMs and
+// groups, who is in it.
 Page {
     id: infoPage
     objectName: "channelInfoPage"

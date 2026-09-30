@@ -15,6 +15,7 @@ find_package(OpenSSL REQUIRED)
 qt_standard_project_setup(REQUIRES 6.8)
 
 option(DISPORTS_SANITIZE "Build with AddressSanitizer, LeakSanitizer and UBSan (tests)" OFF)
+option(DISPORTS_TEST_HOOKS "Build the hooks tools/test drives the app with" OFF)
 
 add_subdirectory(third_party)
 
@@ -30,13 +31,20 @@ add_subdirectory(src/discord)
 
 qt_add_executable(disports
     src/main.cpp
+    src/ChannelInfo.cpp src/ChannelInfo.h
+    src/ChannelPermissions.cpp src/ChannelPermissions.h
     src/DiscordUrls.cpp src/DiscordUrls.h
+    src/GatewayConnection.cpp src/GatewayConnection.h
+    src/Log.cpp src/Log.h
+    src/MentionSuggester.cpp src/MentionSuggester.h
     src/MessageFormatter.cpp src/MessageFormatter.h
+    src/MessageSender.cpp src/MessageSender.h
     src/OfflineCache.cpp src/OfflineCache.h
     src/ImageCache.cpp src/ImageCache.h
     src/Preferences.cpp src/Preferences.h
     src/RemoteAuth.cpp src/RemoteAuth.h
     src/Session.cpp src/Session.h
+    src/TypingIndicator.cpp src/TypingIndicator.h
     src/backend/CoreGlobals.cpp src/backend/CoreGlobals.h
     src/backend/QtFrontend.cpp src/backend/QtFrontend.h
     src/backend/QtHttpClient.cpp src/backend/QtHttpClient.h
@@ -44,6 +52,7 @@ qt_add_executable(disports
     src/models/ChannelListModel.cpp src/models/ChannelListModel.h
     src/models/EmojiPickerModel.cpp src/models/EmojiPickerModel.h
     src/models/GuildListModel.cpp src/models/GuildListModel.h
+    src/models/MessageContent.cpp src/models/MessageContent.h
     src/models/MessageListModel.cpp src/models/MessageListModel.h
     src/models/UnreadDmListModel.cpp src/models/UnreadDmListModel.h
     src/media/GstVideoPlayer.cpp src/media/GstVideoPlayer.h
@@ -55,6 +64,14 @@ qt_add_executable(disports
     src/voice/VoiceSession.cpp src/voice/VoiceSession.h
     src/voice/VoiceStates.cpp src/voice/VoiceStates.h
 )
+
+# Test builds (tools/test): hooks driven by environment variables.
+set(TEST_QML_FILES)
+if(DISPORTS_TEST_HOOKS)
+    target_sources(disports PRIVATE src/testing/TestHooks.cpp src/testing/TestHooks.h)
+    target_compile_definitions(disports PRIVATE DISPORTS_TEST_HOOKS)
+    set(TEST_QML_FILES qml/TestHooks.qml)
+endif()
 
 # Video goes through GStreamer (hardware decoders on the phone via
 # gstreamer1.0-droid), see src/media/GstVideoPlayer.h.
@@ -77,7 +94,13 @@ qt_add_qml_module(disports
         qml/StatusDot.qml
         qml/ChannelPanel.qml
         qml/ChatPanel.qml
+        qml/CallBar.qml
+        qml/MessageList.qml
+        qml/Composer.qml
+        qml/MentionPopup.qml
+        qml/AttachmentBar.qml
         qml/ChatPage.qml
+        qml/MessageCitation.qml
         qml/MessageDelegate.qml
         qml/PanelHeader.qml
         qml/UnreadBadge.qml
@@ -99,6 +122,7 @@ qt_add_qml_module(disports
         qml/ContentPickerPage.qml
         qml/CallBadge.qml
         qml/MediaSize.js
+        ${TEST_QML_FILES}
 )
 
 qt_add_resources(disports "assets"

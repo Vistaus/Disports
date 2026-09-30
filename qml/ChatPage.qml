@@ -40,7 +40,7 @@ Page {
                 // A call going on here: the active call icon, in green.
                 iconName: Session.currentChannelHasCall ? "active-call" : "call-start"
                 text: Session.currentChannelHasCall ? i18n.tr("Join call") : i18n.tr("Call")
-                visible: Session.connected && Session.currentChannelId !== ""
+                visible: Session.connection.connected && Session.currentChannelId !== ""
                          && Session.call.canCall(Session.currentChannelId)
                 onTriggered: Session.call.start(Session.currentChannelId)
             },
@@ -54,23 +54,13 @@ Page {
     }
 
     ChatPanel {
-        id: panel
         anchors {
             top: chatPage.header.bottom
             left: parent.left
             right: parent.right
             bottom: parent.bottom
         }
+        pageStack: chatPage.pageStack
         showHeader: false
-        onMediaOpened: function(media) {
-            if (media.viewType === "none")
-                Qt.openUrlExternally(media.openUrl || media.viewUrl)
-            else
-                chatPage.pageStack.push(Qt.resolvedUrl("MediaViewerPage.qml"), { "media": media })
-        }
-        onAttachRequested: {
-            const picker = chatPage.pageStack.push(Qt.resolvedUrl("ContentPickerPage.qml"))
-            picker.picked.connect(function(url, transfer) { panel.attach(url, transfer) })
-        }
     }
 }

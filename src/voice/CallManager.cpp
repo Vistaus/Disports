@@ -74,12 +74,12 @@ QString CallManager::statusText() const
     case Incoming:
         return tr("Incoming call");
     case Connecting:
-        return tr("Connecting…");
+        return tr("Connecting...");
     case Active:
         break;
     }
     if (m_direct && m_participants.isEmpty())
-        return tr("Calling…");
+        return tr("Calling...");
     if (!m_talkStartedMs)
         return tr("Connected");
     const qint64 seconds = (QDateTime::currentMSecsSinceEpoch() - m_talkStartedMs) / 1000;
@@ -506,8 +506,7 @@ void CallManager::stopVoice()
 
 void CallManager::keepDisplayOn(bool on)
 {
-    // Ubuntu Touch suspends apps in the background and when the screen
-    // turns off; keeping the display on keeps the call going.
+    // Ubuntu Touch suspends apps when the screen turns off.
     if (on == m_displayRequested)
         return;
     m_displayRequested = on;

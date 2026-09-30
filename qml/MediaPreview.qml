@@ -10,7 +10,7 @@ import "MediaSize.js" as MediaSize
 Item {
     id: preview
 
-    // An entry of a message's `media`, see MessageListModel::mediaOf.
+    // An entry of a message's `media`, see MessageContent::media().
     property var media: ({})
     property real maxWidth: units.gu(30)
     // Set by the message while it is on screen and the app is in front.

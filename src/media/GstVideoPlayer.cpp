@@ -8,6 +8,8 @@
 #include <gst/gst.h>
 #include <gst/video/video.h>
 
+#include "Log.h"
+
 namespace {
 
 constexpr int BusPollMs = 40;
@@ -212,8 +214,7 @@ void GstVideoPlayer::createPipeline()
     gst_app_sink_set_callbacks(GST_APP_SINK(appsink), &callbacks, this, nullptr);
 
     m_hardwareDecoder = false;
-    m_softwareDecoding = m_loops || m_hardwareFailed
-                         || qEnvironmentVariableIntValue("DISPORTS_SOFTWARE_VIDEO") != 0;
+    m_softwareDecoding = m_loops || m_hardwareFailed;
     g_signal_connect(m_pipeline, "element-setup", G_CALLBACK(elementSetup), this);
 
     const QByteArray uri = m_source.toEncoded();
@@ -276,7 +277,7 @@ void GstVideoPlayer::onElementAdded(GstElement* element, void* player)
         return;
     const gchar* klass = gst_element_factory_get_metadata(factory, GST_ELEMENT_METADATA_KLASS);
     if (klass && g_strrstr(klass, "Decoder") && g_strrstr(klass, "Video"))
-        qInfo("GstVideoPlayer: decoding with %s", GST_OBJECT_NAME(factory));
+        qCDebug(lcVideo, "decoding with %s", GST_OBJECT_NAME(factory));
     if (isHardwareVideoDecoder(factory))
         self->m_hardwareDecoder = true;
 }
@@ -285,7 +286,7 @@ bool GstVideoPlayer::retryInSoftware()
 {
     if (m_softwareDecoding || !m_hardwareDecoder)
         return false;
-    qWarning("GstVideoPlayer: the hardware decoder failed on %s, playing it with software decoders",
+    qCWarning(lcVideo, "hardware decoder failed on %s, retrying with software decoders",
              qPrintable(m_source.toString()));
     m_hardwareFailed = true;
     // Not from inside pollBus(), which is still using the pipeline.
@@ -376,7 +377,7 @@ void GstVideoPlayer::pollBus()
             GError* error = nullptr;
             gchar* debug = nullptr;
             gst_message_parse_error(message, &error, &debug);
-            qWarning("GstVideoPlayer: %s (%s)", error ? error->message : "?", debug ? debug : "");
+            qCWarning(lcVideo, "%s (%s)", error ? error->message : "?", debug ? debug : "");
             setError(error ? QString::fromUtf8(error->message) : tr("The video could not be played."));
             g_clear_error(&error);
             g_free(debug);

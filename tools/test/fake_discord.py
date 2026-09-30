@@ -160,7 +160,13 @@ HISTORY_MSGS[MEDIA] = media_messages()
 # #text: 200 plain messages, to compare scrolling with #media.
 HISTORY_MSGS[TEXT] = [message(TEXT, [ALICE, BOB, CAROL][i % 3],
                               "Plain message %d, long enough to take a couple of lines on a phone screen." % i)
-                      for i in range(200)]
+                      for i in range(400)]
+# The newest two reply to an earlier message: a recent one, and one 390
+# messages back (far enough to ask whether to keep looking).
+for i, text in ((395, "Replying to a recent one"), (10, "Replying to an old one")):
+    old = HISTORY_MSGS[TEXT][i]
+    HISTORY_MSGS[TEXT].append(message(TEXT, ME, text, type=19, referenced_message=old,
+                                      message_reference={"type": 0, "message_id": old["id"], "channel_id": TEXT}))
 
 # Stickers, one of each format (1 PNG, 2 APNG, 3 Lottie, 4 GIF), in the DM.
 # The fake CDN answers /stickers/<id>.png|gif with a small picture (and

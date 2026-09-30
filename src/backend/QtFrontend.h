@@ -4,9 +4,8 @@
 
 class Session;
 
-// The core's Frontend interface, implemented for Disports. Every
-// call arrives on the Qt main thread (both transports deliver there) and is
-// forwarded to the Session, which owns the QML-facing state.
+// The core's Frontend interface. Every call arrives on the main thread (the
+// Qt transports deliver there) and is passed on to the Session.
 class QtFrontend : public Frontend
 {
 public:

@@ -33,7 +33,7 @@ public:
         AvatarUrlRole,
         BodyRole,          // rich text
         PlainBodyRole,
-        TimestampRole,     // short, e.g. "Today at 14:02"
+        TimestampRole,     // "14:02" today, else "2026-09-29 14:02"
         EditedRole,
         IsOwnRole,
         IsPendingRole,
@@ -42,17 +42,18 @@ public:
         HasReplyRole,
         ReplyAuthorRole,
         ReplyBodyRole,
-        MediaRole,         // attachments and media embeds, see mediaOf()
-        ReactionsRole,     // list of {emoji, text, imageUrl, count, me}
-        EmbedsRole,        // link previews and bot embeds, see embedsOf()
+        MediaRole,         // see MessageContent::media()
+        ReactionsRole,     // see MessageContent::reactions()
+        EmbedsRole,        // see MessageContent::embeds()
         SystemIconRole,    // Suru icon of a system message
         InteractionRole,   // "Alice used /ping" above a command's response
         ForwardedRole,     // the body is a forwarded message
-        StickersRole,      // list of {name, url, animated, lottie}
-        PollRole,          // see pollOf(), or null
+        StickersRole,      // see MessageContent::stickers()
+        PollRole,          // see MessageContent::poll()
         JumboRole,         // only 1-3 emoji: show them large
         SeparatedRole,     // not grouped with the message above: separator
         BlockedRole,       // from a user the account blocked
+        ReplyIdRole,       // the message replied to, if it is in this channel
     };
 
     using QAbstractListModel::QAbstractListModel;
@@ -78,6 +79,8 @@ public:
     bool reachedStart() const { return m_reachedStart; }
     // The GAP_UP marker to load older messages from, or null.
     MessagePtr olderGap() const;
+    // The row of a message, or -1 when it isn't loaded.
+    Q_INVOKABLE int indexOfMessage(const QString& id) const;
     // Newest real message, for read acknowledgement.
     Snowflake newestMessageId() const;
 

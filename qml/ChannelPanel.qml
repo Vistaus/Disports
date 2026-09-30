@@ -131,7 +131,7 @@ Item {
                                 status: row.status
                             }
 
-                            // Blocked, as in the Qt 5 version
+                            // Blocked
                             Icon {
                                 anchors.centerIn: parent
                                 visible: row.blocked
@@ -277,7 +277,7 @@ Item {
                             Label {
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: voiceList.width - units.gu(4)
-                                text: modelData.name !== "" ? modelData.name : i18n.tr("Loading…")
+                                text: modelData.name !== "" ? modelData.name : i18n.tr("Loading...")
                                 font.pixelSize: units.gu(1.5)
                                 elide: Text.ElideRight
                                 color: theme.palette.normal.backgroundSecondaryText

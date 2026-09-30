@@ -32,18 +32,20 @@ ListItem {
     required property bool jumbo
     required property bool separated
     required property bool blocked
+    required property string replyId
 
-    signal replyRequested(string messageId, string author)
+    signal replyRequested(string messageId, string author, string text)
+    // Tapped the message this one replies to.
+    signal jumpRequested(string messageId)
     signal editRequested(string messageId, string text)
     signal deleteRequested(string messageId)
     // caller: the item the reaction picker points at
     signal reactRequested(string messageId, Item caller)
     signal mediaOpened(var media)
 
-    // On screen with the app not hidden or suspended: GIFs may play (if
-    // enabled). Against the list's visible range, which follows scrolling
-    // a few times a second (ChatPanel): every row re-checking every frame
-    // was the chat's biggest cost while scrolling.
+    // GIFs only play while on screen and the app is in front. Uses the
+    // list's visible range (MessageList), which updates a few times a
+    // second rather than every frame.
     readonly property bool onScreen: {
         const view = ListView.view
         return view !== null && visible
@@ -75,18 +77,6 @@ ListItem {
           : Math.max(content.height, avatar.visible ? avatar.height : 0) + units.gu(1.2)
     visible: !hiddenBlocked
 
-    // Scroll test: rows that change height once shown make scrolling jump.
-    property real shownHeight: 0
-    Component.onCompleted: if (testScroll) Qt.callLater(function() { bubble.shownHeight = bubble.height })
-    onHeightChanged: {
-        if (!testScroll)
-            return
-        const view = ListView.view
-        const onScreen = view && view.scrollTestStarted && y + shownHeight > view.contentY && y < view.contentY + view.height
-        if (shownHeight > 0 && onScreen && Math.abs(height - shownHeight) > 1)
-            console.log("scroll-test: row " + messageId + " changed height on screen " + shownHeight + " -> " + height)
-        shownHeight = height
-    }
     divider.visible: false
     opacity: isPending ? 0.5 : 1
 
@@ -95,20 +85,20 @@ ListItem {
             Action {
                 iconName: "mail-reply"
                 text: i18n.tr("Reply")
-                visible: !bubble.isPending && !bubble.isSystem && Session.canSendMessages
-                onTriggered: bubble.replyRequested(bubble.messageId, bubble.author)
+                visible: !bubble.isPending && !bubble.isSystem && Session.permissions.canSendMessages
+                onTriggered: bubble.replyRequested(bubble.messageId, bubble.author, bubble.plainBody)
             },
             Action {
                 iconName: "bot"
                 text: i18n.tr("React")
-                visible: !bubble.isPending && !bubble.isSystem && Session.canAddReactions
+                visible: !bubble.isPending && !bubble.isSystem && Session.permissions.canAddReactions
                 onTriggered: bubble.reactRequested(bubble.messageId, bubble)
             },
             Action {
                 iconName: "edit"
                 text: i18n.tr("Edit")
                 // Editing happens in the message box, there when sending is.
-                visible: bubble.isOwn && !bubble.isPending && !bubble.isSystem && Session.canSendMessages
+                visible: bubble.isOwn && !bubble.isPending && !bubble.isSystem && Session.permissions.canSendMessages
                 onTriggered: bubble.editRequested(bubble.messageId, bubble.plainBody)
             },
             Action {
@@ -127,7 +117,7 @@ ListItem {
             Action {
                 iconName: "delete"
                 text: i18n.tr("Delete")
-                visible: !bubble.isPending && !bubble.isSystem && (bubble.isOwn || Session.canManageMessages)
+                visible: !bubble.isPending && !bubble.isSystem && (bubble.isOwn || Session.permissions.canManageMessages)
                 onTriggered: bubble.deleteRequested(bubble.messageId)
             }
         ]
@@ -189,6 +179,25 @@ ListItem {
         onLinkActivated: bubble.revealed = true
     }
 
+    // Flashes when jumped to from a reply.
+    Rectangle {
+        anchors.fill: parent
+        color: theme.palette.normal.activity
+        opacity: bubble.ListView.view && bubble.ListView.view.highlightedId === bubble.messageId ? 0.2 : 0
+        Behavior on opacity { NumberAnimation { duration: 400 } }
+    }
+
+    // Along a forwarded message, from "Forwarded" down to its content.
+    Rectangle {
+        visible: bubble.forwarded && !bubble.placeholder
+        x: bubble.contentLeft - units.gu(1)
+        y: content.y + forwardedRow.y
+        width: units.dp(3)
+        radius: units.dp(2)
+        height: (reactionsLoader.visible ? reactionsLoader.y - units.gu(0.3) : content.height) - forwardedRow.y
+        color: theme.palette.normal.activity
+    }
+
     SidebarIcon {
         id: avatar
         visible: bubble.showAvatar && !bubble.grouped && !bubble.isSystem && !bubble.placeholder
@@ -216,28 +225,14 @@ ListItem {
         }
         spacing: units.gu(0.3)
 
-        // Reply citation
-        Row {
+        // The message this one replies to; tap to go to it.
+        MessageCitation {
             visible: bubble.hasReply
             width: parent.width
-            spacing: units.gu(0.75)
-
-            Rectangle {
-                width: units.dp(2)
-                height: replyLabel.height
-                color: theme.palette.normal.base
-            }
-
-            Label {
-                id: replyLabel
-                width: parent.width - units.gu(1)
-                text: "<b>" + bubble.replyAuthor + "</b> " + bubble.replyBody
-                textFormat: Text.StyledText
-                font.pixelSize: units.gu(1.4)
-                color: theme.palette.normal.backgroundSecondaryText
-                elide: Text.ElideRight
-                maximumLineCount: 1
-            }
+            title: bubble.replyAuthor !== "" ? bubble.replyAuthor : i18n.tr("Original message was deleted")
+            text: bubble.replyBody
+            tappable: bubble.replyId !== "" && bubble.replyAuthor !== ""
+            onClicked: bubble.jumpRequested(bubble.replyId)
         }
 
         // Who ran the command this message answers
@@ -285,6 +280,7 @@ ListItem {
         }
 
         Row {
+            id: forwardedRow
             visible: bubble.forwarded
             spacing: units.gu(0.75)
 
@@ -293,14 +289,14 @@ ListItem {
                 width: units.gu(1.6)
                 height: width
                 name: "mail-forwarded"
-                color: theme.palette.normal.backgroundSecondaryText
+                color: theme.palette.normal.activity
             }
 
             Label {
                 text: i18n.tr("Forwarded")
-                textSize: Label.Small
-                font.italic: true
-                color: theme.palette.normal.backgroundSecondaryText
+                font.pixelSize: units.gu(1.4)
+                font.bold: true
+                color: theme.palette.normal.activity
             }
         }
 
@@ -319,10 +315,8 @@ ListItem {
             onLinkActivated: function(link) { Qt.openUrlExternally(link) }
         }
 
-        // Pictures and videos. The ListView builds rows ahead of time in
-        // steps, and these come after the row is placed: the room they
-        // take is kept from the start (their sizes are known, MediaSize.js),
-        // or the row would grow as they appear and scrolling would jump.
+        // Pictures and videos. Their room is reserved from the start
+        // (MediaSize.js) so the row doesn't grow while scrolling.
         Item {
             width: parent.width
             height: MediaSize.totalHeight(bubble.media, mediaColumn.maxWidth, units.gu(30), units.gu(5),
@@ -394,9 +388,9 @@ ListItem {
             }
         }
 
-        // Only built for messages with reactions (rows are built while
-        // scrolling; the less in each, the smoother).
+        // Only built for messages with reactions.
         Loader {
+            id: reactionsLoader
             width: parent.width
             active: bubble.reactions.length > 0
             visible: active
@@ -405,8 +399,8 @@ ListItem {
                 messageId: bubble.messageId
                 reactions: bubble.reactions
                 // System messages' reactions are shown, not joined in on.
-                canAdd: !bubble.isSystem && Session.canAddReactions
-                canToggle: !bubble.isSystem && Session.canUseReactions
+                canAdd: !bubble.isSystem && Session.permissions.canAddReactions
+                canToggle: !bubble.isSystem && Session.permissions.canUseReactions
                 onAddRequested: function(caller) { bubble.reactRequested(bubble.messageId, caller) }
             }
         }

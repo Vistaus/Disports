@@ -1,0 +1,209 @@
+import QtQuick
+import Lomiri.Components
+import Lomiri.Components.Popups
+import Disports.Core
+
+// The open channel's messages, newest at the bottom. Loads older ones when
+// scrolled to the top.
+ListView {
+    id: list
+
+    signal replyRequested(string messageId, string author, string text)
+    signal reactRequested(string messageId, var caller)
+    signal editRequested(string messageId, string text)
+    signal deleteRequested(string messageId)
+    signal mediaOpened(var media)
+
+    // Stays on the newest message until scrolled away from, and goes back
+    // to it when the content grows (history arriving, images laid out) or
+    // the view shrinks (the keyboard opening). Bottom-to-top: the newest
+    // message is at atYEnd, and positionViewAtBeginning() goes there.
+    property bool followNewest: true
+
+    function scrollToNewest() {
+        followNewest = true
+        Qt.callLater(function() {
+            if (list.followNewest)
+                list.positionViewAtBeginning()
+        })
+    }
+
+    // Going to a message (a reply's original): it flashes once there. Not
+    // loaded yet, older pages are loaded until it is; every few pages the
+    // user is asked whether to keep going.
+    property string highlightedId: ""
+    property string seekingId: ""
+    property int seekPages: 0
+    readonly property int pagesBeforeAsking: 5
+
+    function jumpToMessage(id) {
+        const index = Session.messages.indexOfMessage(id)
+        if (index >= 0) {
+            seekingId = ""
+            followNewest = false
+            positionViewAtIndex(index, ListView.Center)
+            highlightedId = id
+            highlightTimer.restart()
+            return
+        }
+        if (seekingId === "") {
+            seekingId = id
+            seekPages = 0
+        }
+        if (!Session.messages.hasOlder || !Session.permissions.canReadHistory) {
+            seekingId = ""
+            Session.showNotice(i18n.tr("The message could not be found."))
+            return
+        }
+        if (seekPages > 0 && seekPages % pagesBeforeAsking === 0) {
+            PopupUtils.open(farBackDialog, list)
+            return
+        }
+        loadNextPage()
+    }
+
+    function loadNextPage() {
+        seekPages++
+        Session.loadOlderMessages()
+    }
+
+    Timer {
+        id: highlightTimer
+        interval: 1500
+        onTriggered: list.highlightedId = ""
+    }
+
+    Connections {
+        target: Session
+        // A page arrived: look again.
+        function onLoadingMessagesChanged() {
+            if (!Session.loadingMessages && list.seekingId !== "")
+                Qt.callLater(list.jumpToMessage, list.seekingId)
+        }
+        function onCurrentChannelChanged() { list.seekingId = "" }
+    }
+
+    Component {
+        id: farBackDialog
+
+        Dialog {
+            id: dialog
+            title: i18n.tr("The message is far back")
+            text: i18n.tr("It isn't in the last %1 messages. Keep looking?").arg(list.count)
+
+            Button {
+                text: i18n.tr("Keep looking")
+                color: theme.palette.normal.positive
+                onClicked: {
+                    PopupUtils.close(dialog)
+                    list.loadNextPage()
+                }
+            }
+
+            Button {
+                text: i18n.tr("Stop")
+                onClicked: {
+                    list.seekingId = ""
+                    PopupUtils.close(dialog)
+                }
+            }
+        }
+    }
+
+    // The part on screen, for rows that only play GIFs while shown. Updated
+    // a few times a second while scrolling rather than every frame.
+    property real visibleTop: 0
+    property real visibleBottom: 0
+
+    function updateVisibleRange() {
+        visibleTop = contentY
+        visibleBottom = contentY + height
+    }
+
+    clip: true
+    model: Session.messages
+    verticalLayoutDirection: ListView.BottomToTop
+    // Rows are built ahead of the finger in the background.
+    cacheBuffer: units.gu(150)
+
+    Component.onCompleted: updateVisibleRange()
+    onContentYChanged: if (!moving) updateVisibleRange()
+    onMovementEnded: {
+        followNewest = atYEnd
+        updateVisibleRange()
+    }
+    onFlickEnded: followNewest = atYEnd
+    onCountChanged: if (followNewest) scrollToNewest()
+    onContentHeightChanged: {
+        if (followNewest)
+            scrollToNewest()
+        updateVisibleRange()
+    }
+    onHeightChanged: {
+        if (followNewest)
+            scrollToNewest()
+        updateVisibleRange()
+    }
+    // The visual top is atYBeginning.
+    onAtYBeginningChanged: {
+        if (atYBeginning && !followNewest && count > 0
+                && Session.messages.hasOlder && !Session.loadingMessages)
+            Session.loadOlderMessages()
+    }
+
+    Timer {
+        running: list.moving
+        interval: 250
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: list.updateVisibleRange()
+    }
+
+    delegate: MessageDelegate {
+        width: list.width
+        onReplyRequested: function(messageId, author, text) { list.replyRequested(messageId, author, text) }
+        onJumpRequested: function(messageId) { list.jumpToMessage(messageId) }
+        onReactRequested: function(messageId, caller) { list.reactRequested(messageId, caller) }
+        onEditRequested: function(messageId, text) { list.editRequested(messageId, text) }
+        onDeleteRequested: function(messageId) { list.deleteRequested(messageId) }
+        onMediaOpened: function(media) { list.mediaOpened(media) }
+    }
+
+    // Above the oldest message (bottom-to-top).
+    footer: Item {
+        width: list.width
+        height: units.gu(6)
+
+        Label {
+            anchors.centerIn: parent
+            width: parent.width - units.gu(4)
+            visible: Session.currentChannelId !== "" && !Session.permissions.canReadHistory
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.WordWrap
+            text: i18n.tr("You don't have permission to read earlier messages in this channel")
+            color: theme.palette.normal.backgroundSecondaryText
+        }
+
+        Button {
+            anchors.centerIn: parent
+            visible: Session.messages.hasOlder && Session.permissions.canReadHistory
+            text: Session.loadingMessages ? i18n.tr("Loading...") : i18n.tr("Load older messages")
+            enabled: !Session.loadingMessages
+            onClicked: Session.loadOlderMessages()
+        }
+
+        Label {
+            anchors.centerIn: parent
+            visible: Session.messages.reachedStart && list.count > 0 && Session.permissions.canReadHistory
+            text: Session.inDirectMessages
+                  ? i18n.tr("This is the beginning of your conversation with %1").arg(Session.currentChannelName)
+                  : i18n.tr("This is the beginning of #%1").arg(Session.currentChannelName)
+            color: theme.palette.normal.backgroundSecondaryText
+        }
+    }
+
+    ActivityIndicator {
+        anchors.centerIn: parent
+        running: Session.loadingMessages && (list.count === 0 || list.seekingId !== "")
+    }
+}

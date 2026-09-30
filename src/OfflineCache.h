@@ -12,14 +12,11 @@
 #include "discord/models/ScrollDir.hpp"
 #include "discord/models/Snowflake.hpp"
 
-// What Disports shows before the gateway is connected (starting offline, or
-// while connecting): the last READY and READY_SUPPLEMENTAL payloads, and the
-// newest messages of each channel that was opened. Everything is Discord's
-// raw JSON, so the core parses it exactly as if it came from Discord.
-//
-// Stored compressed in ~/.cache/<app>/offline; written on a worker thread,
-// channels at most every few seconds. Message events keep the channels
-// that are cached up to date.
+// What the app shows before the gateway connects: the last READY and
+// READY_SUPPLEMENTAL, and the newest messages of channels that were opened.
+// Kept as Discord's raw JSON, so the core reads it as if it came from
+// Discord. Stored compressed in the cache folder, written on a worker
+// thread.
 class OfflineCache : public QObject
 {
     Q_OBJECT

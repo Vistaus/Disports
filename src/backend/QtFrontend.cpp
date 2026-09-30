@@ -14,16 +14,17 @@
 #include "discord/state/MessageCache.hpp"
 
 #include "Session.h"
+#include "Log.h"
 
 QtFrontend::QtFrontend(Session* session)
     : m_session(session)
 {
 }
 
-void QtFrontend::OnLoginAgain() { m_session->coreLoginAgain(); }
+void QtFrontend::OnLoginAgain() { m_session->connection()->closedForReconnect(); }
 void QtFrontend::OnLoggedOut() { m_session->coreLoggedOut(); }
-void QtFrontend::OnSessionClosed(int errorCode) { m_session->coreSessionClosed(errorCode); }
-void QtFrontend::OnConnecting() { m_session->coreConnecting(); }
+void QtFrontend::OnSessionClosed(int errorCode) { m_session->connection()->sessionClosed(errorCode); }
+void QtFrontend::OnConnecting() { m_session->connection()->setConnected(false); }
 void QtFrontend::OnConnected() { m_session->coreConnected(); }
 
 void QtFrontend::OnGatewayDispatch(const std::string& type, const nlohmann::json& message)
@@ -49,17 +50,17 @@ void QtFrontend::OnAddMessage(Snowflake channelID, const Message& msg)
 void QtFrontend::OnUpdateMessage(Snowflake channelID, const Message& msg)
 {
     GetMessageCache()->EditMessage(channelID, msg);
-    m_session->coreMessageUpdated(channelID, msg);
+    m_session->coreMessageUpdated(channelID);
 }
 
 void QtFrontend::OnDeleteMessage(Snowflake messageInCurrentChannel)
 {
-    m_session->coreMessageDeleted(messageInCurrentChannel);
+    m_session->coreMessageDeleted();
 }
 
 void QtFrontend::OnStartTyping(Snowflake userID, Snowflake guildID, Snowflake channelID, time_t)
 {
-    m_session->coreTyping(userID, guildID, channelID);
+    m_session->typing()->userTyping(userID, channelID);
 }
 
 void QtFrontend::OnRequestDone(NetRequest* pRequest)
@@ -70,7 +71,7 @@ void QtFrontend::OnRequestDone(NetRequest* pRequest)
     // A failed gateway lookup only surfaces as a generic error in the core
     // and is never retried; treat it as a failed connection instead.
     if (pRequest->itype == DiscordRequest::GATEWAY && !pRequest->IsOk()) {
-        m_session->coreGatewayFailed(-1, QString::fromStdString(pRequest->ErrorMessage()));
+        m_session->connection()->failed(-1, QString::fromStdString(pRequest->ErrorMessage()));
         return;
     }
     GetDiscordInstance()->HandleRequest(pRequest);
@@ -83,23 +84,23 @@ void QtFrontend::OnFailedToSendMessage(Snowflake channel, Snowflake message)
 
 void QtFrontend::OnFailedToUploadFile(const std::string& file, int error)
 {
-    m_session->coreUploadFailed(QString::fromStdString(file), error);
+    m_session->sender()->uploadFailed(QString::fromStdString(file), error);
 }
 
-void QtFrontend::OnStartProgress(Snowflake key, const std::string& fileName, bool isUploading)
+void QtFrontend::OnStartProgress(Snowflake, const std::string& fileName, bool isUploading)
 {
     if (isUploading)
-        m_session->coreUploadStarted(key, QString::fromStdString(fileName));
+        m_session->sender()->uploadStarted(QString::fromStdString(fileName));
 }
 
-bool QtFrontend::OnUpdateProgress(Snowflake key, size_t offset, size_t length)
+bool QtFrontend::OnUpdateProgress(Snowflake, size_t offset, size_t length)
 {
-    return m_session->coreUploadProgress(key, offset, length);
+    return m_session->sender()->uploadProgressed(offset, length);
 }
 
-void QtFrontend::OnStopProgress(Snowflake key)
+void QtFrontend::OnStopProgress(Snowflake)
 {
-    m_session->coreUploadStopped(key);
+    m_session->sender()->uploadFinished();
 }
 
 void QtFrontend::RefreshMembers(const std::set<Snowflake>&)
@@ -114,7 +115,7 @@ void QtFrontend::OnGenericError(const std::string& message)
 
 void QtFrontend::OnJsonException(const std::string& message)
 {
-    qWarning("Discord JSON error: %s", message.c_str());
+    qCWarning(lcCore, "JSON error: %s", message.c_str());
 }
 
 void QtFrontend::OnCantViewChannel(const std::string& channelName)
@@ -124,12 +125,12 @@ void QtFrontend::OnCantViewChannel(const std::string& channelName)
 
 void QtFrontend::OnGatewayConnectFailure()
 {
-    m_session->coreGatewayFailed(-1, QStringLiteral("Could not connect to Discord"));
+    m_session->connection()->failed(-1, QStringLiteral("Could not connect to Discord"));
 }
 
 void QtFrontend::OnProtobufError(Protobuf::ErrorCode code)
 {
-    qWarning("Discord settings protobuf error %d", int(code));
+    qCWarning(lcCore, "settings protobuf error %d", int(code));
 }
 
 void QtFrontend::UpdateSelectedGuild() { m_session->coreSelectedGuildChanged(); }
@@ -141,8 +142,8 @@ void QtFrontend::UpdateChannelAcknowledge(Snowflake channelID, Snowflake)
     m_session->coreChannelAcknowledged(channelID);
 }
 
-void QtFrontend::UpdateProfileAvatar(Snowflake userID, const std::string&) { m_session->coreUserChanged(userID); }
-void QtFrontend::UpdateUserData(Snowflake userID) { m_session->coreUserChanged(userID); }
+void QtFrontend::UpdateProfileAvatar(Snowflake, const std::string&) { m_session->coreUserChanged(); }
+void QtFrontend::UpdateUserData(Snowflake) { m_session->coreUserChanged(); }
 void QtFrontend::RepaintGuildList() { m_session->coreGuildListChanged(); }
 void QtFrontend::RepaintProfile() { m_session->coreProfileChanged(); }
 void QtFrontend::RepaintProfileWithUserID(Snowflake) { m_session->coreProfileChanged(); }
@@ -159,22 +160,22 @@ void QtFrontend::LaunchURL(const std::string& url)
 
 void QtFrontend::OnWebsocketMessage(int gatewayID, const std::string& payload)
 {
-    m_session->coreGatewayMessage(gatewayID, payload);
+    m_session->connection()->messageReceived(gatewayID, payload);
 }
 
 void QtFrontend::OnWebsocketClose(int gatewayID, int errorCode, const std::string&)
 {
-    m_session->coreGatewayClosed(gatewayID, errorCode);
+    m_session->connection()->closed(gatewayID, errorCode);
 }
 
 void QtFrontend::OnWebsocketFail(int gatewayID, int, const std::string& message, bool, bool)
 {
-    m_session->coreGatewayFailed(gatewayID, QString::fromStdString(message));
+    m_session->connection()->failed(gatewayID, QString::fromStdString(message));
 }
 
 void QtFrontend::SetHeartbeatInterval(int timeMs)
 {
-    m_session->coreSetHeartbeatInterval(timeMs);
+    m_session->connection()->heartbeatIntervalReceived(timeMs);
 }
 
 std::string QtFrontend::LoadConfig()
@@ -253,6 +254,6 @@ void QtFrontend::DebugPrint(const char* fmt, va_list vl)
 {
     char buffer[2048];
     vsnprintf(buffer, sizeof buffer, fmt, vl);
-    qDebug("%s", buffer);
+    qCDebug(lcCore, "%s", buffer);
 }
 #endif

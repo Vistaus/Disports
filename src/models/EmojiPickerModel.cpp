@@ -9,6 +9,7 @@
 #include "discord/DiscordInstance.hpp"
 
 #include "DiscordUrls.h"
+#include "Log.h"
 
 namespace {
 
@@ -44,7 +45,7 @@ void EmojiPickerModel::loadUnicode()
 {
     QFile file(QStringLiteral(":/data/emoji.json"));
     if (!file.open(QIODevice::ReadOnly)) {
-        qWarning("Emoji data missing");
+        qCWarning(lcCore, "emoji data missing");
         return;
     }
     const QJsonArray rows = QJsonDocument::fromJson(file.readAll()).object().value(QStringLiteral("emoji")).toArray();

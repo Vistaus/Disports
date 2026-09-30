@@ -19,18 +19,14 @@ struct pa_operation;
 namespace webrtc { class AudioProcessing; }
 struct DenoiseState;
 
-// Call audio through PulseAudio (the "audio" and "microphone" AppArmor
-// policy groups allow its socket to confined apps): the microphone in 20 ms
-// frames of 48 kHz mono, and a mix of the other participants to the output,
-// one small jitter buffer each. Both streams have media.role=phone. On
-// phones, the output switches between loudspeaker and earpiece through the
-// sink's ports.
+// Call audio through PulseAudio: the microphone in 20 ms frames of 48 kHz
+// mono, and the other participants mixed to the output, each with a small
+// jitter buffer. On phones the output switches between loudspeaker and
+// earpiece through the sink's ports.
 //
-// The microphone goes through WebRTC's audio processing (third_party/):
-// echo cancellation (AEC3), with what we play as its reference, noise
-// suppression, gain control. With
-// denoising on, RNNoise's neural suppression replaces WebRTC's, after the
-// echo canceller.
+// The microphone goes through WebRTC's echo canceller (with what we play as
+// the reference), noise suppression and gain control. With `denoise`,
+// RNNoise replaces WebRTC's noise suppression.
 class AudioIO
 {
 public:
@@ -82,8 +78,8 @@ private:
     CaptureCallback m_capture;
     std::vector<int16_t> m_captureBuffer;
 
-    // WebRTC audio processing, used on PulseAudio's thread only; it works
-    // on 10 ms chunks. The playback mix (mono) waits in m_renderBuffer.
+    // Only used on PulseAudio's thread. Works on 10 ms chunks; the rest of
+    // the playback mix waits in m_renderBuffer.
     rtc::scoped_refptr<webrtc::AudioProcessing> m_apm;
     std::vector<float> m_renderBuffer;
     DenoiseState* m_denoise = nullptr;

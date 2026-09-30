@@ -18,9 +18,9 @@ pa_proplist* callProperties()
     pa_proplist_sets(props, PA_PROP_APPLICATION_NAME, "Disports");
     pa_proplist_sets(props, PA_PROP_APPLICATION_ID, "disports.jukfiuu");
     pa_proplist_sets(props, PA_PROP_MEDIA_ROLE, "phone");
-    // Not PulseAudio's echo canceller (which module-filter-heuristics adds
-    // to phone streams): on Android phones it cannot keep up with the HAL
-    // and takes PulseAudio down.
+    // module-filter-heuristics would add PulseAudio's echo canceller to
+    // phone streams, which crashes PulseAudio on Android devices. We do
+    // our own.
     pa_proplist_sets(props, "filter.suppress", "echo-cancel");
     return props;
 }
@@ -100,13 +100,8 @@ bool AudioIO::start(CaptureCallback capture, bool processing, bool denoise)
         return false;
     }
 
-    // The output's ports, for the loudspeaker / earpiece button.
-    //
-    // Not pulseaudio-modules-droid's "communication" profile (Android's VoIP
-    // mode, hardware echo cancellation): recording while playing in it
-    // leaves the phone's microphone broken for every app until a reboot
-    // (seen on a Qualcomm phone on Ubuntu Touch 24.04: about half of every
-    // recording is silence from then on).
+    // Don't switch to the droid "communication" profile: recording while
+    // playing in it can break the microphone for every app until a reboot.
     queryPorts();
 
     // Microphone: 20 ms fragments of mono.
@@ -367,14 +362,12 @@ void AudioIO::setUpProcessing(bool denoise)
         return;
     webrtc::AudioProcessing::Config config;
     config.high_pass_filter.enabled = true;
-    // AEC3 (not the mobile mode, the older, weaker AECM): it finds the delay
-    // between loudspeaker and microphone itself.
+    // AEC3; mobile mode would be the older AECM.
     config.echo_canceller.enabled = true;
     config.echo_canceller.mobile_mode = false;
     config.noise_suppression.enabled = !denoise;
     config.noise_suppression.level = webrtc::AudioProcessing::Config::NoiseSuppression::kHigh;
-    // AGC2: digital gain that only follows speech (a voice detector), so it
-    // doesn't raise what is left of the echo or the noise.
+    // AGC2 only adapts to speech, so it doesn't boost leftover echo.
     config.gain_controller2.enabled = true;
     config.gain_controller2.adaptive_digital.enabled = true;
     config.residual_echo_detector.enabled = false;
@@ -383,8 +376,7 @@ void AudioIO::setUpProcessing(bool denoise)
 
 int AudioIO::streamDelayMs()
 {
-    // From the mix being written to it being heard, plus from being said to
-    // being read from the microphone.
+    // Output latency plus input latency.
     pa_usec_t total = 0;
     for (pa_stream* stream : {m_playback, m_record}) {
         pa_usec_t latency = 0;

@@ -7,7 +7,7 @@ import Disports.Core
 Item {
     id: stickerView
 
-    // An entry of a message's `stickers`, see MessageListModel::stickersOf.
+    // An entry of a message's `stickers`, see MessageContent::stickers().
     property var sticker: ({})
     property bool playing: false
 

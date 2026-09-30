@@ -63,23 +63,10 @@ Page {
                 }
 
                 ChatPanel {
-                    id: panel
                     anchors.fill: parent
                     anchors.leftMargin: units.dp(1)
                     visible: Session.currentChannelId !== ""
-                    onInfoRequested: function(channelId) {
-                        mainPage.pageStack.push(Qt.resolvedUrl("ChannelInfoPage.qml"), { "channelId": channelId })
-                    }
-                    onMediaOpened: function(media) {
-                        if (media.viewType === "none")
-                            Qt.openUrlExternally(media.openUrl || media.viewUrl)
-                        else
-                            mainPage.pageStack.push(Qt.resolvedUrl("MediaViewerPage.qml"), { "media": media })
-                    }
-                    onAttachRequested: {
-                        const picker = mainPage.pageStack.push(Qt.resolvedUrl("ContentPickerPage.qml"))
-                        picker.picked.connect(function(url, transfer) { panel.attach(url, transfer) })
-                    }
+                    pageStack: mainPage.pageStack
                 }
 
                 Label {

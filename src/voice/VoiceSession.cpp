@@ -1,9 +1,7 @@
 #include "VoiceSession.h"
 
 #include <QDateTime>
-#include <QFile>
 #include <QNetworkDatagram>
-#include <QStandardPaths>
 #include <QUdpSocket>
 #include <QWebSocket>
 
@@ -14,6 +12,7 @@
 #include <cstring>
 
 #include "DaveSession.h"
+#include "Log.h"
 
 using Json = nlohmann::json;
 
@@ -123,7 +122,7 @@ void VoiceSession::stop()
 
 void VoiceSession::fail(const QString& reason)
 {
-    qWarning("Voice: %s", qPrintable(reason));
+    qCWarning(lcVoice, "%s", qPrintable(reason));
     emit failed(reason);
     stop();
 }
@@ -345,8 +344,7 @@ void VoiceSession::startMedia(const std::vector<uint8_t>& key, const std::string
     m_dave->onSelectProtocolAck(daveVersion);
 
     int error = 0;
-    // Stereo, as Discord's clients (and Abaddon, DPP) send it; the
-    // microphone is mono, in both channels.
+    // Discord's clients send stereo; the mono microphone goes in both.
     m_encoder = opus_encoder_create(AudioIO::SampleRate, 2, OPUS_APPLICATION_VOIP, &error);
     if (!m_encoder) {
         fail(QStringLiteral("Opus encoder: %1").arg(opus_strerror(error)));
@@ -357,15 +355,6 @@ void VoiceSession::startMedia(const std::vector<uint8_t>& key, const std::string
     opus_encoder_ctl(m_encoder, OPUS_SET_PACKET_LOSS_PERC(5));
 
     // Frames arrive on PulseAudio's thread; encode and send here.
-    // Debugging: with a "voice-debug" file in the app's data folder, what
-    // the microphone gives is kept in call-mic.raw (s16le, 48 kHz, mono).
-    const QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    if (QFile::exists(dataDir + QStringLiteral("/voice-debug"))) {
-        m_micDump.setFileName(dataDir + QStringLiteral("/call-mic.raw"));
-        if (!m_micDump.open(QIODevice::WriteOnly | QIODevice::Truncate))
-            qWarning("Voice: cannot write %s", qPrintable(m_micDump.fileName()));
-    }
-
     const bool audioOk = m_audio.start([this](const int16_t* samples) {
         const QByteArray pcm(reinterpret_cast<const char*>(samples), AudioIO::FrameSamples * qsizetype(sizeof(int16_t)));
         QMetaObject::invokeMethod(this, [this, pcm]() { sendFrame(pcm); }, Qt::QueuedConnection);
@@ -396,15 +385,13 @@ void VoiceSession::sendFrame(const QByteArray& pcm)
         return;
     if (m_muted)
         return;
-    // Our own speaking indicator: a simple level threshold.
+    // Our own speaking indicator.
     const auto* samples = reinterpret_cast<const int16_t*>(pcm.constData());
     int64_t level = 0;
     for (int i = 0; i < AudioIO::FrameSamples; ++i)
         level += std::abs(int(samples[i]));
     if (level / AudioIO::FrameSamples > SelfSpeakingLevel)
         m_lastHeard[m_info.userId.toStdString()] = QDateTime::currentMSecsSinceEpoch();
-    if (m_micDump.isOpen())
-        m_micDump.write(pcm);
     int16_t stereo[AudioIO::FrameSamples * 2];
     for (int i = 0; i < AudioIO::FrameSamples; ++i)
         stereo[2 * i] = stereo[2 * i + 1] = samples[i];

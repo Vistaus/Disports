@@ -11,31 +11,29 @@ class Message;
 // emoji and timestamps.
 namespace MessageFormatter {
 
-// emojiSize: pixel size of custom emoji images.
-// How a person is called in a server: their nickname there, else their
-// display name, else their username; `fallback` when they are not known.
+// Server nickname, else display name, else username; `fallback` when the
+// user isn't known.
 QString displayName(Snowflake user, Snowflake guild, const QString& fallback = QString());
 
+// emojiSize: pixel size of custom emoji images.
 QString richText(const QString& content, Snowflake guild, int emojiSize = 20);
 
-// The number of emoji when the content is nothing but emoji (Unicode or
-// custom, separated by spaces at most), else 0. Messages of up to three
-// show them large.
+// How many emoji the content is, when it is nothing but emoji (and spaces);
+// else 0.
 int emojiOnlyCount(const QString& content);
 
 // Plain, single-line text for reply previews and notifications.
 QString plainText(const QString& content, Snowflake guild);
 
-// A system message (joins, pins, calls, boosts, ...) as one line of rich
-// text that names the author itself, with a Suru icon. Empty for messages
-// that show their content.
+// Joins, pins, calls, boosts and the like: one line of rich text naming
+// the author, with a Suru icon. Empty text for regular messages.
 struct SystemMessage {
     QString icon;
     QString text;
 };
 SystemMessage systemMessage(const Message& message, Snowflake guild);
 
-// The same as plain text, or an empty string for regular messages.
+// The same as plain text.
 QString systemText(const Message& message, Snowflake guild);
 
 }

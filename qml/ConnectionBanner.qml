@@ -2,15 +2,12 @@ import QtQuick
 import Lomiri.Components
 import Disports.Core
 
-// Shown while a signed-in session is not connected, as in the Qt 5 version:
-// an icon and what is going on ("Offline - showing saved conversations",
-// "Reconnecting - retrying in 5 seconds"), then a short green "Connected"
-// once it is back. It appears as soon as the connection drops and counts
-// down live; tapping it retries right away.
+// Shown while signed in but not connected ("Reconnecting - retrying in 5
+// seconds"), then briefly "Connected" once back. Tap to retry now.
 Rectangle {
     id: banner
 
-    readonly property bool reconnecting: Session.phase === SessionPhase.Ready && !Session.connected
+    readonly property bool reconnecting: Session.phase === SessionPhase.Ready && !Session.connection.connected
     // Stays on while the success colour shows and while it closes.
     property bool showSuccess: false
     property bool successClosing: false
@@ -20,7 +17,7 @@ Rectangle {
     height: expanded ? units.gu(4) : 0
     clip: true
     color: success ? theme.palette.normal.positive
-         : Session.networkOnline ? theme.palette.normal.activity
+         : Session.connection.networkOnline ? theme.palette.normal.activity
          : theme.palette.normal.negative
 
     Behavior on height {
@@ -68,7 +65,7 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             width: units.gu(2)
             height: width
-            name: banner.success ? "tick" : Session.networkOnline ? "sync" : "sync-error"
+            name: banner.success ? "tick" : Session.connection.networkOnline ? "sync" : "sync-error"
             color: "white"
         }
 
@@ -81,12 +78,12 @@ Rectangle {
             text: {
                 if (banner.success)
                     return i18n.tr("Connected")
-                if (!Session.networkOnline)
+                if (!Session.connection.networkOnline)
                     return i18n.tr("Offline - showing saved conversations")
-                if (Session.reconnectSeconds > 0)
+                if (Session.connection.reconnectSeconds > 0)
                     return i18n.tr("Reconnecting - retrying in %1 second, tap to retry now",
                                    "Reconnecting - retrying in %1 seconds, tap to retry now",
-                                   Session.reconnectSeconds).arg(Session.reconnectSeconds)
+                                   Session.connection.reconnectSeconds).arg(Session.connection.reconnectSeconds)
                 return i18n.tr("Reconnecting - connecting to Discord")
             }
         }
@@ -94,7 +91,7 @@ Rectangle {
 
     MouseArea {
         anchors.fill: parent
-        enabled: banner.reconnecting && Session.networkOnline
-        onClicked: Session.reconnect()
+        enabled: banner.reconnecting && Session.connection.networkOnline
+        onClicked: Session.connection.reconnect()
     }
 }

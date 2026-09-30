@@ -9,9 +9,7 @@ class Preferences : public QObject
     Q_OBJECT
     // Direct message list: profile pictures, or icons with a status dot.
     Q_PROPERTY(bool dmProfilePictures READ dmProfilePictures WRITE setDmProfilePictures NOTIFY dmProfilePicturesChanged)
-    // Play GIFs in the chat while they are on screen, instead of only in
-    // the media viewer. Off by default: it costs data and battery.
-    // Chats: profile pictures next to messages, or none (more room).
+    // Profile pictures next to messages, or none (more room).
     Q_PROPERTY(bool chatProfilePictures READ chatProfilePictures WRITE setChatProfilePictures NOTIFY chatProfilePicturesChanged)
     // 0 light (Ambiance), 1 dark (SuruDark), 2 follow the system.
     Q_PROPERTY(int themeMode READ themeMode WRITE setThemeMode NOTIFY themeModeChanged)
@@ -20,8 +18,9 @@ class Preferences : public QObject
     Q_PROPERTY(QString blockedMessages READ blockedMessages WRITE setBlockedMessages NOTIFY blockedMessagesChanged)
     // Lines the message box grows to before it scrolls (1-6).
     Q_PROPERTY(int composerMaxLines READ composerMaxLines WRITE setComposerMaxLines NOTIFY composerMaxLinesChanged)
+    // Play GIFs in the chat while on screen, not only in the media viewer.
     Q_PROPERTY(bool autoplayGifs READ autoplayGifs WRITE setAutoplayGifs NOTIFY autoplayGifsChanged)
-    // Echo cancellation, noise suppression and gain control in calls.
+    // Calls: echo cancellation and gain control, and RNNoise.
     Q_PROPERTY(bool voiceProcessing READ voiceProcessing WRITE setVoiceProcessing NOTIFY voiceProcessingChanged)
     Q_PROPERTY(bool noiseSuppression READ noiseSuppression WRITE setNoiseSuppression NOTIFY noiseSuppressionChanged)
 

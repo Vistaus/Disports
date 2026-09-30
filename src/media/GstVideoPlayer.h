@@ -11,22 +11,12 @@
 typedef struct _GstElement GstElement;
 typedef struct _GstAppSink GstAppSink;
 
-// A QML item that plays a video with GStreamer and draws it itself:
+// A QML item that plays a video with GStreamer and draws the frames as its
+// texture. QtMultimedia has no backend on Ubuntu Touch's Qt 6.
 //
-//   GstVideoPlayer { anchors.fill: parent; source: "..."; autoPlay: true }
-//
-// On Ubuntu Touch GStreamer uses the phone's hardware decoders
-// (gstreamer1.0-droid). QtMultimedia is not involved: the Qt 6 images have
-// no backend for it, and its VideoOutput draws nothing without one.
-// playbin decodes and converts to RGBA; an appsink hands the frames to the
-// GUI thread, and each one becomes the item's texture.
-//
-// Decoders: the phone's hardware ones (amcviddec-* through libhybris) for
-// videos. Looping videos (GIFs) use software decoders (openh264 and co.):
-// the hardware decoder on Ubuntu Touch cannot restart after the end of a
-// stream, so every loop would re-create it. If the hardware decoder fails
-// on a video (errors, or ends it early), the player plays it again in
-// software. DISPORTS_SOFTWARE_VIDEO=1 uses software decoders for everything.
+// Videos use the phone's hardware decoders, and are played again with
+// software decoders if those fail. Looping videos (GIFs) always use software
+// decoders: the hardware ones can't restart at the end of a stream.
 class GstVideoPlayer : public QQuickItem
 {
     Q_OBJECT

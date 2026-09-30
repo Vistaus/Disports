@@ -6,10 +6,9 @@ MainView {
     id: root
 
     applicationName: "disports.jukfiuu"
-    // MainView's own keyboard handling uses the keyboard height as reported,
-    // which on Ubuntu Touch with Qt 6 is not HiDPI-scaled: it overshoots and
-    // pushes the whole app off screen. Keep room for the keyboard ourselves
-    // (the same workaround Morph uses).
+    // With Qt 6 on Ubuntu Touch the reported keyboard height isn't scaled
+    // for HiDPI, and MainView would push the app off screen. We keep room
+    // for the keyboard ourselves, like Morph does.
     anchorToKeyboard: false
 
     // Settings > Theme; "" follows the system.
@@ -42,44 +41,15 @@ MainView {
         }
     }
 
-    Component.onCompleted: {
-        showPhase()
-        if (testVideoUrl !== "")
-            testVideoTimer.start()
-    }
+    Component.onCompleted: showPhase()
 
-    Component {
-        id: testPreviewPage
-
-        Page {
-            property string url
-            header: PageHeader { title: "Preview" }
-
-            MediaPreview {
-                anchors.centerIn: parent
-                maxWidth: parent.width - units.gu(4)
-                playing: true
-                media: ({ "kind": "gif", "viewType": "video", "viewUrl": parent.url, "previewUrl": "",
-                          "width": 498, "height": 374 })
-            }
-        }
-    }
-
-    // Test hook, see DISPORTS_PLAY_VIDEO in main.cpp.
-    Timer {
-        id: testVideoTimer
-        interval: 1500
-        // "gif:<url>" opens it as a GIF (looping, muted); "preview:<url>"
-        // shows the chat's preview of such a GIF instead.
-        onTriggered: {
-            if (testVideoUrl.startsWith("preview:")) {
-                stack.push(testPreviewPage, { "url": testVideoUrl.substring(8) })
-                return
-            }
-            const gif = testVideoUrl.startsWith("gif:")
-            const url = gif ? testVideoUrl.substring(4) : testVideoUrl
-            stack.push(Qt.resolvedUrl("MediaViewerPage.qml"), { "media": {
-                "kind": gif ? "gif" : "video", "viewType": "video", "viewUrl": url, "openUrl": url } })
+    // Only in test builds (DISPORTS_TEST_HOOKS), see src/testing/TestHooks.h.
+    Loader {
+        active: typeof testHooks !== "undefined"
+        source: "TestHooks.qml"
+        onLoaded: {
+            item.stack = stack
+            item.root = root
         }
     }
 
@@ -110,12 +80,6 @@ MainView {
     Connections {
         target: Session
         function onPhaseChanged() { root.showPhase() }
-        // Test hook (DISPORTS_OPEN_CHANNEL): on a phone, show the chat too.
-        function onCurrentChannelChanged() {
-            if (testOpenChannel !== "" && Session.currentChannelId === testOpenChannel
-                    && !root.wideLayout && root.currentPageName === "mainPage")
-                stack.push(Qt.resolvedUrl("ChatPage.qml"))
-        }
     }
 
     // Calls: the call screen comes up when one starts or rings, and goes
@@ -139,8 +103,7 @@ MainView {
         z: 2
     }
 
-    // Something in progress (connecting, loading a conversation): Lomiri's
-    // indeterminate progress strip at the top, like the Qt 5 version's.
+    // Connecting, or loading a conversation.
     CallBanner {
         id: callBanner
         anchors { top: connectionBanner.bottom; left: parent.left; right: parent.right }
@@ -152,8 +115,8 @@ MainView {
         anchors { top: callBanner.bottom; left: parent.left; right: parent.right }
         z: 2
         indeterminate: true
-        visible: Session.networkOnline
-                 && ((connectionBanner.reconnecting && Session.reconnectSeconds === 0)
+        visible: Session.connection.networkOnline
+                 && ((connectionBanner.reconnecting && Session.connection.reconnectSeconds === 0)
                      || Session.loadingMessages)
     }
 
@@ -195,7 +158,7 @@ MainView {
 
             Label {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: Session.networkOnline ? i18n.tr("Connecting to Discord…") : i18n.tr("Waiting for network…")
+                text: Session.connection.networkOnline ? i18n.tr("Connecting to Discord...") : i18n.tr("Waiting for network...")
                 color: theme.palette.normal.backgroundSecondaryText
             }
         }

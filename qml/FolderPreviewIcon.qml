@@ -1,7 +1,7 @@
 import QtQuick
 import Lomiri.Components
 
-// A collapsed server folder: up to four server icons in a 2×2 grid, in one
+// A collapsed server folder: up to four server icons in a 2x2 grid, in one
 // Lomiri shape.
 Item {
     id: folderPreview

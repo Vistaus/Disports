@@ -15,14 +15,11 @@ class Session;
 class VoiceSession;
 class Ringtone;
 
-// Voice calls for QML (Session.call): DM calls (ringing, incoming calls)
-// and voice channels. There is no system component for VoIP calls on
-// Ubuntu Touch (the dialer and telephony-service are for the cellular
-// network), so the call screen is our own, modelled on the dialer's.
+// Voice calls: DM and group calls (with ringing) and voice channels.
 //
 // Joining sends a voice state update on the main gateway, which answers
-// with our voice session id and a voice server; VoiceSession then connects
-// to that on its own thread.
+// with a session id and a voice server; VoiceSession connects to that on
+// its own thread.
 class CallManager : public QObject
 {
     Q_OBJECT
@@ -39,9 +36,8 @@ class CallManager : public QObject
     Q_PROPERTY(bool canSpeak READ canSpeak NOTIFY stateChanged)
     Q_PROPERTY(bool speaker READ speaker NOTIFY speakerChanged)
     Q_PROPERTY(bool speakerAvailable READ speakerAvailable NOTIFY speakerChanged)
-    // Everyone in the call, us first:
-    // [{id, name, avatarUrl, speaking, muted, self, joined}]; in DM calls,
-    // people still being rung have joined: false.
+    // [{id, name, avatarUrl, speaking, muted, self, joined}], us first.
+    // In DM calls, people still being rung have joined: false.
     Q_PROPERTY(QVariantList participants READ participants NOTIFY participantsChanged)
 
 public:
@@ -92,11 +88,9 @@ signals:
     void mutedChanged();
     void speakerChanged();
     void participantsChanged();
-    // Something went wrong; shown as a notice.
     void callFailed(const QString& reason);
-    // Something to tell (not an error), shown as a notice.
     void notice(const QString& text);
-    // The call screen should be on screen (started, ringing, or asked for).
+    // Started, ringing, or asked for.
     void showRequested();
 
 private:

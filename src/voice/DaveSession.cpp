@@ -1,8 +1,8 @@
 #include "DaveSession.h"
 
-#include <QDebug>
-
 #include <dave/logger.h>
+
+#include "Log.h"
 
 using namespace discord::dave;
 
@@ -14,7 +14,7 @@ constexpr uint16_t InitTransitionId = 0;
 void logSink(LoggingSeverity severity, const char*, int, const std::string& message)
 {
     if (severity >= LS_WARNING)
-        qWarning("DAVE: %s", message.c_str());
+        qCWarning(lcVoice, "DAVE: %s", message.c_str());
 }
 
 }
@@ -27,7 +27,7 @@ DaveSession::DaveSession(std::string selfUserId, uint64_t groupId, Callbacks cal
     SetLogSink(&logSink);
     // Persistent keys are not used: a new identity key per call.
     m_session = mls::CreateSession(nullptr, std::string(), [](const std::string& source, const std::string& reason) {
-        qWarning("DAVE MLS failure: %s: %s", source.c_str(), reason.c_str());
+        qCWarning(lcVoice, "DAVE MLS failure: %s: %s", source.c_str(), reason.c_str());
     });
     m_encryptor = CreateEncryptor();
     // Until DAVE is set up, media is not end-to-end encrypted.

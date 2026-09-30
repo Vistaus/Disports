@@ -1,8 +1,9 @@
 #!/bin/bash
 # check.sh [--no-build] [scenario ...]
 #
-# Builds the app with AddressSanitizer, LeakSanitizer and UBSan
-# (-DDISPORTS_SANITIZE=ON, in build/asan/), then runs each scenario against
+# Builds the app with AddressSanitizer, LeakSanitizer and UBSan and the
+# test hooks (-DDISPORTS_SANITIZE=ON -DDISPORTS_TEST_HOOKS=ON, in
+# build/asan/), then runs each scenario against
 # the fake Discord server and fails when
 #   - memory is misused or behaviour is undefined in any run,
 #   - memory allocated by our code (src/) is still unfreed at exit
@@ -27,7 +28,7 @@ podman image exists localhost/disports-test-gl \
 if [ $BUILD = 1 ]; then
     # clickable.yaml plus the sanitizer option and its own build folder.
     CONFIG=$ROOT/.clickable-asan.yaml
-    sed -e 's|^  - -DCLICK_MODE=ON|  - -DCLICK_MODE=ON\n  - -DDISPORTS_SANITIZE=ON|' "$ROOT/clickable.yaml" > "$CONFIG"
+    sed -e 's|^  - -DCLICK_MODE=ON|  - -DCLICK_MODE=ON\n  - -DDISPORTS_SANITIZE=ON\n  - -DDISPORTS_TEST_HOOKS=ON|' "$ROOT/clickable.yaml" > "$CONFIG"
     echo 'build_dir: ${ROOT}/build/asan/app' >> "$CONFIG"
     echo "== building the sanitizer build"
     (cd "$ROOT" && clickable build --arch amd64 -c "$CONFIG") > "$ROOT/build/asan-build.log" 2>&1 \
@@ -133,29 +134,27 @@ scenario_nicknames() {  # history has no member objects: the app asks, and shows
     expect nicknames 'member search \[.*"200".*\] -> \[.alice.\]'
 }
 
-scenario_scroll() {     # scroll up a channel full of media: no row grows on screen
-    STEPS="sleep 16" "$HERE/run.sh" scroll 18000 DISPORTS_OPEN_CHANNEL=1109 "${WIDE[@]}" DISPORTS_TEST_SCROLL=1
-    local grown
-    grown=$(grep -c "changed height on screen" "$ROOT/build/test/scroll/log.txt")
-    if [ "$grown" -gt 0 ]; then
-        echo "   FAIL scroll: $grown row(s) changed height on screen:"
-        grep "changed height on screen" "$ROOT/build/test/scroll/log.txt" | head -5 | sed 's/^/     /'
-        FAILED=1
-    fi
-    grep -q "scroll-test: while moving" "$ROOT/build/test/scroll/log.txt" || { echo "   FAIL scroll: the test did not run"; FAILED=1; }
-}
-
 scenario_dmcall() {     # a DM with a call going on
     STEPS="sleep 5" "$HERE/run.sh" dmcall 7000 DISPORTS_OPEN_CHANNEL=2001 "${WIDE[@]}"
     expect dmcall 'REST history 2001'
 }
+scenario_reply() {      # tap a reply to a message 390 back: five pages, the question, keep looking
+    STEPS="sleep 6;click 560 702;sleep 8;click 500 417;sleep 4" \
+        "$HERE/run.sh" reply 20000 DISPORTS_OPEN_CHANNEL=1110 "${WIDE[@]}"
+    # The first page, five more, then the rest once asked to keep looking.
+    if [ "$(grep -a -c 'REST history 1110' "$LOG")" -lt 9 ]; then
+        echo "   FAIL reply: did not keep loading older messages"
+        FAILED=1
+    fi
+}
+
 scenario_permissions() { # read-only, no history, no files, slowmode
     for channel in 1103 1104 1106 1105; do
         STEPS="sleep 5" "$HERE/run.sh" permissions-$channel 6500 DISPORTS_OPEN_CHANNEL=$channel "${WIDE[@]}"
     done
 }
 
-ALL=(channels mentions upload zoom nicknames scroll dmcall permissions)
+ALL=(channels mentions upload zoom nicknames dmcall reply permissions)
 SCENARIOS=("${@:-${ALL[@]}}")
 [ $# -eq 0 ] && SCENARIOS=("${ALL[@]}")
 

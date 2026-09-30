@@ -2,10 +2,8 @@ import QtQuick
 import Lomiri.Components
 import Disports.Core
 
-// The call screen: the pictures of everyone in the call (us included,
-// ringed in green while talking), as on Discord, with Lomiri's shapes and
-// Suru icons and the dialer's round controls. An incoming call
-// looks like the dialer's: the caller's picture, decline and answer.
+// The call screen: everyone's picture, ringed in green while talking, and
+// the dialer's round controls. Incoming calls look like the dialer's.
 Page {
     id: callPage
     objectName: "callPage"
@@ -179,7 +177,7 @@ Page {
                             Label {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 visible: !modelData.joined
-                                text: modelData.self ? i18n.tr("Connecting…") : i18n.tr("Calling…")
+                                text: modelData.self ? i18n.tr("Connecting...") : i18n.tr("Calling...")
                                 textSize: Label.Small
                                 color: theme.palette.normal.backgroundSecondaryText
                             }

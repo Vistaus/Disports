@@ -2,14 +2,9 @@
 
 #include <QQmlNetworkAccessManagerFactory>
 
-// A disk cache for the pictures that identify people and places: profile
-// pictures, server icons and group DM icons. Nothing else (attachments,
-// previews, emoji) is cached.
-//
-// Discord puts a hash of the picture in these URLs
-// (avatars/<user>/<hash>.png, icons/<guild>/<hash>.png), so a changed
-// picture has a new URL: a cached one never needs checking, and is kept
-// until the cache is full. They show offline, and cost no requests online.
+// A disk cache for profile pictures, server icons and group icons, so they
+// show offline too. Their URLs contain a hash of the picture, so a cached
+// one never goes stale.
 class ImageCacheFactory : public QQmlNetworkAccessManagerFactory
 {
 public:

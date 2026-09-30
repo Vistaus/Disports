@@ -2,10 +2,9 @@ import QtQuick
 import Lomiri.Components
 import Lomiri.Content
 
-// Picks a file to attach through Content Hub, the way confined apps get
-// files on Ubuntu Touch: the user chooses an app (Gallery, Files, Camera…),
-// which hands a copy over. `picked(url, transfer)` gives the copy's file://
-// URL; the transfer is finalized (its copy removed) once it has been read.
+// Picks a file through Content Hub. `picked(url, transfer)` gives a
+// file:// URL to a copy; finalize the transfer once it has been read to
+// remove the copy.
 Page {
     id: picker
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QByteArray>
-#include <QFile>
 #include <QHostAddress>
 #include <QObject>
 #include <QString>
@@ -113,7 +112,6 @@ private:
     bool m_muted = false;
     bool m_deafened = false;
     bool m_speaking = false;
-    QFile m_micDump; // see startMedia()
 
     // Receiving
     std::unique_ptr<DaveSession> m_dave;

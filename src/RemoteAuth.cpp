@@ -50,7 +50,7 @@ void RemoteAuth::start()
     m_finished = false;
     m_qrImage.clear();
     emit qrImageChanged();
-    setStatus(tr("Preparing QR code…"), true);
+    setStatus(tr("Preparing QR code..."), true);
 
     m_key = EVP_RSA_gen(2048);
     if (!m_key) {
@@ -165,7 +165,7 @@ void RemoteAuth::completeLogin(const QString& ticket)
 {
     if (ticket.isEmpty())
         return;
-    setStatus(tr("Signing in…"), true);
+    setStatus(tr("Signing in..."), true);
 
     QNetworkRequest request(QUrl(QString::fromStdString(GetDiscordAPI()) + QStringLiteral("users/@me/remote-auth/login")));
     QtHttpClient::applyClientHeaders(request);

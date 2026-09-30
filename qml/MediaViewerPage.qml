@@ -8,7 +8,7 @@ Page {
     id: viewer
     objectName: "mediaViewerPage"
 
-    // An entry of a message's `media`, see MessageListModel::mediaOf.
+    // An entry of a message's `media`, see MessageContent::media().
     property var media: ({})
 
     readonly property string viewType: media.viewType || "none"

@@ -12,12 +12,14 @@ Discord's two-step uploads and logs what it receives.
   undefined behaviour, leaks of our code (not the libraries' leftovers at
   exit, see `leaks.py`), unclean exits, or requests the server never got.
   `check.sh --no-build mentions upload` reruns some without building.
-- `run.sh <name> <ms> [VAR=value…]`: one run with a screenshot, for looking
+- `run.sh <name> <ms> [VAR=value...]`: one run with a screenshot, for looking
   at things; `STEPS` drives it with xdotool. Output in `build/test/<name>/`.
 - `server.sh start|stop|restart`: the fake server (`build/test/fake.log`).
 - `build-image.sh`: makes the test image, after a first
   `clickable build --arch amd64`.
 
-Test hooks in the app (`DISPORTS_OPEN_CHANNEL`, `DISPORTS_SEND_FILE`,
-`DISPORTS_START_CALL`, `DISPORTS_SCREENSHOT`, …) are listed in
-`src/main.cpp`.
+The app is driven through test hooks (`DISPORTS_OPEN_CHANNEL`,
+`DISPORTS_SEND_FILE`, `DISPORTS_SCREENSHOT`, ...), listed in
+`src/testing/TestHooks.h`. They are only built with
+`-DDISPORTS_TEST_HOOKS=ON`, which `check.sh` sets; release builds don't
+have them.

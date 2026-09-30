@@ -2,16 +2,13 @@ import QtQuick
 import Lomiri.Components
 import Disports.Core
 
-// A poll, in Lomiri's list style: the question as a header, then one row per
-// answer with a tick (single choice, like OptionSelector) or a CheckBox
-// (multiple choice). Tap an answer to vote, again to take the vote back.
-// Once you voted or the poll closed, each answer shows its votes and a
-// ProgressBar.
+// A poll as a Lomiri list: tap an answer to vote, again to take it back.
+// Results show once you voted or the poll closed.
 LomiriShape {
     id: card
 
     property string messageId: ""
-    // See MessageListModel::pollOf.
+    // See MessageContent::poll().
     property var poll: ({})
 
     readonly property var answers: poll.answers || []
@@ -67,7 +64,7 @@ LomiriShape {
                 width: column.width
                 height: layout.height + (bar.visible ? bar.height + units.gu(1) : 0) + divider.height
                 // Timeouts take voting away too.
-                enabled: !card.poll.closed && Session.timeoutText === ""
+                enabled: !card.poll.closed && Session.permissions.timeoutText === ""
                 onClicked: card.vote(modelData.id)
 
                 // Pressed feedback, like a ListItem
@@ -109,7 +106,7 @@ LomiriShape {
                         SlotsLayout.position: SlotsLayout.Trailing
                         visible: card.poll.multiselect
                         checked: answer.modelData.me
-                        enabled: !card.poll.closed && Session.timeoutText === ""
+                        enabled: !card.poll.closed && Session.permissions.timeoutText === ""
                         onTriggered: {
                             checked = Qt.binding(function() { return answer.modelData.me })
                             card.vote(answer.modelData.id)

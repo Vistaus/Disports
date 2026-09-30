@@ -7,17 +7,24 @@
 # <screenshot-ms>. Output: build/test/<name>/log.txt; sanitizer reports
 # (sanitizer builds) as build/test/<name>/asan.* / ubsan.*.
 #
-# STEPS drives it with xdotool, ";"-separated: "sleep 2;click 700 772;
-# type hi @bo;key Return;wheel 30 400 5" (5 scroll steps down at 30,400). APP_INSTALL picks the build to run (default:
-# the normal amd64 one). Files for tests go in build/test/files (/files in
-# the container). Test hooks (DISPORTS_OPEN_CHANNEL, ...): src/main.cpp.
+# STEPS drives it with xdotool, ";"-separated: "sleep 2;click 700 772;drag x1 y1 x2 y2;
+# type hi @bo;key Return;wheel 30 400 5" (5 scroll steps down at 30,400).
+# APP_INSTALL picks the build to run (default: check.sh's, which has the
+# test hooks). Files for tests go in
+# build/test/files (/files in the container). Test hooks
+# (DISPORTS_OPEN_CHANNEL, ...): src/testing/TestHooks.h.
 HERE=$(dirname "$(readlink -f "$0")")
 ROOT=$(readlink -f "$HERE/../..")
 NAME=$1; DELAY=$2; shift 2
-INSTALL=${APP_INSTALL:-$ROOT/build/x86_64-linux-gnu/app/install}
+INSTALL=${APP_INSTALL:-$ROOT/build/asan/app/install}
 OUT=$ROOT/build/test/$NAME
 rm -rf "$OUT"; mkdir -p "$OUT/data/disports.jukfiuu" "$ROOT/build/test/files"
 echo '{"Token": "test-token"}' > "$OUT/data/disports.jukfiuu/settings.json"
+# THEME=dark (or light): the app's theme setting.
+if [ -n "${THEME:-}" ]; then
+    mkdir -p "$OUT/.config/disports.jukfiuu"
+    printf '[appearance]\ntheme=%s\n' "$([ "$THEME" = dark ] && echo 1 || echo 0)" > "$OUT/.config/disports.jukfiuu/preferences.ini"
+fi
 ENVS=(); for kv in "$@"; do ENVS+=(-e "$kv"); done
 cat > "$OUT/inner.sh" <<'INNER'
 Xvfb :99 -screen 0 1280x2000x24 -nolisten tcp >/dev/null 2>&1 &
@@ -32,6 +39,11 @@ for step in "${steps[@]}"; do
     case $1 in
         sleep) sleep "$2" ;;
         click) xdotool mousemove --window "$win" "$2" "$3" click 1 ;;
+        drag) xdotool mousemove --window "$win" "$2" "$3" mousedown 1
+              for i in 1 2 3 4 5 6 7 8; do
+                  xdotool mousemove --window "$win" $(( $2 + ($4 - $2) * i / 8 )) $(( $3 + ($5 - $3) * i / 8 )); sleep 0.03
+              done
+              xdotool mouseup 1 ;;
         wheel) xdotool mousemove --window "$win" "$2" "$3" click --repeat "$4" --delay 60 5 ;;
         type) xdotool windowfocus --sync "$win" 2>/dev/null; shift; xdotool type --delay 80 "$*" ;;
         key) xdotool windowfocus --sync "$win" 2>/dev/null; xdotool key "$2" ;;

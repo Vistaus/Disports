@@ -9,11 +9,10 @@
 
 #include "discord/models/Snowflake.hpp"
 
-// Who is in which call, everywhere (not only our own call): the people in
-// server voice channels (voice states in READY and GUILD_CREATE, then
-// VOICE_STATE_UPDATE) and the calls going on in DMs and groups (CALL_CREATE
-// / UPDATE / DELETE). For the call markers on servers, conversations and
-// voice channels.
+// Who is in which call, for the call markers in the lists: people in
+// server voice channels (voice states from READY, GUILD_CREATE and
+// VOICE_STATE_UPDATE) and calls in DMs and groups (CALL_CREATE, _UPDATE,
+// _DELETE).
 class VoiceStates : public QObject
 {
     Q_OBJECT

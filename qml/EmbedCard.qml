@@ -7,7 +7,7 @@ import Lomiri.Components
 LomiriShape {
     id: card
 
-    // An entry of a message's `embeds`, see MessageListModel::embedsOf.
+    // An entry of a message's `embeds`, see MessageContent::embeds().
     property var embed: ({})
     property bool playing: false
 
