@@ -1,6 +1,6 @@
 #pragma once
 
-// The global accessors Discord Messenger's core expects the host to define
+// The global accessors the core expects the host to define
 // (GetDiscordInstance, GetFrontend, GetHTTPClient, GetWebsocketClient) are
 // backed by these pointers, which the Session sets up and tears down.
 

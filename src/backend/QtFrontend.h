@@ -4,7 +4,7 @@
 
 class Session;
 
-// Discord Messenger's Frontend interface, implemented for Disports. Every
+// The core's Frontend interface, implemented for Disports. Every
 // call arrives on the Qt main thread (both transports deliver there) and is
 // forwarded to the Session, which owns the QML-facing state.
 class QtFrontend : public Frontend

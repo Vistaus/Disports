@@ -2,7 +2,7 @@
 
 // The gateway transport. The core only needs to open, write to and close
 // connections, so the host application implements this (Disports uses
-// QWebSocket; Discord Messenger wrapped websocketpp/asio here).
+// QWebSocket).
 
 #include <string>
 

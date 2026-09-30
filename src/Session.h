@@ -29,7 +29,7 @@ class QtFrontend;
 class QtHttpClient;
 class QtWebsocketClient;
 
-// The QML-facing session: owns Discord Messenger's core (DiscordInstance),
+// The QML-facing session: owns the Discord client core (DiscordInstance),
 // the Qt transports and the list models, and exposes navigation and chat
 // actions to QML. Everything runs on the main thread.
 class Session : public QObject

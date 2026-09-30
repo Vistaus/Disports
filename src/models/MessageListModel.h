@@ -12,7 +12,7 @@
 #include "discord/models/Snowflake.hpp"
 
 // Messages of the open channel, newest first (the chat ListView runs
-// bottom-to-top). Rows are read from Discord Messenger's MessageCache; gap
+// bottom-to-top). Rows are read from the core's MessageCache; gap
 // markers become the hasOlder flag instead of rows.
 class MessageListModel : public QAbstractListModel
 {

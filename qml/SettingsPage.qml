@@ -6,6 +6,28 @@ import Disports.Core
 Page {
     id: settingsPage
 
+    // A collapsed OptionSelector shows its first option until it has been
+    // opened and closed once (Lomiri only scrolls its list to the selected
+    // one after collapsing): scroll it there ourselves.
+    function showSelected(selector) {
+        if (selector.currentlyExpanded)
+            return
+        function listIn(item) {
+            for (let i = 0; i < item.children.length; ++i) {
+                const child = item.children[i]
+                if (child.positionViewAtIndex !== undefined && child.itemHeight !== undefined)
+                    return child
+                const found = listIn(child)
+                if (found)
+                    return found
+            }
+            return null
+        }
+        const list = listIn(selector)
+        if (list)
+            Qt.callLater(function() { list.positionViewAtIndex(selector.selectedIndex, ListView.Beginning) })
+    }
+
     header: PageHeader {
         title: i18n.tr("Settings")
     }
@@ -58,11 +80,20 @@ Page {
                 OptionSelector {
                     id: themeSelector
                     anchors { left: parent.left; right: parent.right; margins: units.gu(2) }
-                    expanded: true
+                    expanded: false
                     // Same order as Preferences.themeMode: 0 light, 1 dark, 2 system.
                     model: [i18n.tr("Light"), i18n.tr("Dark"), i18n.tr("Follow system")]
-                    selectedIndex: Session.preferences.themeMode
                     onDelegateClicked: function(index) { Session.preferences.themeMode = index }
+                    onSelectedIndexChanged: settingsPage.showSelected(themeSelector)
+                }
+
+                // selectedIndex is the list's currentIndex, which the model
+                // resets to 0 when set after it: apply it once built.
+                Binding {
+                    target: themeSelector
+                    property: "selectedIndex"
+                    value: Session.preferences.themeMode
+                    delayed: true
                 }
             }
 
@@ -172,10 +203,17 @@ Page {
                     id: blockedSelector
                     readonly property var modes: ["hide", "reveal", "show"]
                     anchors { left: parent.left; right: parent.right; margins: units.gu(2) }
-                    expanded: true
+                    expanded: false
                     model: [i18n.tr("Hide completely"), i18n.tr("Show a placeholder to tap"), i18n.tr("Show normally")]
-                    selectedIndex: Math.max(0, modes.indexOf(Session.preferences.blockedMessages))
                     onDelegateClicked: function(index) { Session.preferences.blockedMessages = modes[index] }
+                    onSelectedIndexChanged: settingsPage.showSelected(blockedSelector)
+                }
+
+                Binding {
+                    target: blockedSelector
+                    property: "selectedIndex"
+                    value: Math.max(0, blockedSelector.modes.indexOf(Session.preferences.blockedMessages))
+                    delayed: true
                 }
             }
 
@@ -245,7 +283,7 @@ Page {
                 anchors { left: parent.left; right: parent.right; margins: units.gu(2) }
                 topPadding: units.gu(2)
                 bottomPadding: units.gu(2)
-                text: i18n.tr("Disports %1 — built on Discord Messenger's client core.").arg(Qt.application.version)
+                text: i18n.tr("Disports %1").arg(Qt.application.version)
                 wrapMode: Text.WordWrap
                 textSize: Label.Small
                 color: theme.palette.normal.backgroundSecondaryText

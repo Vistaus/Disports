@@ -8,9 +8,9 @@
 
 class QNetworkReply;
 
-// HTTPClient for Discord Messenger's core, backed by QNetworkAccessManager.
-// Replies arrive on the Qt event loop, so the core's request handlers run on
-// the main thread just like on Windows, where they are posted to the UI loop.
+// HTTPClient for the core, backed by QNetworkAccessManager. Replies arrive
+// on the Qt event loop, so the core's request handlers run on the main
+// thread.
 class QtHttpClient : public QObject, public HTTPClient
 {
     Q_OBJECT

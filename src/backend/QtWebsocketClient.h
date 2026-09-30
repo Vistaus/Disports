@@ -9,7 +9,7 @@
 
 class QWebSocket;
 
-// WebsocketClient for Discord Messenger's core, backed by QWebSocket.
+// WebsocketClient for the core, backed by QWebSocket.
 // Events are reported through the Frontend (OnWebsocketMessage / Close /
 // Fail) on the Qt event loop.
 class QtWebsocketClient : public QObject, public WebsocketClient

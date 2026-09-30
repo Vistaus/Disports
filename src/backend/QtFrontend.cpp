@@ -41,7 +41,7 @@ void QtFrontend::OnMessagesFetched(Snowflake channel, ScrollDir::eScrollDir sd, 
 
 void QtFrontend::OnAddMessage(Snowflake channelID, const Message& msg)
 {
-    // As on Windows, the frontend is the one that stores new messages.
+    // The frontend is the one that stores new messages (the core leaves it to it).
     GetMessageCache()->AddMessage(channelID, msg);
     m_session->coreMessageAdded(channelID, msg);
 }
@@ -201,8 +201,8 @@ bool QtFrontend::SaveConfig(const std::string& configJson)
 
 void QtFrontend::RequestQuit()
 {
-    // Called after errors the Windows client treats as fatal. On a phone the
-    // app stays open; the error has already been reported.
+    // Called after errors the core treats as fatal. On a phone the app
+    // stays open; the error has already been reported.
 }
 
 bool QtFrontend::IsWindowMinimized() { return !m_session->applicationActive(); }

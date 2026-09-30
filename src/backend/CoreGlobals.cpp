@@ -29,8 +29,8 @@ Frontend* GetFrontend() { return g_frontend; }
 HTTPClient* GetHTTPClient() { return g_http; }
 WebsocketClient* GetWebsocketClient() { return g_ws; }
 
-// Discord Messenger lays out formatted text itself through these hooks. The
-// QML UI renders messages on its own, so they are never meaningfully used.
+// The core can lay out formatted text itself through these hooks. The QML
+// UI renders messages on its own, so they are never meaningfully used.
 Point MdMeasureString(DrawingContext*, const String&, int, bool& outWasWordWrapped, int)
 {
     outWasWordWrapped = false;
