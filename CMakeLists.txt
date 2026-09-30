@@ -14,7 +14,16 @@ find_package(OpenSSL REQUIRED)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
+option(DISPORTS_SANITIZE "Build with AddressSanitizer, LeakSanitizer and UBSan (tests)" OFF)
+
 add_subdirectory(third_party)
+
+# Our own code only: third-party libraries are linked in uninstrumented.
+# See tools/test/check.sh.
+if(DISPORTS_SANITIZE)
+    add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer -g)
+    add_link_options(-fsanitize=address,undefined)
+endif()
 
 # The client core, see src/discord/CMakeLists.txt.
 add_subdirectory(src/discord)
