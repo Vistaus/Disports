@@ -79,6 +79,8 @@ Session::Session(QObject* parent)
     m_preferences = new Preferences(this);
     m_emoji = new EmojiPickerModel(this);
     m_offline = new OfflineCache(this);
+    m_call = new CallManager(this);
+    connect(m_call, &CallManager::callFailed, this, &Session::setNotice);
 
     m_qrLogin = new RemoteAuth(m_http->networkAccessManager(), this);
     connect(m_qrLogin, &RemoteAuth::tokenReceived, this, &Session::loginWithToken);
@@ -287,6 +289,8 @@ void Session::destroyInstance()
     m_ws->abortAll();
     m_http->StopAllRequests();
 
+    if (m_call)
+        m_call->gatewayLost();
     if (m_instance) {
         m_instance->CloseGatewaySession();
         CoreGlobals::setInstance(nullptr);

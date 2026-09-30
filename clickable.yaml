@@ -18,6 +18,10 @@ dependencies_target:
   - libgstreamer-plugins-base1.0-dev
   - libssl-dev
   - libwebp-dev
+  - nlohmann-json3-dev
+  - libopus-dev
+  - libpulse-dev
+  - libwebrtc-audio-processing-dev
   # QML runtime modules, so `clickable desktop` can run the app in the
   # container. On a device they come with the OS image.
   - qml6-module-lomiri-components

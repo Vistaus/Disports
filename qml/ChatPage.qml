@@ -12,6 +12,13 @@ Page {
         subtitle: Session.currentChannelTopic.replace(/\s*\n+\s*/g, "  ")
         trailingActionBar.actions: [
             Action {
+                iconName: "call-start"
+                text: i18n.tr("Call")
+                visible: Session.connected && Session.currentChannelId !== ""
+                         && Session.call.canCall(Session.currentChannelId)
+                onTriggered: Session.call.start(Session.currentChannelId)
+            },
+            Action {
                 iconName: "info"
                 text: i18n.tr("Info")
                 onTriggered: chatPage.pageStack.push(Qt.resolvedUrl("ChannelInfoPage.qml"),

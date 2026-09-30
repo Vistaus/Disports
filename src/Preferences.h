@@ -21,6 +21,8 @@ class Preferences : public QObject
     // Lines the message box grows to before it scrolls (1-6).
     Q_PROPERTY(int composerMaxLines READ composerMaxLines WRITE setComposerMaxLines NOTIFY composerMaxLinesChanged)
     Q_PROPERTY(bool autoplayGifs READ autoplayGifs WRITE setAutoplayGifs NOTIFY autoplayGifsChanged)
+    // Echo cancellation, noise suppression and gain control in calls.
+    Q_PROPERTY(bool voiceProcessing READ voiceProcessing WRITE setVoiceProcessing NOTIFY voiceProcessingChanged)
 
 public:
     explicit Preferences(QObject* parent = nullptr);
@@ -37,10 +39,13 @@ public:
     void setChatProfilePictures(bool enabled);
     bool autoplayGifs() const { return m_autoplayGifs; }
     void setAutoplayGifs(bool enabled);
+    bool voiceProcessing() const { return m_voiceProcessing; }
+    void setVoiceProcessing(bool enabled);
 
 signals:
     void dmProfilePicturesChanged();
     void autoplayGifsChanged();
+    void voiceProcessingChanged();
     void chatProfilePicturesChanged();
     void themeModeChanged();
     void blockedMessagesChanged();
@@ -50,6 +55,7 @@ private:
     QSettings m_settings;
     bool m_dmProfilePictures = true;
     bool m_autoplayGifs = false;
+    bool m_voiceProcessing = true;
     bool m_chatProfilePictures = true;
     int m_themeMode = 2;
     QString m_blockedMessages = QStringLiteral("reveal");

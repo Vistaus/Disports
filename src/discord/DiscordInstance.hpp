@@ -466,6 +466,14 @@ public:
 	// Add or remove the current user's reaction. The emoji is a Unicode
 	// emoji or "name:id" for a custom one (Reaction::GetApiString). The
 	// message updates when the gateway confirms the change.
+	// Voice: joins a voice channel or DM call (channel 0 leaves); the gateway
+	// answers with VOICE_STATE_UPDATE and VOICE_SERVER_UPDATE.
+	void SendVoiceStateUpdate(Snowflake guild, Snowflake channel, bool selfMute, bool selfDeaf);
+	// DM calls: ring the other recipients, or stop ringing for this user
+	// (declining an incoming call).
+	void RequestRingCall(Snowflake channel);
+	void RequestStopRinging(Snowflake channel);
+
 	// Loads a READY (and READY_SUPPLEMENTAL) payload saved by an offline
 	// cache, so guilds, channels, DMs and profiles are there before the
 	// gateway connects. Does not count as connecting, and never resumes the

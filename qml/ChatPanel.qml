@@ -182,6 +182,9 @@ Item {
         subtitle: Session.currentChannelTopic
         actionIcon: "info"
         onActionTriggered: chatPanel.infoRequested(Session.currentChannelId)
+        secondActionIcon: Session.connected && Session.currentChannelId !== ""
+                          && Session.call.canCall(Session.currentChannelId) ? "call-start" : ""
+        onSecondActionTriggered: Session.call.start(Session.currentChannelId)
     }
 
     ListView {

@@ -199,6 +199,36 @@ Page {
                 }
             }
 
+            ListItem {
+                height: callsHeader.height
+                divider.visible: false
+                ListItemLayout {
+                    id: callsHeader
+                    title.text: i18n.tr("Calls")
+                    title.font.bold: true
+                }
+            }
+
+            ListItem {
+                height: processingLayout.height + (divider.visible ? divider.height : 0)
+                onClicked: processingSwitch.trigger()
+
+                ListItemLayout {
+                    id: processingLayout
+                    title.text: i18n.tr("Echo and noise cancellation")
+                    summary.text: i18n.tr("Removes the call's own sound, background noise and uneven volume from your microphone. Applies from the next call")
+                    summary.wrapMode: Text.WordWrap
+                    summary.maximumLineCount: 4
+
+                    Switch {
+                        id: processingSwitch
+                        SlotsLayout.position: SlotsLayout.Trailing
+                        checked: Session.preferences.voiceProcessing
+                        onTriggered: Session.preferences.voiceProcessing = checked
+                    }
+                }
+            }
+
             Item {
                 width: parent.width
                 height: units.gu(2)

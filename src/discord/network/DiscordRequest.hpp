@@ -27,5 +27,6 @@ namespace DiscordRequest
 		SET_USER_NOTE,
 		REACTION,
 		POLL_VOTE,
+		CALL_RING,
 	};
 };

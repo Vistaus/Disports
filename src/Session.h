@@ -19,6 +19,7 @@
 #include "models/GuildListModel.h"
 #include "models/MessageListModel.h"
 #include "models/UnreadDmListModel.h"
+#include "voice/CallManager.h"
 
 class DiscordInstance;
 class Message;
@@ -70,6 +71,7 @@ class Session : public QObject
     Q_PROPERTY(Preferences* preferences READ preferences CONSTANT)
     Q_PROPERTY(EmojiPickerModel* emoji READ emoji CONSTANT)
     Q_PROPERTY(RemoteAuth* qrLogin READ qrLogin CONSTANT)
+    Q_PROPERTY(CallManager* call READ call CONSTANT)
 
 public:
     enum Phase {
@@ -120,6 +122,8 @@ public:
     Preferences* preferences() const { return m_preferences; }
     EmojiPickerModel* emoji() const { return m_emoji; }
     RemoteAuth* qrLogin() const { return m_qrLogin; }
+    CallManager* call() const { return m_call; }
+    DiscordInstance* instance() const { return m_instance; }
 
     OfflineCache* offlineCache() const { return m_offline; }
 
@@ -255,4 +259,5 @@ private:
     // Showing the offline cache's READY until the real one arrives.
     bool m_cachedStart = false;
     RemoteAuth* m_qrLogin = nullptr;
+    CallManager* m_call = nullptr;
 };

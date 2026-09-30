@@ -8,6 +8,5 @@
         "networking",
         "video"
     ],
-    "policy_version": "$ENV{APPARMOR_POLICY}",
-    "template": "unconfined"
+    "policy_version": "$ENV{APPARMOR_POLICY}"
 }

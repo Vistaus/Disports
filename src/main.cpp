@@ -48,6 +48,7 @@ void scheduleScreenshot(QQuickView* view)
 
 // Test hooks for headless runs: DISPORTS_OPEN_CHANNEL=<id> opens a channel
 // once connected, DISPORTS_SEND_MESSAGE=<text> then sends a message to it,
+// DISPORTS_START_CALL=1 calls it (or joins it, for a voice channel),
 // DISPORTS_EXPAND_FOLDER=<id> expands a server folder. DISPORTS_PLAY_VIDEO=<url>
 // (read by Main.qml) opens the media viewer with a video, logged in or not;
 // "gif:<url>" opens it as a looping GIF, "preview:<url>" shows the chat's
@@ -77,6 +78,8 @@ void scheduleTestActions(Session* session)
         const QString text = qEnvironmentVariable("DISPORTS_SEND_MESSAGE");
         if (!text.isEmpty())
             QTimer::singleShot(1500, session, [session, text]() { session->sendMessage(text); });
+        if (qEnvironmentVariableIsSet("DISPORTS_START_CALL"))
+            QTimer::singleShot(1500, session, [session, channel]() { session->call()->start(channel); });
     });
 }
 
@@ -103,6 +106,8 @@ int main(int argc, char* argv[])
     qmlRegisterType<GstVideoPlayer>("Disports.Core", 1, 0, "GstVideoPlayer");
     qmlRegisterUncreatableType<Session>("Disports.Core", 1, 0, "SessionPhase",
                                         QStringLiteral("Use the Session singleton"));
+    qmlRegisterUncreatableType<CallManager>("Disports.Core", 1, 0, "CallState",
+                                            QStringLiteral("Use Session.call"));
 
     QQuickView view;
     // Profile pictures and server icons are kept on disk; see ImageCache.h.

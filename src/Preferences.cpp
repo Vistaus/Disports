@@ -9,6 +9,7 @@ const QString ChatProfilePicturesKey = QStringLiteral("chat/profilePictures");
 const QString ThemeModeKey = QStringLiteral("appearance/theme");
 const QString BlockedMessagesKey = QStringLiteral("chat/blockedMessages");
 const QString ComposerMaxLinesKey = QStringLiteral("chat/composerMaxLines");
+const QString VoiceProcessingKey = QStringLiteral("calls/voiceProcessing");
 }
 
 Preferences::Preferences(QObject* parent)
@@ -25,6 +26,7 @@ Preferences::Preferences(QObject* parent)
     if (m_blockedMessages != QLatin1String("hide") && m_blockedMessages != QLatin1String("show"))
         m_blockedMessages = QStringLiteral("reveal");
     m_composerMaxLines = qBound(1, m_settings.value(ComposerMaxLinesKey, 3).toInt(), 6);
+    m_voiceProcessing = m_settings.value(VoiceProcessingKey, true).toBool();
 }
 
 void Preferences::setDmProfilePictures(bool enabled)
@@ -82,4 +84,13 @@ void Preferences::setComposerMaxLines(int lines)
     m_composerMaxLines = lines;
     m_settings.setValue(ComposerMaxLinesKey, lines);
     emit composerMaxLinesChanged();
+}
+
+void Preferences::setVoiceProcessing(bool enabled)
+{
+    if (m_voiceProcessing == enabled)
+        return;
+    m_voiceProcessing = enabled;
+    m_settings.setValue(VoiceProcessingKey, enabled);
+    emit voiceProcessingChanged();
 }

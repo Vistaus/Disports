@@ -1437,6 +1437,49 @@ bool DiscordInstance::SendMessageToCurrentChannel(const std::string& msg_, Snowf
 	return true;
 }
 
+// VOICE
+
+void DiscordInstance::SendVoiceStateUpdate(Snowflake guild, Snowflake channel, bool selfMute, bool selfDeaf)
+{
+	Json j, d;
+	d["guild_id"] = guild ? Json(std::to_string(guild)) : Json(nullptr);
+	d["channel_id"] = channel ? Json(std::to_string(channel)) : Json(nullptr);
+	d["self_mute"] = selfMute;
+	d["self_deaf"] = selfDeaf;
+	d["self_video"] = false;
+	j["op"] = GatewayOp::VOICE_STATE_UPDATE;
+	j["d"] = d;
+	GetWebsocketClient()->SendMsg(m_gatewayConnId, j.dump());
+}
+
+void DiscordInstance::RequestRingCall(Snowflake channel)
+{
+	GetHTTPClient()->PerformRequest(
+		true,
+		NetRequest::POST_JSON,
+		GetDiscordAPI() + "channels/" + std::to_string(channel) + "/call/ring",
+		DiscordRequest::CALL_RING,
+		channel,
+		"{\"recipients\":null}",
+		m_token
+	);
+}
+
+void DiscordInstance::RequestStopRinging(Snowflake channel)
+{
+	Json j;
+	j["recipients"] = Json::array({ std::to_string(m_mySnowflake) });
+	GetHTTPClient()->PerformRequest(
+		true,
+		NetRequest::POST_JSON,
+		GetDiscordAPI() + "channels/" + std::to_string(channel) + "/call/stop-ringing",
+		DiscordRequest::CALL_RING,
+		channel,
+		j.dump(),
+		m_token
+	);
+}
+
 void DiscordInstance::Typing()
 {
 	if (!GetCurrentChannel() || !GetCurrentGuild())

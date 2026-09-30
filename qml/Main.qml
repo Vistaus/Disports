@@ -112,6 +112,20 @@ MainView {
         function onPhaseChanged() { root.showPhase() }
     }
 
+    // Calls: the call screen comes up when one starts or rings, and goes
+    // away when it ends.
+    Connections {
+        target: Session.call
+        function onShowRequested() {
+            if (root.currentPageName !== "callPage")
+                stack.push(Qt.resolvedUrl("CallPage.qml"))
+        }
+        function onStateChanged() {
+            if (Session.call.state === CallState.Idle && root.currentPageName === "callPage")
+                stack.pop()
+        }
+    }
+
     // Offline / reconnecting: above everything, the page title included.
     ConnectionBanner {
         id: connectionBanner
@@ -121,8 +135,15 @@ MainView {
 
     // Something in progress (connecting, loading a conversation): Lomiri's
     // indeterminate progress strip at the top, like the Qt 5 version's.
-    ProgressBar {
+    CallBanner {
+        id: callBanner
         anchors { top: connectionBanner.bottom; left: parent.left; right: parent.right }
+        z: 2
+        hidden: root.currentPageName === "callPage"
+    }
+
+    ProgressBar {
+        anchors { top: callBanner.bottom; left: parent.left; right: parent.right }
         z: 2
         indeterminate: true
         visible: Session.networkOnline
@@ -133,7 +154,7 @@ MainView {
     PageStack {
         id: stack
         anchors.fill: parent
-        anchors.topMargin: connectionBanner.height
+        anchors.topMargin: connectionBanner.height + callBanner.height
         anchors.bottomMargin: root.keyboardHeight
 
         Behavior on anchors.bottomMargin {

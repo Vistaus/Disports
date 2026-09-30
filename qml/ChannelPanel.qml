@@ -67,12 +67,14 @@ Item {
             ListItem {
                 anchors.fill: parent
                 visible: !row.isCategory
-                enabled: row.openable
-                opacity: row.openable ? 1 : 0.6
+                // Voice channels are joined rather than opened.
+                readonly property bool joinable: row.kind === "voice"
+                enabled: row.openable || joinable
+                opacity: enabled ? 1 : 0.6
                 // Separator lines between contacts, groups and channels
                 divider.visible: true
                 color: row.active ? theme.palette.highlighted.background : "transparent"
-                onClicked: panel.channelOpened(row.channelId)
+                onClicked: joinable ? Session.call.start(row.channelId) : panel.channelOpened(row.channelId)
 
                 Row {
                     anchors {

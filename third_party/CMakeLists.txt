@@ -30,3 +30,28 @@ set_target_properties(qwebp PROPERTIES
 if(CLICK_MODE)
     install(TARGETS qwebp LIBRARY DESTINATION lib/${CMAKE_LIBRARY_ARCHITECTURE}/plugins/imageformats)
 endif()
+
+# Voice end-to-end encryption (DAVE): Discord's libdave, on Cisco's MLS
+# library. libdave's own CMake expects vcpkg; its sources are built here the
+# way its vcpkg packaging builds them (OpenSSL 3, mlspp in namespace mlspp,
+# no GREASE, no persistent keys).
+set(MLS_CXX_NAMESPACE "mlspp" CACHE STRING "" FORCE)
+set(DISABLE_GREASE ON CACHE BOOL "" FORCE)
+set(TESTING OFF CACHE BOOL "" FORCE)
+add_subdirectory(mlspp EXCLUDE_FROM_ALL)
+# Both treat warnings as errors; a newer compiler must not break our build.
+foreach(target mlspp bytes tls_syntax hpke mls_vectors mls_ds)
+    if(TARGET ${target})
+        target_compile_options(${target} PRIVATE -Wno-error)
+    endif()
+endforeach()
+
+set(DAVE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libdave/cpp)
+file(GLOB_RECURSE DAVE_SOURCES CONFIGURE_DEPENDS ${DAVE_DIR}/src/*.cpp)
+list(FILTER DAVE_SOURCES EXCLUDE REGEX ".*(persisted_key|bindings_|boringssl_).*")
+list(APPEND DAVE_SOURCES ${DAVE_DIR}/src/mls/persisted_key_pair_null.cpp)
+add_library(dave STATIC ${DAVE_SOURCES})
+target_include_directories(dave PUBLIC ${DAVE_DIR}/includes PRIVATE ${DAVE_DIR}/src)
+target_compile_definitions(dave PRIVATE WITH_OPENSSL3)
+target_link_libraries(dave PUBLIC mlspp PRIVATE OpenSSL::Crypto nlohmann_json)
+set_target_properties(dave PROPERTIES POSITION_INDEPENDENT_CODE ON)

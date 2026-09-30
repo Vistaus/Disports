@@ -29,6 +29,7 @@ void QtFrontend::OnConnected() { m_session->coreConnected(); }
 void QtFrontend::OnGatewayDispatch(const std::string& type, const nlohmann::json& message)
 {
     m_session->offlineCache()->gatewayDispatch(type, message);
+    m_session->call()->gatewayDispatch(type, message);
 }
 
 void QtFrontend::OnMessagesFetched(Snowflake channel, ScrollDir::eScrollDir sd, Snowflake anchor,
