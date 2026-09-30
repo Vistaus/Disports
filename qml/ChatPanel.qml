@@ -71,6 +71,78 @@ Item {
     property string emojiMode: ""
 
     signal mediaOpened(var media)
+    // Choose a file to attach (the page holding the panel opens the picker
+    // and calls attach()).
+    signal attachRequested()
+
+    // A file waiting to be sent with the next message.
+    property string attachmentUrl: ""
+    property string attachmentName: ""
+    property var attachmentTransfer: null
+
+    function attach(url, transfer) {
+        clearAttachment()
+        attachmentUrl = url
+        attachmentName = decodeURIComponent(url.substring(url.lastIndexOf("/") + 1))
+        attachmentTransfer = transfer
+    }
+
+    function clearAttachment() {
+        // Content Hub's copy of the file is not needed any more.
+        if (attachmentTransfer)
+            attachmentTransfer.finalize()
+        attachmentUrl = ""
+        attachmentName = ""
+        attachmentTransfer = null
+    }
+
+    // Mentions: the "@word" / "#word" being typed, and what it could be.
+    property string mentionWord: ""
+    property var suggestions: []
+
+    function updateMention() {
+        const before = input.text.substring(0, input.cursorPosition)
+        const match = before.match(/(^|\s)([@#][^\s@#]*)$/)
+        const word = match ? match[2] : ""
+        if (word !== mentionWord) {
+            mentionWord = word
+            refreshSuggestions()
+            // Server members not loaded yet: ask Discord (debounced).
+            if (word.length > 1 && word[0] === "@")
+                memberSearch.restart()
+        }
+    }
+
+    function refreshSuggestions() {
+        suggestions = mentionWord !== "" && Session.canSendMessages ? Session.mentionSuggestions(mentionWord) : []
+    }
+
+    function insertMention(text) {
+        const end = input.cursorPosition
+        const start = end - mentionWord.length
+        input.remove(start, end)
+        input.insert(start, text + " ")
+        input.cursorPosition = start + text.length + 1
+        mentionWord = ""
+        suggestions = []
+        input.forceActiveFocus()
+    }
+
+    Timer {
+        id: memberSearch
+        interval: 300
+        onTriggered: Session.searchMembers(chatPanel.mentionWord.substring(1))
+    }
+
+    Connections {
+        target: Session
+        function onMembersChanged() { chatPanel.refreshSuggestions() }
+        function onCurrentChannelChanged() {
+            chatPanel.clearAttachment()
+            chatPanel.mentionWord = ""
+            chatPanel.suggestions = []
+        }
+    }
 
     function openEmoji(mode) {
         emojiMode = mode
@@ -126,6 +198,15 @@ Item {
 
     function send() {
         const text = input.text
+        if (editingId === "" && attachmentUrl !== "") {
+            if (Session.sendAttachment(attachmentUrl, text)) {
+                clearAttachment()
+                input.text = ""
+                messageList.followNewest = true
+                messageList.scrollToNewest()
+            }
+            return
+        }
         if (text.trim() === "")
             return
         if (editingId !== "") {
@@ -304,9 +385,75 @@ Item {
         color: theme.palette.normal.backgroundSecondaryText
     }
 
+    // Who or what an @ / # being typed could be.
+    Rectangle {
+        anchors { left: parent.left; right: parent.right; bottom: replyBar.top }
+        height: Math.min(suggestionList.contentHeight, units.gu(30))
+        visible: chatPanel.suggestions.length > 0
+        z: 3
+        color: theme.palette.normal.background
+
+        Rectangle {
+            anchors { top: parent.top; left: parent.left; right: parent.right }
+            height: units.dp(1)
+            color: theme.palette.normal.base
+        }
+
+        ListView {
+            id: suggestionList
+            anchors.fill: parent
+            clip: true
+            model: chatPanel.suggestions
+
+            delegate: ListItem {
+                required property var modelData
+                height: suggestionLayout.height + (divider.visible ? divider.height : 0)
+                onClicked: chatPanel.insertMention(modelData.insert)
+
+                ListItemLayout {
+                    id: suggestionLayout
+                    title.text: modelData.label
+                    title.color: modelData.color ? modelData.color : theme.palette.normal.backgroundText
+                    subtitle.text: modelData.detail
+
+                    Item {
+                        SlotsLayout.position: SlotsLayout.Leading
+                        width: units.gu(4)
+                        height: width
+
+                        LomiriShape {
+                            anchors.fill: parent
+                            visible: modelData.kind === "user"
+                            aspect: LomiriShape.Flat
+                            backgroundColor: theme.palette.normal.base
+                            sourceFillMode: LomiriShape.PreserveAspectCrop
+                            source: Image {
+                                source: modelData.kind === "user" ? modelData.avatarUrl : ""
+                                sourceSize.width: units.gu(8)
+                                sourceSize.height: units.gu(8)
+                                asynchronous: true
+                            }
+                        }
+
+                        Icon {
+                            anchors.centerIn: parent
+                            visible: modelData.kind !== "user"
+                            width: units.gu(2.5)
+                            height: width
+                            name: modelData.kind === "channel" ? "message"
+                                : modelData.kind === "everyone" ? "notification"
+                                : "contact-group"
+                            color: theme.palette.normal.backgroundSecondaryText
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     Rectangle {
         id: replyBar
-        anchors { left: parent.left; right: parent.right; bottom: composer.top }
+        anchors { left: parent.left; right: parent.right; bottom: attachBar.top }
         height: chatPanel.replyToId !== "" || chatPanel.editingId !== "" ? units.gu(4) : 0
         visible: height > 0
         color: theme.palette.normal.base
@@ -331,6 +478,66 @@ Item {
                     chatPanel.replyToId = ""
                     chatPanel.stopEditing()
                 }
+            }
+        }
+    }
+
+    // The file going with the next message, or being sent.
+    Rectangle {
+        id: attachBar
+        anchors { left: parent.left; right: parent.right; bottom: composer.top }
+        height: chatPanel.attachmentUrl !== "" || Session.uploading ? units.gu(5) : 0
+        visible: height > 0
+        color: theme.palette.normal.base
+
+        Icon {
+            id: attachIcon
+            anchors { left: parent.left; leftMargin: units.gu(2); verticalCenter: parent.verticalCenter }
+            width: units.gu(2.5)
+            height: width
+            name: "attachment"
+            color: theme.palette.normal.backgroundText
+        }
+
+        Column {
+            anchors {
+                left: attachIcon.right
+                right: attachClose.left
+                leftMargin: units.gu(1.5)
+                rightMargin: units.gu(1.5)
+                verticalCenter: parent.verticalCenter
+            }
+            spacing: units.gu(0.5)
+
+            Label {
+                width: parent.width
+                text: Session.uploading ? i18n.tr("Sending %1").arg(Session.uploadName) : chatPanel.attachmentName
+                font.pixelSize: units.gu(1.4)
+                elide: Text.ElideMiddle
+            }
+
+            ProgressBar {
+                width: parent.width
+                height: units.gu(0.5)
+                visible: Session.uploading
+                minimumValue: 0
+                maximumValue: 1
+                value: Session.uploadProgress
+                showProgressPercentage: false
+            }
+        }
+
+        Icon {
+            id: attachClose
+            anchors { right: parent.right; rightMargin: units.gu(2); verticalCenter: parent.verticalCenter }
+            width: units.gu(2)
+            height: width
+            name: "close"
+            color: theme.palette.normal.backgroundText
+            MouseArea {
+                anchors.fill: parent
+                anchors.margins: -units.gu(1)
+                onClicked: Session.uploading ? Session.cancelUpload() : chatPanel.clearAttachment()
             }
         }
     }
@@ -366,6 +573,28 @@ Item {
                 rightMargin: units.gu(1)
             }
             spacing: units.gu(1)
+
+            // Attach a file (Content Hub)
+            AbstractButton {
+                Layout.preferredWidth: units.gu(4.5)
+                Layout.preferredHeight: units.gu(4.5)
+                Layout.alignment: Qt.AlignBottom
+                visible: Session.canAttachFiles && chatPanel.editingId === ""
+                enabled: Session.connected && !Session.uploading
+                opacity: enabled ? 1 : 0.4
+                onClicked: {
+                    chatPanel.closeEmoji()
+                    chatPanel.attachRequested()
+                }
+
+                Icon {
+                    anchors.centerIn: parent
+                    width: units.gu(2.8)
+                    height: width
+                    name: "attachment"
+                    color: theme.palette.normal.backgroundText
+                }
+            }
 
             // Emoji panel / back to the keyboard
             AbstractButton {
@@ -422,7 +651,9 @@ Item {
                         }
                         if (text !== "" && chatPanel.editingId === "")
                             Session.notifyTyping()
+                        chatPanel.updateMention()
                     }
+                    onCursorPositionChanged: chatPanel.updateMention()
                     onActiveFocusChanged: if (activeFocus && chatPanel.emojiMode === "compose") chatPanel.closeEmoji()
                     Keys.onReturnPressed: function(event) {
                         // Enter sends on a hardware keyboard; the on-screen
@@ -441,7 +672,8 @@ Item {
                 Layout.preferredWidth: units.gu(4.5)
                 Layout.preferredHeight: units.gu(4.5)
                 Layout.alignment: Qt.AlignBottom
-                enabled: Session.connected && input.text.trim() !== ""
+                enabled: Session.connected
+                         && (input.text.trim() !== "" || (chatPanel.attachmentUrl !== "" && chatPanel.editingId === ""))
                          && (chatPanel.editingId !== "" || Session.slowmodeRemaining === 0)
                 opacity: enabled ? 1 : 0.4
                 onClicked: chatPanel.send()

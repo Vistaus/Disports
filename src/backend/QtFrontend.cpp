@@ -82,9 +82,28 @@ void QtFrontend::OnFailedToSendMessage(Snowflake channel, Snowflake message)
 
 void QtFrontend::OnFailedToUploadFile(const std::string& file, int error)
 {
-    m_session->coreError(QStringLiteral("Could not upload %1 (%2)")
-                             .arg(QString::fromStdString(file))
-                             .arg(error));
+    m_session->coreUploadFailed(QString::fromStdString(file), error);
+}
+
+void QtFrontend::OnStartProgress(Snowflake key, const std::string& fileName, bool isUploading)
+{
+    if (isUploading)
+        m_session->coreUploadStarted(key, QString::fromStdString(fileName));
+}
+
+bool QtFrontend::OnUpdateProgress(Snowflake key, size_t offset, size_t length)
+{
+    return m_session->coreUploadProgress(key, offset, length);
+}
+
+void QtFrontend::OnStopProgress(Snowflake key)
+{
+    m_session->coreUploadStopped(key);
+}
+
+void QtFrontend::RefreshMembers(const std::set<Snowflake>&)
+{
+    m_session->coreMembersChanged();
 }
 
 void QtFrontend::OnGenericError(const std::string& message)

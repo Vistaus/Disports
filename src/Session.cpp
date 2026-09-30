@@ -2,11 +2,15 @@
 
 #include "media/GstVideoPlayer.h"
 
+#include <QColor>
 #include <QDateTime>
 #include <QDir>
-#include <QLocale>
+#include <QFile>
+#include <QFileInfo>
 #include <QGuiApplication>
+#include <QLocale>
 #include <QStandardPaths>
+#include <QUrl>
 
 #include <ctime>
 #include <utility>
@@ -703,6 +707,17 @@ int Session::slowmodeRemaining() const
     return left > 0 ? int((left + 999) / 1000) : 0;
 }
 
+bool Session::canAttachFiles() const
+{
+    return canSendMessages() && hasPermission(PERM_ATTACH_FILES);
+}
+
+bool Session::canMentionEveryone() const
+{
+    // Groups and DMs have no @everyone.
+    return currentServerChannel() && hasPermission(PERM_MENTION_EVERYONE);
+}
+
 void Session::updatePermissions()
 {
     // A timeout ends by itself: look again then.
@@ -1144,4 +1159,250 @@ void Session::coreError(const QString& message)
     // Error texts from the core can be long (they include the response);
     // keep the first line for the UI.
     setNotice(message.section(QLatin1Char('\n'), 0, 0));
+}
+
+// Attachments
+
+bool Session::sendAttachment(const QString& fileUrl, const QString& text)
+{
+    if (!m_instance || !m_connected)
+        return false;
+    if (m_uploading) {
+        setNotice(tr("Wait for the file being sent to finish."));
+        return false;
+    }
+    if (!canAttachFiles()) {
+        setNotice(tr("You can't attach files in this channel."));
+        return false;
+    }
+    if (const int wait = slowmodeRemaining()) {
+        setNotice(tr("Slowmode is on: you can send another message in %n second(s).", nullptr, wait));
+        return false;
+    }
+
+    const QUrl url(fileUrl);
+    QFile file(url.isLocalFile() ? url.toLocalFile() : fileUrl);
+    // Discord's largest upload (with Nitro) is 500 MB.
+    constexpr qint64 MaxSize = 500ll * 1024 * 1024;
+    if (!file.open(QIODevice::ReadOnly) || file.size() > MaxSize) {
+        setNotice(file.size() > MaxSize ? tr("%1 is too large to send.").arg(QFileInfo(file).fileName())
+                                         : tr("%1 could not be read.").arg(QFileInfo(file).fileName()));
+        return false;
+    }
+    QByteArray data = file.readAll();
+    const QString name = QFileInfo(file).fileName();
+    const QString content = text.trimmed();
+
+    Snowflake tempId = 0;
+    if (!m_instance->SendMessageAndAttachmentToCurrentChannel(content.toStdString(), tempId,
+            reinterpret_cast<uint8_t*>(data.data()), size_t(data.size()), name.toStdString())) {
+        setNotice(tr("You can't attach files in this channel."));
+        return false;
+    }
+    m_uploading = true;
+    m_uploadCancelled = false;
+    m_uploadName = name;
+    m_uploadProgress = 0;
+    emit uploadChanged();
+
+    if (const int seconds = slowmodeSeconds()) {
+        m_slowmodeUntil.insert(m_instance->GetCurrentChannelID(), QDateTime::currentMSecsSinceEpoch() + seconds * 1000);
+        m_slowmodeTimer.start();
+        emit slowmodeChanged();
+    }
+
+    // Shown until the real message arrives (by nonce), like a text message.
+    Message pending;
+    pending.m_snowflake = tempId;
+    pending.m_type = MessageType::SENDING_MESSAGE;
+    pending.m_message = (content.isEmpty() ? name : content + QStringLiteral("\n") + name).toStdString();
+    if (Profile* profile = m_instance->GetProfile()) {
+        pending.m_author_snowflake = profile->m_snowflake;
+        pending.m_author = !profile->m_globalName.empty() ? profile->m_globalName : profile->m_name;
+        pending.m_avatar = profile->m_avatarlnk;
+    }
+    pending.SetTime(time(nullptr));
+    GetMessageCache()->AddMessage(m_instance->GetCurrentChannelID(), pending);
+    m_messages->sync();
+    return true;
+}
+
+void Session::cancelUpload()
+{
+    if (m_uploading)
+        m_uploadCancelled = true;
+}
+
+void Session::coreUploadStarted(Snowflake, const QString& name)
+{
+    m_uploadName = name;
+    emit uploadChanged();
+}
+
+bool Session::coreUploadProgress(Snowflake, size_t offset, size_t length)
+{
+    if (length)
+        m_uploadProgress = qreal(offset) / qreal(length);
+    emit uploadChanged();
+    return m_uploadCancelled;
+}
+
+void Session::coreUploadStopped(Snowflake)
+{
+    m_uploading = false;
+    m_uploadProgress = 0;
+    emit uploadChanged();
+}
+
+void Session::coreUploadFailed(const QString& name, int error)
+{
+    const bool cancelled = m_uploadCancelled;
+    m_uploading = false;
+    m_uploadCancelled = false;
+    m_uploadProgress = 0;
+    emit uploadChanged();
+    if (cancelled)
+        return;
+    // Discord answers 400 / 413 for files over this server's limit.
+    if (error == 400 || error == 413)
+        setNotice(tr("%1 could not be sent: it may be larger than this server allows.").arg(name));
+    else
+        setNotice(tr("%1 could not be sent (error %2).").arg(name).arg(error));
+}
+
+// Mentions
+
+QVariantList Session::mentionSuggestions(const QString& word) const
+{
+    QVariantList result;
+    Channel* channel = m_instance ? m_instance->GetCurrentChannel() : nullptr;
+    if (!channel || word.isEmpty())
+        return result;
+    const QChar trigger = word.at(0);
+    const QString query = word.mid(1).toLower();
+    Guild* guild = channel->IsDM() ? nullptr : m_instance->GetGuild(channel->m_parentGuild);
+
+    // Starting with the query first, then containing it; by name.
+    struct Candidate { int rank; QVariantMap item; };
+    std::vector<Candidate> found;
+    auto rankOf = [&query](std::initializer_list<QString> names) {
+        int best = -1;
+        for (const QString& name : names) {
+            const QString lower = name.toLower();
+            if (lower.isEmpty())
+                continue;
+            if (lower.startsWith(query))
+                return 0;
+            if (lower.contains(query))
+                best = 1;
+        }
+        return best;
+    };
+    auto str = [](const std::string& s) { return QString::fromStdString(s); };
+
+    if (trigger == QLatin1Char('@')) {
+        std::vector<Snowflake> people;
+        if (guild)
+            people.assign(guild->m_knownMembers.begin(), guild->m_knownMembers.end());
+        else
+            people = channel->m_recipients;
+        for (Snowflake id : people) {
+            Profile* profile = GetProfileCache()->LookupProfile(id, "", "", "", false);
+            if (!profile || profile->GetUsername().empty())
+                continue;
+            QString nick;
+            if (guild) {
+                auto member = profile->m_guildMembers.find(guild->m_snowflake);
+                if (member != profile->m_guildMembers.end())
+                    nick = str(member->second.m_nick);
+            }
+            const QString username = str(profile->GetUsername());
+            const QString global = str(profile->m_globalName);
+            const int rank = rankOf({nick, global, username});
+            if (rank < 0)
+                continue;
+            found.push_back({rank, QVariantMap{
+                {QStringLiteral("kind"), QStringLiteral("user")},
+                {QStringLiteral("label"), !nick.isEmpty() ? nick : !global.isEmpty() ? global : username},
+                {QStringLiteral("detail"), QStringLiteral("@") + username},
+                {QStringLiteral("insert"), QStringLiteral("@") + username},
+                {QStringLiteral("avatarUrl"), DiscordUrls::userAvatar(id, profile->m_avatarlnk)},
+            }});
+        }
+        if (guild && canMentionEveryone()) {
+            const std::pair<QString, QString> everyone[] = {
+                {QStringLiteral("everyone"), tr("Notify everyone who can see this channel")},
+                {QStringLiteral("here"), tr("Notify everyone online who can see this channel")},
+            };
+            for (const auto& [name, detail] : everyone) {
+                if (!name.startsWith(query))
+                    continue;
+                found.push_back({0, QVariantMap{
+                    {QStringLiteral("kind"), QStringLiteral("everyone")},
+                    {QStringLiteral("label"), QStringLiteral("@") + name},
+                    {QStringLiteral("detail"), detail},
+                    {QStringLiteral("insert"), QStringLiteral("@") + name},
+                }});
+            }
+        }
+        if (guild) {
+            for (const auto& [id, role] : guild->m_roles) {
+                // The @everyone role has the server's id.
+                if (id == guild->m_snowflake || (!role.m_bMentionable && !canMentionEveryone()))
+                    continue;
+                const QString name = str(role.m_name);
+                const int rank = rankOf({name});
+                if (rank < 0)
+                    continue;
+                found.push_back({rank, QVariantMap{
+                    {QStringLiteral("kind"), QStringLiteral("role")},
+                    {QStringLiteral("label"), QStringLiteral("@") + name},
+                    {QStringLiteral("detail"), tr("Role")},
+                    {QStringLiteral("insert"), QStringLiteral("@") + name},
+                    {QStringLiteral("color"), role.m_colorOriginal
+                        ? QColor(QRgb(role.m_colorOriginal)).name() : QString()},
+                }});
+            }
+        }
+    } else if (trigger == QLatin1Char('#') && guild) {
+        for (Channel& other : guild->m_channels) {
+            if (other.IsCategory() || !other.HasPermission(PERM_VIEW_CHANNEL))
+                continue;
+            const QString name = str(other.m_name);
+            const int rank = rankOf({name});
+            if (rank < 0)
+                continue;
+            Channel* category = other.m_parentCateg ? guild->GetChannel(other.m_parentCateg) : nullptr;
+            found.push_back({rank, QVariantMap{
+                {QStringLiteral("kind"), QStringLiteral("channel")},
+                {QStringLiteral("label"), QStringLiteral("#") + name},
+                {QStringLiteral("detail"), category && category != &other ? str(category->m_name) : QString()},
+                {QStringLiteral("insert"), QStringLiteral("#") + name},
+            }});
+        }
+    }
+
+    std::stable_sort(found.begin(), found.end(), [](const Candidate& a, const Candidate& b) {
+        if (a.rank != b.rank)
+            return a.rank < b.rank;
+        return a.item.value(QStringLiteral("label")).toString().compare(
+                   b.item.value(QStringLiteral("label")).toString(), Qt::CaseInsensitive) < 0;
+    });
+    constexpr size_t Limit = 8;
+    for (size_t i = 0; i < found.size() && i < Limit; ++i)
+        result.append(found[i].item);
+    return result;
+}
+
+void Session::searchMembers(const QString& query)
+{
+    Channel* channel = currentServerChannel();
+    if (!channel || !m_connected || query.trimmed().isEmpty())
+        return;
+    m_instance->RequestGuildMembers(channel->m_parentGuild, query.trimmed().toStdString(), false, 10);
+}
+
+void Session::coreMembersChanged()
+{
+    emit membersChanged();
 }

@@ -3489,13 +3489,15 @@ void DiscordInstance::OnUploadAttachmentFirst(NetRequest* pReq)
 
 	if (pReq->result != HTTP_OK)
 	{
-		// Delete enqueued upload
+		// Delete enqueued upload, and the message waiting for it.
 		auto iter = ups.find(pReq->key);
-		std::string name = iter->second.m_uploadFileName;
-		if (iter != ups.end())
-			ups.erase(iter);
+		if (iter == ups.end())
+			return;
+		const PendingUpload up = iter->second;
+		ups.erase(iter);
 
-		GetFrontend()->OnFailedToUploadFile(name, pReq->result);
+		GetFrontend()->OnFailedToUploadFile(up.m_name, pReq->result);
+		GetFrontend()->OnFailedToSendMessage(up.m_channelSF, up.m_tempSF);
 		return;
 	}
 
@@ -3510,10 +3512,7 @@ void DiscordInstance::OnUploadAttachmentFirst(NetRequest* pReq)
 		up.m_uploadUrl = GetFieldSafe(att, "upload_url");
 		up.m_uploadFileName = GetFieldSafe(att, "upload_filename");
 
-		// Send data to the upload URL
-		uint8_t* pNewData = new uint8_t[up.m_data.size()];
-		memcpy(pNewData, up.m_data.data(), up.m_data.size());
-
+		// Send data to the upload URL (the request copies it).
 		GetHTTPClient()->PerformRequest(
 			true,
 			NetRequest::PUT_OCTETS_PROGRESS,
@@ -3524,7 +3523,7 @@ void DiscordInstance::OnUploadAttachmentFirst(NetRequest* pReq)
 			"",//GetToken(),
 			"",
 			nullptr, // default processing
-			pNewData,
+			up.m_data.data(),
 			up.m_data.size()
 		);
 
@@ -3548,9 +3547,11 @@ void DiscordInstance::OnUploadAttachmentSecond(NetRequest* pReq)
 
 	if (pReq->result != HTTP_OK)
 	{
-		// Delete enqueued upload
+		// Delete enqueued upload, and the message waiting for it.
+		const PendingUpload up = iter->second;
 		ups.erase(iter);
-		GetFrontend()->OnFailedToUploadFile(pReq->additional_data, pReq->result);
+		GetFrontend()->OnFailedToUploadFile(up.m_name, pReq->result);
+		GetFrontend()->OnFailedToSendMessage(up.m_channelSF, up.m_tempSF);
 		GetFrontend()->OnStopProgress(pReq->key);
 		return;
 	}

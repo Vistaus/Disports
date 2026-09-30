@@ -28,6 +28,7 @@ Page {
     }
 
     ChatPanel {
+        id: panel
         anchors {
             top: chatPage.header.bottom
             left: parent.left
@@ -40,6 +41,10 @@ Page {
                 Qt.openUrlExternally(media.openUrl || media.viewUrl)
             else
                 chatPage.pageStack.push(Qt.resolvedUrl("MediaViewerPage.qml"), { "media": media })
+        }
+        onAttachRequested: {
+            const picker = chatPage.pageStack.push(Qt.resolvedUrl("ContentPickerPage.qml"))
+            picker.picked.connect(function(url, transfer) { panel.attach(url, transfer) })
         }
     }
 }

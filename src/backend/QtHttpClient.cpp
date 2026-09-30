@@ -146,6 +146,19 @@ void QtHttpClient::PerformRequest(
     }
 
     m_pending.insert(reply);
+    // Uploads with progress: the core is told as it goes, and may cancel.
+    if (type == NetRequest::PUT_OCTETS_PROGRESS) {
+        connect(reply, &QNetworkReply::uploadProgress, this, [this, reply, req](qint64 sent, qint64 total) {
+            if (total <= 0 || m_quitting)
+                return;
+            req->result = HTTP_PROGRESS;
+            req->m_offset = size_t(sent);
+            req->m_length = size_t(total);
+            req->pFunc(req);
+            if (req->m_bCancelOp)
+                reply->abort();
+        });
+    }
     connect(reply, &QNetworkReply::finished, this, [this, reply, req]() {
         m_pending.remove(reply);
         reply->deleteLater();

@@ -86,6 +86,7 @@ qt_add_qml_module(disports
         qml/CallPage.qml
         qml/CallBanner.qml
         qml/RoundedPicture.qml
+        qml/ContentPickerPage.qml
 )
 
 qt_add_resources(disports "assets"

@@ -70,6 +70,14 @@ class Session : public QObject
     // long until the next one may be sent.
     Q_PROPERTY(int slowmodeSeconds READ slowmodeSeconds NOTIFY permissionsChanged)
     Q_PROPERTY(int slowmodeRemaining READ slowmodeRemaining NOTIFY slowmodeChanged)
+    Q_PROPERTY(bool canAttachFiles READ canAttachFiles NOTIFY permissionsChanged)
+    // @everyone / @here, and roles that are not mentionable.
+    Q_PROPERTY(bool canMentionEveryone READ canMentionEveryone NOTIFY permissionsChanged)
+
+    // The file being uploaded (one at a time).
+    Q_PROPERTY(bool uploading READ uploading NOTIFY uploadChanged)
+    Q_PROPERTY(QString uploadName READ uploadName NOTIFY uploadChanged)
+    Q_PROPERTY(qreal uploadProgress READ uploadProgress NOTIFY uploadChanged)
     Q_PROPERTY(QString typingText READ typingText NOTIFY typingTextChanged)
     Q_PROPERTY(bool loadingMessages READ loadingMessages NOTIFY loadingMessagesChanged)
 
@@ -129,6 +137,11 @@ public:
     QString timeoutText() const;
     int slowmodeSeconds() const;
     int slowmodeRemaining() const;
+    bool canAttachFiles() const;
+    bool canMentionEveryone() const;
+    bool uploading() const { return m_uploading; }
+    QString uploadName() const { return m_uploadName; }
+    qreal uploadProgress() const { return m_uploadProgress; }
     QString typingText() const { return m_typingText; }
     bool loadingMessages() const { return m_loadingMessages; }
     bool chatVisible() const { return m_chatVisible; }
@@ -165,6 +178,17 @@ public:
     Q_INVOKABLE QVariantMap channelInfo(const QString& channelId) const;
     Q_INVOKABLE void showNotice(const QString& text) { setNotice(text); }
     Q_INVOKABLE void loadOlderMessages();
+    // Sends a local file (a file:// URL, e.g. from Content Hub) with an
+    // optional message, to the open channel.
+    Q_INVOKABLE bool sendAttachment(const QString& fileUrl, const QString& text);
+    Q_INVOKABLE void cancelUpload();
+    // Suggestions for the word being typed: "@al" or "#gen". A list of
+    // {kind ("user", "role", "everyone", "channel"), label, detail,
+    // insert (the text that replaces the word), avatarUrl, color}.
+    Q_INVOKABLE QVariantList mentionSuggestions(const QString& word) const;
+    // Asks Discord for server members matching a name (they arrive
+    // later: membersChanged).
+    Q_INVOKABLE void searchMembers(const QString& query);
     Q_INVOKABLE void markCurrentChannelRead();
     Q_INVOKABLE void notifyTyping();
     Q_INVOKABLE void clearNotice();
@@ -203,6 +227,11 @@ public:
     void coreUserChanged(Snowflake user);
     void coreMessagesRefreshed();
     void coreError(const QString& message);
+    void coreUploadStarted(Snowflake key, const QString& name);
+    bool coreUploadProgress(Snowflake key, size_t offset, size_t length); // true: cancel
+    void coreUploadStopped(Snowflake key);
+    void coreUploadFailed(const QString& name, int error);
+    void coreMembersChanged();
 
     QString configPath() const;
     bool applicationActive() const;
@@ -223,6 +252,8 @@ signals:
     void autoSelectChannelChanged();
     void permissionsChanged();
     void slowmodeChanged();
+    void uploadChanged();
+    void membersChanged();
 
 private:
     void setPhase(Phase phase);
@@ -279,6 +310,10 @@ private:
     QHash<Snowflake, qint64> m_slowmodeUntil; // channel -> ms since epoch
     QTimer m_slowmodeTimer;
     QTimer m_timeoutTimer; // the end of a timeout
+    bool m_uploading = false;
+    bool m_uploadCancelled = false;
+    QString m_uploadName;
+    qreal m_uploadProgress = 0;
 
     GuildListModel* m_guilds = nullptr;
     ChannelListModel* m_channels = nullptr;

@@ -33,9 +33,10 @@ public:
     void OnFailedToSendMessage(Snowflake channel, Snowflake message) override;
     void OnFailedToUploadFile(const std::string& file, int error) override;
     void OnFailedToCheckForUpdates(int, const std::string&) override {}
-    void OnStartProgress(Snowflake, const std::string&, bool) override {}
-    bool OnUpdateProgress(Snowflake, size_t, size_t) override { return true; }
-    void OnStopProgress(Snowflake) override {}
+    void OnStartProgress(Snowflake key, const std::string& fileName, bool isUploading) override;
+    // Returns whether to cancel.
+    bool OnUpdateProgress(Snowflake key, size_t offset, size_t length) override;
+    void OnStopProgress(Snowflake key) override;
     void OnNotification() override {}
 
     // Error messages
@@ -59,7 +60,7 @@ public:
     void RepaintProfile() override;
     void RepaintProfileWithUserID(Snowflake id) override;
     void RefreshMessages(ScrollDir::eScrollDir sd, Snowflake gapCulprit) override;
-    void RefreshMembers(const std::set<Snowflake>&) override {}
+    void RefreshMembers(const std::set<Snowflake>& members) override;
 
     // Interactive requests
     void JumpToMessage(Snowflake) override {}

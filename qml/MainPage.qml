@@ -63,6 +63,7 @@ Page {
                 }
 
                 ChatPanel {
+                    id: panel
                     anchors.fill: parent
                     anchors.leftMargin: units.dp(1)
                     visible: Session.currentChannelId !== ""
@@ -74,6 +75,10 @@ Page {
                             Qt.openUrlExternally(media.openUrl || media.viewUrl)
                         else
                             mainPage.pageStack.push(Qt.resolvedUrl("MediaViewerPage.qml"), { "media": media })
+                    }
+                    onAttachRequested: {
+                        const picker = mainPage.pageStack.push(Qt.resolvedUrl("ContentPickerPage.qml"))
+                        picker.picked.connect(function(url, transfer) { panel.attach(url, transfer) })
                     }
                 }
 
