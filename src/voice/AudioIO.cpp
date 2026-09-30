@@ -144,8 +144,12 @@ void AudioIO::stop()
     if (!m_loop)
         return;
     pa_threaded_mainloop_lock(m_loop);
+    // Unhooked first: waiting below lets PulseAudio's thread run callbacks
+    // it has already queued for these streams.
     for (pa_stream** stream : {&m_record, &m_playback}) {
         if (*stream) {
+            pa_stream_set_read_callback(*stream, nullptr, nullptr);
+            pa_stream_set_write_callback(*stream, nullptr, nullptr);
             pa_stream_disconnect(*stream);
             pa_stream_unref(*stream);
             *stream = nullptr;
@@ -200,6 +204,8 @@ void AudioIO::onRead(size_t)
 {
     const void* data = nullptr;
     size_t bytes = 0;
+    if (!m_record)
+        return;
     while (pa_stream_readable_size(m_record) > 0) {
         if (pa_stream_peek(m_record, &data, &bytes) < 0)
             return;
@@ -279,6 +285,8 @@ void AudioIO::onWrite(size_t bytes)
 {
     void* buffer = nullptr;
     size_t size = bytes;
+    if (!m_playback)
+        return;
     if (pa_stream_begin_write(m_playback, &buffer, &size) < 0 || !buffer)
         return;
     const size_t frames = size / (2 * sizeof(int16_t));
