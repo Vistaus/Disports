@@ -10,6 +10,7 @@ const QString ThemeModeKey = QStringLiteral("appearance/theme");
 const QString BlockedMessagesKey = QStringLiteral("chat/blockedMessages");
 const QString ComposerMaxLinesKey = QStringLiteral("chat/composerMaxLines");
 const QString VoiceProcessingKey = QStringLiteral("calls/voiceProcessing");
+const QString NoiseSuppressionKey = QStringLiteral("calls/noiseSuppression");
 }
 
 Preferences::Preferences(QObject* parent)
@@ -27,6 +28,7 @@ Preferences::Preferences(QObject* parent)
         m_blockedMessages = QStringLiteral("reveal");
     m_composerMaxLines = qBound(1, m_settings.value(ComposerMaxLinesKey, 3).toInt(), 6);
     m_voiceProcessing = m_settings.value(VoiceProcessingKey, true).toBool();
+    m_noiseSuppression = m_settings.value(NoiseSuppressionKey, true).toBool();
 }
 
 void Preferences::setDmProfilePictures(bool enabled)
@@ -93,4 +95,13 @@ void Preferences::setVoiceProcessing(bool enabled)
     m_voiceProcessing = enabled;
     m_settings.setValue(VoiceProcessingKey, enabled);
     emit voiceProcessingChanged();
+}
+
+void Preferences::setNoiseSuppression(bool enabled)
+{
+    if (m_noiseSuppression == enabled)
+        return;
+    m_noiseSuppression = enabled;
+    m_settings.setValue(NoiseSuppressionKey, enabled);
+    emit noiseSuppressionChanged();
 }

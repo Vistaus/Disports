@@ -434,6 +434,7 @@ void CallManager::maybeConnect()
     info.channelId = DiscordUrls::id(m_channel);
     info.userId = DiscordUrls::id(m_session->instance()->GetUserID());
     info.voiceProcessing = m_session->preferences()->voiceProcessing();
+    info.noiseSuppression = m_session->preferences()->noiseSuppression();
 
     m_thread = new QThread(this);
     m_thread->setObjectName(QStringLiteral("voice"));

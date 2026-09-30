@@ -33,6 +33,7 @@ struct VoiceServerInfo {
     QString channelId;
     QString userId;
     bool voiceProcessing = true; // see AudioIO
+    bool noiseSuppression = true;
 };
 
 // One voice connection, on its own thread: the voice gateway (v8, with

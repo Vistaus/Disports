@@ -19,3 +19,6 @@
 [submodule "third_party/mlspp"]
 	path = third_party/mlspp
 	url = https://github.com/cisco/mlspp.git
+[submodule "third_party/rnnoise/upstream"]
+	path = third_party/rnnoise/upstream
+	url = https://github.com/xiph/rnnoise.git

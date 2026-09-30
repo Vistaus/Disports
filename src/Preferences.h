@@ -23,6 +23,7 @@ class Preferences : public QObject
     Q_PROPERTY(bool autoplayGifs READ autoplayGifs WRITE setAutoplayGifs NOTIFY autoplayGifsChanged)
     // Echo cancellation, noise suppression and gain control in calls.
     Q_PROPERTY(bool voiceProcessing READ voiceProcessing WRITE setVoiceProcessing NOTIFY voiceProcessingChanged)
+    Q_PROPERTY(bool noiseSuppression READ noiseSuppression WRITE setNoiseSuppression NOTIFY noiseSuppressionChanged)
 
 public:
     explicit Preferences(QObject* parent = nullptr);
@@ -41,11 +42,14 @@ public:
     void setAutoplayGifs(bool enabled);
     bool voiceProcessing() const { return m_voiceProcessing; }
     void setVoiceProcessing(bool enabled);
+    bool noiseSuppression() const { return m_noiseSuppression; }
+    void setNoiseSuppression(bool enabled);
 
 signals:
     void dmProfilePicturesChanged();
     void autoplayGifsChanged();
     void voiceProcessingChanged();
+    void noiseSuppressionChanged();
     void chatProfilePicturesChanged();
     void themeModeChanged();
     void blockedMessagesChanged();
@@ -56,6 +60,7 @@ private:
     bool m_dmProfilePictures = true;
     bool m_autoplayGifs = false;
     bool m_voiceProcessing = true;
+    bool m_noiseSuppression = true;
     bool m_chatProfilePictures = true;
     int m_themeMode = 2;
     QString m_blockedMessages = QStringLiteral("reveal");

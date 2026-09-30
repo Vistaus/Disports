@@ -253,8 +253,8 @@ Page {
 
                 ListItemLayout {
                     id: processingLayout
-                    title.text: i18n.tr("Echo and noise cancellation")
-                    summary.text: i18n.tr("Removes the call's own sound, background noise and uneven volume from your microphone. Applies from the next call")
+                    title.text: i18n.tr("Echo cancellation")
+                    summary.text: i18n.tr("Keeps others from hearing themselves through your loudspeaker, and evens out your volume. Applies from the next call")
                     summary.wrapMode: Text.WordWrap
                     summary.maximumLineCount: 4
 
@@ -263,6 +263,26 @@ Page {
                         SlotsLayout.position: SlotsLayout.Trailing
                         checked: Session.preferences.voiceProcessing
                         onTriggered: Session.preferences.voiceProcessing = checked
+                    }
+                }
+            }
+
+            ListItem {
+                height: denoiseLayout.height + (divider.visible ? divider.height : 0)
+                onClicked: denoiseSwitch.trigger()
+
+                ListItemLayout {
+                    id: denoiseLayout
+                    title.text: i18n.tr("Noise suppression")
+                    summary.text: i18n.tr("Removes background noise such as typing, fans and traffic from your microphone. Applies from the next call")
+                    summary.wrapMode: Text.WordWrap
+                    summary.maximumLineCount: 4
+
+                    Switch {
+                        id: denoiseSwitch
+                        SlotsLayout.position: SlotsLayout.Trailing
+                        checked: Session.preferences.noiseSuppression
+                        onTriggered: Session.preferences.noiseSuppression = checked
                     }
                 }
             }

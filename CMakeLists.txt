@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(disports VERSION 1.0.0 LANGUAGES CXX)
+project(disports VERSION 1.0.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -132,6 +132,7 @@ target_link_libraries(disports PRIVATE
     OpenSSL::Crypto
     discord
     qrcodegen
+    rnnoise
 )
 
 install(TARGETS disports RUNTIME DESTINATION bin)

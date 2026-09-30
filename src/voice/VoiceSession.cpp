@@ -369,7 +369,7 @@ void VoiceSession::startMedia(const std::vector<uint8_t>& key, const std::string
     const bool audioOk = m_audio.start([this](const int16_t* samples) {
         const QByteArray pcm(reinterpret_cast<const char*>(samples), AudioIO::FrameSamples * qsizetype(sizeof(int16_t)));
         QMetaObject::invokeMethod(this, [this, pcm]() { sendFrame(pcm); }, Qt::QueuedConnection);
-    }, m_info.voiceProcessing);
+    }, m_info.voiceProcessing, m_info.noiseSuppression);
     if (!audioOk) {
         fail(QStringLiteral("Audio: %1").arg(QString::fromStdString(m_audio.error())));
         return;

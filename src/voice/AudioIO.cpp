@@ -1,6 +1,7 @@
 #include "AudioIO.h"
 
 #include <pulse/pulseaudio.h>
+#include <rnnoise.h>
 #include <webrtc/modules/audio_processing/include/audio_processing.h>
 
 #include <algorithm>
@@ -69,13 +70,15 @@ bool AudioIO::waitForContext()
     }
 }
 
-bool AudioIO::start(CaptureCallback capture, bool processing)
+bool AudioIO::start(CaptureCallback capture, bool processing, bool denoise)
 {
     stop();
     m_capture = std::move(capture);
     m_renderBuffer.clear();
     if (processing)
-        setUpProcessing();
+        setUpProcessing(denoise);
+    if (denoise)
+        m_denoise = rnnoise_create(nullptr);
     m_loop = pa_threaded_mainloop_new();
     if (!m_loop) {
         m_error = "no PulseAudio main loop";
@@ -165,6 +168,10 @@ void AudioIO::stop()
     pa_threaded_mainloop_unlock(m_loop);
     pa_threaded_mainloop_stop(m_loop);
     m_apm.reset();
+    if (m_denoise) {
+        rnnoise_destroy(m_denoise);
+        m_denoise = nullptr;
+    }
     pa_threaded_mainloop_free(m_loop);
     m_loop = nullptr;
     std::lock_guard<std::mutex> lock(m_mixLock);
@@ -341,11 +348,11 @@ void AudioIO::waitFor(pa_operation* op)
 
 namespace {
 
-constexpr int ChunkSamples = AudioIO::SampleRate / 100; // WebRTC works on 10 ms
+constexpr int ChunkSamples = AudioIO::SampleRate / 100; // WebRTC and RNNoise work on 10 ms
 
 }
 
-void AudioIO::setUpProcessing()
+void AudioIO::setUpProcessing(bool denoise)
 {
     webrtc::Config config;
     // Loudspeaker, room and microphone delays are not known well on phones:
@@ -360,7 +367,7 @@ void AudioIO::setUpProcessing()
     m_apm->echo_cancellation()->set_suppression_level(webrtc::EchoCancellation::kHighSuppression);
     m_apm->echo_cancellation()->Enable(true);
     m_apm->noise_suppression()->set_level(webrtc::NoiseSuppression::kHigh);
-    m_apm->noise_suppression()->Enable(true);
+    m_apm->noise_suppression()->Enable(!denoise);
     m_apm->gain_control()->set_mode(webrtc::GainControl::kAdaptiveDigital);
     m_apm->gain_control()->set_target_level_dbfs(3);
     m_apm->gain_control()->set_compression_gain_db(9);
@@ -384,7 +391,7 @@ int AudioIO::streamDelayMs()
 
 void AudioIO::processCapture(int16_t* samples)
 {
-    if (!m_apm)
+    if (!m_apm && !m_denoise)
         return;
     const webrtc::StreamConfig config(SampleRate, 1);
     float chunk[ChunkSamples];
@@ -392,9 +399,18 @@ void AudioIO::processCapture(int16_t* samples)
     for (int offset = 0; offset < FrameSamples; offset += ChunkSamples) {
         for (int i = 0; i < ChunkSamples; ++i)
             chunk[i] = samples[offset + i] / 32768.0f;
-        m_apm->set_stream_delay_ms(streamDelayMs());
-        if (m_apm->ProcessStream(channels, config, config, channels) != webrtc::AudioProcessing::kNoError)
-            continue;
+        if (m_apm) {
+            m_apm->set_stream_delay_ms(streamDelayMs());
+            m_apm->ProcessStream(channels, config, config, channels);
+        }
+        if (m_denoise) {
+            // RNNoise takes samples in 16-bit range.
+            for (float& sample : chunk)
+                sample *= 32768.0f;
+            rnnoise_process_frame(m_denoise, chunk, chunk);
+            for (float& sample : chunk)
+                sample /= 32768.0f;
+        }
         for (int i = 0; i < ChunkSamples; ++i)
             samples[offset + i] = int16_t(std::clamp(chunk[i] * 32768.0f, -32768.0f, 32767.0f));
     }

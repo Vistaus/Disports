@@ -9,6 +9,7 @@ target_include_directories(boost_regex INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/boo
 target_compile_definitions(boost_regex INTERFACE BOOST_REGEX_STANDALONE)
 
 add_subdirectory(qrcodegen)
+add_subdirectory(rnnoise)
 
 # Qt's WebP image plugin, built against the system libwebp. Discord's media
 # proxy serves previews as WebP, and Ubuntu Touch has no WebP plugin for

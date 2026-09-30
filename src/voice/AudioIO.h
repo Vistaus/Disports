@@ -15,6 +15,7 @@ struct pa_stream;
 struct pa_operation;
 
 namespace webrtc { class AudioProcessing; }
+struct DenoiseState;
 
 // Call audio through PulseAudio (the "audio" and "microphone" AppArmor
 // policy groups allow its socket to confined apps): the microphone in 20 ms
@@ -25,7 +26,9 @@ namespace webrtc { class AudioProcessing; }
 //
 // The microphone goes through WebRTC's audio processing (the library
 // PulseAudio uses too, already on Ubuntu Touch): echo cancellation, with
-// what we play as its reference, noise suppression, gain control.
+// what we play as its reference, noise suppression, gain control. With
+// denoising on, RNNoise's neural suppression replaces WebRTC's, after the
+// echo canceller.
 class AudioIO
 {
 public:
@@ -38,7 +41,7 @@ public:
     AudioIO();
     ~AudioIO();
 
-    bool start(CaptureCallback capture, bool processing = true);
+    bool start(CaptureCallback capture, bool processing = true, bool denoise = true);
     void stop();
     std::string error() const { return m_error; }
 
@@ -64,7 +67,7 @@ private:
     bool waitForContext();
     void mix(int16_t* out, size_t frames);
     void queryPorts();
-    void setUpProcessing();
+    void setUpProcessing(bool denoise);
     void processCapture(int16_t* samples);
     void analyzePlayback(const int16_t* stereo, size_t frames);
     int streamDelayMs();
@@ -81,6 +84,7 @@ private:
     // on 10 ms chunks. The playback mix (mono) waits in m_renderBuffer.
     std::unique_ptr<webrtc::AudioProcessing> m_apm;
     std::vector<float> m_renderBuffer;
+    DenoiseState* m_denoise = nullptr;
     std::string m_error;
 
     struct Source {
