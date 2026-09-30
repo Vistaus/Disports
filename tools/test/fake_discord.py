@@ -12,7 +12,8 @@ One server, "Test Server", where our user (100) has the role "Muted":
   #slow           slowmode of 10 s
   #no-files       @everyone is denied Attach Files
 Roles: Moderators (mentionable), Muted. Members: alice, bob, carol, dave.
-A DM with Alice (2001).
+A DM with Alice (2001); LIVE_DM=<seconds> makes a new message from her
+arrive that long after signing in.
 
 Uploads follow Discord's two steps: POST .../attachments gives an upload
 URL, PUT sends the file there, then the message names the upload.
@@ -122,6 +123,17 @@ for ch in (GENERAL, NOHISTORY, SLOW, NOFILES, READONLY, DM):
     HISTORY_MSGS[ch] = [message(ch, ALICE, "Hello from Alice in %s" % ch)]
 
 
+# MANY_SERVERS=<n>: that many more servers, to scroll the server rail.
+MANY_SERVERS = int(os.environ.get("MANY_SERVERS", "0"))
+
+
+def extra_servers(everyone):
+    return [{"id": str(6000 + i * 10), "properties": {"name": "Server %d" % (i + 1), "icon": None, "owner_id": "300"},
+             "channels": [{"id": str(6001 + i * 10), "type": 0, "name": "chat", "position": 0}],
+             "roles": [dict(everyone, id=str(6000 + i * 10))], "emojis": [], "voice_states": []}
+            for i in range(MANY_SERVERS)]
+
+
 def ready():
     for ch in CHANNELS:
         if ch["id"] in HISTORY_MSGS:
@@ -145,10 +157,12 @@ def ready():
                                       "self_mute": False, "self_deaf": False} for u in LOUNGE_PEOPLE]},
                    {"id": QUIET, "properties": {"name": "Quiet Server", "icon": None, "owner_id": "300"},
                     "channels": [{"id": QUIET_CHAN, "type": 0, "name": "chat", "position": 0}],
-                    "roles": [dict(roles[0], id=QUIET)], "emojis": [], "voice_states": []}],
+                    "roles": [dict(roles[0], id=QUIET)], "emojis": [], "voice_states": []}]
+                  + extra_servers(roles[0]),
         "users": MEMBERS,
         "merged_members": [[{"user_id": "100", "roles": [ROLE_MUTED], "nick": None}],
-                           [{"user_id": "100", "roles": [], "nick": None}]],
+                           [{"user_id": "100", "roles": [], "nick": None}]]
+                          + [[{"user_id": "100", "roles": [], "nick": None}] for _ in range(MANY_SERVERS)],
         "private_channels": [{"id": DM, "type": 1, "recipient_ids": ["200"],
                               "last_message_id": HISTORY_MSGS[DM][-1]["id"]}],
         "read_state": {"entries": [], "version": 1},
@@ -184,8 +198,18 @@ async def gateway(ws):
                     return
                 clients.add(ws)
                 await dispatch(ws, "READY", ready())
-                await dispatch(ws, "READY_SUPPLEMENTAL", {"guilds": [{"id": GUILD}, {"id": QUIET}],
-                               "merged_presences": {"friends": [], "guilds": [[], []]}})
+                others = [str(6000 + i * 10) for i in range(MANY_SERVERS)]
+                await dispatch(ws, "READY_SUPPLEMENTAL", {"guilds": [{"id": g} for g in [GUILD, QUIET] + others],
+                               "merged_presences": {"friends": [], "guilds": [[] for _ in range(2 + len(others))]}})
+                # LIVE_DM=<seconds>: a new DM from Alice arrives then (unread).
+                if os.environ.get("LIVE_DM"):
+                    async def live_dm(ws=ws):
+                        await asyncio.sleep(float(os.environ["LIVE_DM"]))
+                        msg = message(DM, ALICE, "A new message from Alice")
+                        HISTORY_MSGS[DM].append(msg)
+                        log("LIVE dm", msg["id"])
+                        await dispatch(ws, "MESSAGE_CREATE", msg)
+                    asyncio.create_task(live_dm())
                 # Calls going on in DMs arrive after READY.
                 await dispatch(ws, "CALL_CREATE", {"channel_id": DM, "message_id": DM_CALL_MESSAGE,
                                "region": "x", "ringing": [], "voice_states": [

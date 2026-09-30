@@ -106,7 +106,6 @@ qt_add_resources(disports "assets"
     FILES
         ${PROJECT_SOURCE_DIR}/assets/logo.svg
         ${PROJECT_SOURCE_DIR}/assets/send.svg
-        ${PROJECT_SOURCE_DIR}/assets/emoji.svg
 )
 
 qt_add_resources(disports "data"

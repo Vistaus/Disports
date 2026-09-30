@@ -70,6 +70,64 @@ PY
     expect upload 'REST upload PUT [0-9]+ 165 bytes'
     expect upload 'REST send 1101 .*"filename": "upload.png"'
 }
+# expect_colour <scenario> <x> <y> <r> <g> <b>: the screenshot's pixel is
+# close to that colour.
+expect_colour() {
+    local shot=$ROOT/build/test/$1/shot.png
+    local got
+    got=$(python3 - "$shot" "$2" "$3" <<'PY'
+import struct, sys, zlib
+data = open(sys.argv[1], "rb").read()
+w, h = struct.unpack(">II", data[16:24])
+bpp = {2: 3, 6: 4}[data[25]]
+idat, pos = b"", 8
+while pos < len(data):
+    n = struct.unpack(">I", data[pos:pos + 4])[0]
+    if data[pos + 4:pos + 8] == b"IDAT":
+        idat += data[pos + 8:pos + 8 + n]
+    pos += n + 12
+raw, stride = zlib.decompress(idat), w * bpp
+rows, prev = [], bytearray(stride)
+for y in range(h):
+    f, line = raw[y * (stride + 1)], bytearray(raw[y * (stride + 1) + 1:(y + 1) * (stride + 1)])
+    for i in range(stride):
+        a = line[i - bpp] if i >= bpp else 0
+        b, c = prev[i], (prev[i - bpp] if i >= bpp else 0)
+        if f == 1: line[i] = (line[i] + a) & 255
+        elif f == 2: line[i] = (line[i] + b) & 255
+        elif f == 3: line[i] = (line[i] + (a + b) // 2) & 255
+        elif f == 4:
+            p = a + b - c
+            pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+            line[i] = (line[i] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+    rows.append(line); prev = line
+x, y = int(sys.argv[2]), int(sys.argv[3])
+print(*rows[y][x * bpp:x * bpp + 3])
+PY
+)
+    set -- "$1" "$2" "$3" "$4" "$5" "$6" $got
+    if [ $(( (${7:-0}-$4)*(${7:-0}-$4) + (${8:-0}-$5)*(${8:-0}-$5) + (${9:-0}-$6)*(${9:-0}-$6) )) -gt 3000 ]; then
+        echo "   FAIL $1: pixel $2,$3 is ${7:-?} ${8:-?} ${9:-?}, not $4 $5 $6"
+        FAILED=1
+    fi
+}
+
+scenario_zoom() {       # double-tap a photo's yellow corner: zoom stays there
+    mkdir -p "$ROOT/build/test/files"
+    python3 - "$ROOT/build/test/files/quadrants.png" <<'PY'
+import struct, sys, zlib
+w, h = 64, 48
+colour = lambda x, y: ((220, 40, 40), (40, 180, 60), (40, 70, 220), (240, 210, 30))[(y >= h // 2) * 2 + (x >= w // 2)]
+raw = b"".join(b"\0" + b"".join(bytes(colour(x, y)) for x in range(w)) for y in range(h))
+chunk = lambda t, d: struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d))
+open(sys.argv[1], "wb").write(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+                              + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+PY
+    STEPS="sleep 7;click 497 650;sleep 2;click 850 650;click 850 650;sleep 1" \
+        "$HERE/run.sh" zoom 12000 DISPORTS_OPEN_CHANNEL=1101 "${WIDE[@]}" DISPORTS_SEND_FILE=/files/quadrants.png
+    expect_colour zoom 500 450 240 210 30
+}
+
 scenario_dmcall() {     # a DM with a call going on
     STEPS="sleep 5" "$HERE/run.sh" dmcall 7000 DISPORTS_OPEN_CHANNEL=2001 "${WIDE[@]}"
     expect dmcall 'REST history 2001'
@@ -80,7 +138,7 @@ scenario_permissions() { # read-only, no history, no files, slowmode
     done
 }
 
-ALL=(channels mentions upload dmcall permissions)
+ALL=(channels mentions upload zoom dmcall permissions)
 SCENARIOS=("${@:-${ALL[@]}}")
 [ $# -eq 0 ] && SCENARIOS=("${ALL[@]}")
 
@@ -89,7 +147,8 @@ for name in "${SCENARIOS[@]}"; do
     echo "== $name"
     "$HERE/server.sh" restart >/dev/null
     "scenario_$name"
-    for out in "$ROOT"/build/test/$name*; do
+    for out in "$ROOT"/build/test/$name "$ROOT"/build/test/$name-*; do
+        [ -d "$out" ] || continue
         RUNS+=("$out")
         grep -q "app exit: 0" "$out/log.txt" || { echo "   FAIL $(basename "$out"): the app did not exit cleanly"; FAILED=1; }
     done

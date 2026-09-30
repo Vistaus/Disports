@@ -18,14 +18,29 @@ Item {
     // Discord's limit for a message (without Nitro).
     readonly property int maxMessageLength: 2000
 
+    // The on-screen keyboard holds the word being typed (predictive text)
+    // outside `text` until it commits it. Commit before reading or changing
+    // the text, or that word is lost (the Qt 5 version's fix, 80ca07f); and
+    // reset the keyboard after replacing the whole text, so it does not
+    // keep a stale word and put it back or drop letters later.
+    function commitTyping() {
+        Qt.inputMethod.commit()
+    }
+
+    function replaceText(text) {
+        input.text = text
+        Qt.inputMethod.reset()
+    }
+
     signal infoRequested(string channelId)
 
     function startEditing(messageId, text) {
         closeEmoji()
+        commitTyping()
         replyToId = ""
         editingId = messageId
         editingOriginal = text
-        input.text = text
+        replaceText(text)
         input.forceActiveFocus()
         input.cursorPosition = input.length
     }
@@ -35,7 +50,7 @@ Item {
             return
         editingId = ""
         editingOriginal = ""
-        input.text = ""
+        replaceText("")
     }
 
     function confirmDelete(messageId) {
@@ -101,7 +116,9 @@ Item {
     property var suggestions: []
 
     function updateMention() {
-        const before = input.text.substring(0, input.cursorPosition)
+        // With the word being typed (it sits at the cursor).
+        const composing = input.inputMethodComposing ? input.displayText.substring(input.length) : ""
+        const before = input.text.substring(0, input.cursorPosition) + composing
         const match = before.match(/(^|\s)([@#][^\s@#]*)$/)
         const word = match ? match[2] : ""
         if (word !== mentionWord) {
@@ -118,6 +135,7 @@ Item {
     }
 
     function insertMention(text) {
+        commitTyping()
         const end = input.cursorPosition
         const start = end - mentionWord.length
         input.remove(start, end)
@@ -156,6 +174,7 @@ Item {
     }
 
     function emojiPicked(emoji) {
+        commitTyping()
         input.insert(input.cursorPosition, emoji.insertText)
     }
 
@@ -197,11 +216,12 @@ Item {
     onMediaOpened: closeEmoji()
 
     function send() {
+        commitTyping()
         const text = input.text
         if (editingId === "" && attachmentUrl !== "") {
             if (Session.sendAttachment(attachmentUrl, text)) {
                 clearAttachment()
-                input.text = ""
+                replaceText("")
                 messageList.followNewest = true
                 messageList.scrollToNewest()
             }
@@ -223,7 +243,7 @@ Item {
         Session.sendMessage(text, chatPanel.replyToId)
         messageList.followNewest = true
         messageList.scrollToNewest()
-        input.text = ""
+        replaceText("")
         chatPanel.replyToId = ""
     }
 
@@ -248,7 +268,7 @@ Item {
             chatPanel.replyToId = ""
             chatPanel.editingId = ""
             chatPanel.editingOriginal = ""
-            input.text = ""
+            chatPanel.replaceText("")
             messageList.followNewest = true
             messageList.scrollToNewest()
         }
@@ -659,8 +679,8 @@ Item {
                     anchors.centerIn: parent
                     width: units.gu(2.8)
                     height: width
-                    source: chatPanel.emojiMode === "compose" ? "" : "qrc:/assets/emoji.svg"
-                    name: chatPanel.emojiMode === "compose" ? "input-keyboard-symbolic" : ""
+                    // Suru's "bot", as for reactions
+                    name: chatPanel.emojiMode === "compose" ? "input-keyboard-symbolic" : "bot"
                     color: theme.palette.normal.backgroundText
                 }
             }
@@ -687,12 +707,17 @@ Item {
                     onTextChanged: {
                         if (length > chatPanel.maxMessageLength) {
                             // As the Qt 5 version: cut it, and say why.
-                            text = text.substring(0, chatPanel.maxMessageLength)
+                            chatPanel.commitTyping()
+                            chatPanel.replaceText(text.substring(0, chatPanel.maxMessageLength))
                             cursorPosition = length
                             Session.showNotice(i18n.tr("Messages cannot exceed %1 characters. Your text has been truncated to fit the limit.")
                                                .arg(chatPanel.maxMessageLength))
                         }
-                        if (text !== "" && chatPanel.editingId === "")
+                        chatPanel.updateMention()
+                    }
+                    // Also while a word is being typed (not committed yet).
+                    onDisplayTextChanged: {
+                        if (displayText !== "" && chatPanel.editingId === "")
                             Session.notifyTyping()
                         chatPanel.updateMention()
                     }
@@ -716,7 +741,7 @@ Item {
                 Layout.preferredHeight: units.gu(4.5)
                 Layout.alignment: Qt.AlignBottom
                 enabled: Session.connected
-                         && (input.text.trim() !== "" || (chatPanel.attachmentUrl !== "" && chatPanel.editingId === ""))
+                         && (input.displayText.trim() !== "" || (chatPanel.attachmentUrl !== "" && chatPanel.editingId === ""))
                          && (chatPanel.editingId !== "" || Session.slowmodeRemaining === 0)
                 opacity: enabled ? 1 : 0.4
                 onClicked: chatPanel.send()

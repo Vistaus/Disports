@@ -28,6 +28,23 @@ Item {
         model: Session.guilds
         cacheBuffer: units.gu(80)
 
+        // The unread conversations are the header: when one comes or goes,
+        // the header changes height and the list's origin moves. At the
+        // top, stay at the top (the new one shows); scrolled down, the
+        // servers in view stay where they are. As the Qt 5 version (437e59a).
+        property real lastOriginY: 0
+
+        Component.onCompleted: {
+            lastOriginY = originY
+            Qt.callLater(function() { rail.contentY = rail.originY })
+        }
+        onOriginYChanged: {
+            if (contentY <= lastOriginY + units.dp(5))
+                contentY = originY
+            lastOriginY = originY
+        }
+        onModelChanged: Qt.callLater(function() { rail.contentY = rail.originY })
+
         header: Column {
             width: rail.width
             spacing: units.gu(0.5)

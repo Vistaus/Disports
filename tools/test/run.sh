@@ -8,7 +8,7 @@
 # (sanitizer builds) as build/test/<name>/asan.* / ubsan.*.
 #
 # STEPS drives it with xdotool, ";"-separated: "sleep 2;click 700 772;
-# type hi @bo;key Return". APP_INSTALL picks the build to run (default:
+# type hi @bo;key Return;wheel 30 400 5" (5 scroll steps down at 30,400). APP_INSTALL picks the build to run (default:
 # the normal amd64 one). Files for tests go in build/test/files (/files in
 # the container). Test hooks (DISPORTS_OPEN_CHANNEL, ...): src/main.cpp.
 HERE=$(dirname "$(readlink -f "$0")")
@@ -32,6 +32,7 @@ for step in "${steps[@]}"; do
     case $1 in
         sleep) sleep "$2" ;;
         click) xdotool mousemove --window "$win" "$2" "$3" click 1 ;;
+        wheel) xdotool mousemove --window "$win" "$2" "$3" click --repeat "$4" --delay 60 5 ;;
         type) xdotool windowfocus --sync "$win" 2>/dev/null; shift; xdotool type --delay 80 "$*" ;;
         key) xdotool windowfocus --sync "$win" 2>/dev/null; xdotool key "$2" ;;
     esac

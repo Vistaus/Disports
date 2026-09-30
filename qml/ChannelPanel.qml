@@ -47,10 +47,16 @@ Item {
             readonly property bool pictures: Session.preferences.dmProfilePictures
             readonly property bool active: Session.currentChannelId === channelId
             readonly property real lineHeight: conversation && pictures ? units.gu(7) : units.gu(5.5)
+            // Voice channels list who is in them under their name, as far
+            // below the name as the row ends below the list.
+            readonly property bool listsMembers: kind === "voice" && voiceCount > 0
+            readonly property real memberGap: units.gu(1)
+            readonly property real nameBottom: (lineHeight + nameLabel.height) / 2
 
             width: list.width
-            // Voice channels list who is in them under their name.
-            height: isCategory ? units.gu(4) : lineHeight + (kind === "voice" ? voiceList.height : 0)
+            height: isCategory ? units.gu(4)
+                  : listsMembers ? nameBottom + memberGap + voiceList.implicitHeight + memberGap
+                  : lineHeight
 
             Label {
                 visible: row.isCategory
@@ -183,11 +189,12 @@ Item {
                     }
 
                     Label {
+                        id: nameLabel
                         readonly property bool emphasized: row.unread || row.mentions > 0 || row.conversation
 
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width - (row.conversation && row.pictures ? units.gu(10) : units.gu(7))
-                               - (callIcon.visible ? callIcon.width + parent.spacing : 0)
+                               - (callIcon.visible ? callIcon.width + units.gu(1) : 0)
                         text: row.name
                         font.pixelSize: units.gu(row.conversation && row.pictures ? 1.8 : 1.7)
                         font.bold: row.unread || row.mentions > 0
@@ -197,17 +204,6 @@ Item {
                         elide: Text.ElideRight
                     }
 
-                    // A call going on in this conversation (shown, not a button).
-                    Icon {
-                        id: callIcon
-                        anchors.verticalCenter: parent.verticalCenter
-                        visible: row.conversation && row.inCall
-                        width: units.gu(2.2)
-                        height: width
-                        name: "call-start"
-                        color: theme.palette.normal.positive
-                    }
-
                     UnreadBadge {
                         anchors.verticalCenter: parent.verticalCenter
                         mentions: row.mentions
@@ -215,19 +211,35 @@ Item {
                     }
                 }
 
+                // A call going on in this conversation (shown, not a button),
+                // at the right edge.
+                Icon {
+                    id: callIcon
+                    anchors {
+                        right: parent.right
+                        rightMargin: units.gu(2)
+                        verticalCenter: mainLine.verticalCenter
+                    }
+                    visible: row.conversation && row.inCall
+                    width: units.gu(2.2)
+                    height: width
+                    name: "call-start"
+                    color: theme.palette.normal.positive
+                }
+
                 // Voice channels: up to 5 of the people in them.
                 Column {
                     id: voiceList
                     anchors {
-                        top: mainLine.bottom
-                        topMargin: -units.gu(1)
+                        top: parent.top
+                        topMargin: row.nameBottom + row.memberGap
                         left: parent.left
                         right: parent.right
                         leftMargin: units.gu(row.indented ? 6 : 5)
                         rightMargin: units.gu(2)
                     }
-                    visible: row.kind === "voice" && row.voiceCount > 0
-                    height: visible ? implicitHeight + units.gu(1.5) : 0
+                    visible: row.listsMembers
+                    height: visible ? implicitHeight : 0
                     spacing: units.gu(0.5)
 
                     Repeater {

@@ -13,9 +13,19 @@ Page {
 
     property var activeTransfer: null
 
-    // ContentPeerPicker has its own header, with Cancel.
+    // One header: ours (its back button cancels), not the picker's too.
+    header: PageHeader {
+        title: i18n.tr("Attach a file")
+    }
+
     ContentPeerPicker {
-        anchors.fill: parent
+        anchors {
+            top: picker.header.bottom
+            left: parent.left
+            right: parent.right
+            bottom: parent.bottom
+        }
+        showTitle: false
         contentType: ContentType.All
         handler: ContentHandler.Source
         onPeerSelected: {

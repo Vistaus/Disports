@@ -54,50 +54,73 @@ Page {
         }
     }
 
-    // Photos: pinch or double-tap to zoom, drag to pan.
+    // Photos: pinch or double-tap to zoom, drag to pan. Zooming resizes the
+    // content about the point between the fingers (or the tapped one), so
+    // that point stays put, as in Qt's photo viewer example.
     Component {
         id: imageView
 
         Flickable {
             id: flick
 
-            contentWidth: Math.max(width, photo.width * photo.scale)
-            contentHeight: Math.max(height, photo.height * photo.scale)
+            readonly property real maxZoom: 6
+            readonly property bool zoomed: contentWidth > width + 1
+
+            contentWidth: width
+            contentHeight: height
             clip: true
 
-            function resetZoom() {
-                photo.scale = 1
-                flick.contentX = 0
-                flick.contentY = 0
+            // Zooms to `zoom` (1: fitted) about `center`, in content coordinates.
+            function zoomAbout(zoom, center) {
+                const z = Math.max(1, Math.min(maxZoom, zoom))
+                resizeContent(width * z, height * z, center)
+                returnToBounds()
             }
 
-            Image {
-                id: photo
-                width: flick.width
-                height: flick.height
-                x: (flick.contentWidth - width) / 2
-                y: (flick.contentHeight - height) / 2
-                source: viewer.media.viewUrl
-                fillMode: Image.PreserveAspectFit
-                asynchronous: true
-                Component.onCompleted: busy.running = Qt.binding(function() { return photo.status === Image.Loading })
+            function resetZoom() {
+                resizeContent(width, height, Qt.point(0, 0))
+                contentX = 0
+                contentY = 0
             }
+
+            // A new size (rotation): start over, fitted.
+            onWidthChanged: resetZoom()
+            onHeightChanged: resetZoom()
 
             PinchArea {
-                width: flick.contentWidth
-                height: flick.contentHeight
-                pinch.target: photo
-                pinch.minimumScale: 1
-                pinch.maximumScale: 6
+                id: pinchArea
+                width: Math.max(flick.contentWidth, flick.width)
+                height: Math.max(flick.contentHeight, flick.height)
+
+                property real startWidth: 0
+
+                onPinchStarted: startWidth = flick.contentWidth
+                onPinchUpdated: function(pinch) {
+                    // Follow the fingers as they move, and scale about them.
+                    flick.contentX += pinch.previousCenter.x - pinch.center.x
+                    flick.contentY += pinch.previousCenter.y - pinch.center.y
+                    const zoom = Math.max(1, Math.min(flick.maxZoom, startWidth * pinch.scale / flick.width))
+                    flick.resizeContent(flick.width * zoom, flick.height * zoom, pinch.center)
+                }
                 onPinchFinished: flick.returnToBounds()
 
-                MouseArea {
-                    anchors.fill: parent
-                    onDoubleClicked: {
-                        if (photo.scale > 1)
-                            flick.resetZoom()
-                        else
-                            photo.scale = 2.5
+                Image {
+                    id: photo
+                    width: flick.contentWidth
+                    height: flick.contentHeight
+                    source: viewer.media.viewUrl
+                    fillMode: Image.PreserveAspectFit
+                    asynchronous: true
+                    Component.onCompleted: busy.running = Qt.binding(function() { return photo.status === Image.Loading })
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onDoubleClicked: function(mouse) {
+                            if (flick.zoomed)
+                                flick.resetZoom()
+                            else
+                                flick.zoomAbout(2.5, Qt.point(mouse.x, mouse.y))
+                        }
                     }
                 }
             }
