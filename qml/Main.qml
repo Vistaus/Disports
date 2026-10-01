@@ -155,11 +155,12 @@ MainView {
         }
     }
 
-    // Splash while signing in for the first time.
+    // Splash while signing in for the first time: Ubuntu Touch's launch
+    // splash (disports.desktop.in) carried on, so it is dark in both themes.
     Rectangle {
         anchors.fill: parent
         z: 3
-        color: theme.palette.normal.background
+        color: "#1f1f1f"
         visible: Session.phase === SessionPhase.Starting || Session.phase === SessionPhase.Connecting
 
         Column {
@@ -170,7 +171,7 @@ MainView {
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: units.gu(12)
                 height: width
-                source: "qrc:/assets/logo.svg"
+                source: "qrc:/assets/splash.svg"
                 sourceSize.width: width * 2
                 sourceSize.height: height * 2
             }
@@ -183,7 +184,7 @@ MainView {
             Label {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: Session.connection.networkOnline ? i18n.tr("Connecting to Discord...") : i18n.tr("Waiting for network...")
-                color: theme.palette.normal.backgroundSecondaryText
+                color: "#aaaaaa"
             }
         }
     }

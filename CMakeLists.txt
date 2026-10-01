@@ -163,6 +163,7 @@ qt_add_resources(disports "assets"
     BASE ${PROJECT_SOURCE_DIR}
     FILES
         ${PROJECT_SOURCE_DIR}/assets/logo.svg
+        ${PROJECT_SOURCE_DIR}/assets/splash.svg
         ${PROJECT_SOURCE_DIR}/assets/send.svg
 )
 
