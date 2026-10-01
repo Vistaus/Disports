@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Disports\n"
 "Report-Msgid-Bugs-To: https://github.com/jukfiuune/Disports/issues\n"
-"POT-Creation-Date: 2026-10-01 18:03+0300\n"
+"POT-Creation-Date: 2026-10-01 19:55+0300\n"
 "PO-Revision-Date: 2026-10-01 16:00+0300\n"
 "Last-Translator: Martin Filipov\n"
 "Language-Team: Bulgarian\n"
@@ -43,6 +43,23 @@ msgstr "Свързване..."
 #: qml/CallPage.qml
 msgid "You are deafened"
 msgstr "Заглушен си"
+
+#: qml/CaptchaPage.qml
+msgid "Are you human?"
+msgstr "Човек ли си?"
+
+#: qml/CaptchaPage.qml qml/ChatPanel.qml qml/LoginPage.qml qml/SettingsPage.qml
+msgid "Cancel"
+msgstr "Отказ"
+
+#: qml/CaptchaPage.qml
+msgid ""
+"Discord wants to make sure you're a person. Solve the captcha to continue."
+msgstr "Discord иска да се увери, че си човек. Реши капчата, за да продължиш."
+
+#: qml/CaptchaPage.qml
+msgid "The captcha couldn't be loaded. Check your internet connection."
+msgstr "Капчата не можа да се зареди. Провери интернет връзката си."
 
 #: qml/ChannelInfoPage.qml
 msgid "Age-restricted channel"
@@ -111,10 +128,6 @@ msgstr "Присъедини се"
 #: qml/ChatPanel.qml
 msgid "Are you sure you want to permanently delete this message?"
 msgstr "Сигурен ли си, че искаш да изтриеш съобщението окончателно?"
-
-#: qml/ChatPanel.qml qml/LoginPage.qml qml/SettingsPage.qml
-msgid "Cancel"
-msgstr "Отказ"
 
 #: qml/ChatPanel.qml qml/MessageDelegate.qml
 msgid "Delete"
@@ -197,12 +210,16 @@ msgid "Refresh QR code"
 msgstr "Опресни QR кода"
 
 #: qml/LoginPage.qml
-msgid "Scan the QR code with the Discord mobile app, or paste a token instead."
-msgstr "Сканирай QR кода с мобилното приложение на Discord или постави ключ."
+msgid "Scan the QR code with the Discord mobile app."
+msgstr "Сканирай QR кода с мобилното приложение на Discord."
 
-#: qml/LoginPage.qml
+#: qml/LoginPage.qml qml/PasswordLoginPage.qml
 msgid "Sign in"
 msgstr "Вход"
+
+#: qml/LoginPage.qml
+msgid "Sign in with a password (not recommended)"
+msgstr "Вход с парола (не се препоръчва)"
 
 #: qml/LoginPage.qml
 msgid "Sign in with a token"
@@ -219,6 +236,12 @@ msgid ""
 msgstr ""
 "Използването на неофициален клиент за Discord нарушава Условията за ползване "
 "на Discord и може да доведе до ограничаване или блокиране на профила ти."
+
+#: qml/Main.qml
+msgid ""
+"Discord wants a captcha solved, but this version of Ubuntu Touch can't show "
+"one. Update to 24.04-2.x or newer."
+msgstr "Discord иска да решиш капча, но тази версия на Ubuntu Touch не може да я покаже. Обнови до 24.04-2.x или по-нова."
 
 #: qml/MainPage.qml
 msgid "Pick a conversation"
@@ -307,6 +330,58 @@ msgstr "Това е началото на разговора ти с %1"
 #: qml/MessageList.qml
 msgid "You don't have permission to read earlier messages in this channel"
 msgstr "Нямаш право да четеш по-стари съобщения в този канал"
+
+#: qml/PasswordLoginPage.qml
+msgid "6-digit code"
+msgstr "6-цифрен код"
+
+#: qml/PasswordLoginPage.qml
+msgid "Authenticator app"
+msgstr "Приложение за удостоверяване"
+
+#: qml/PasswordLoginPage.qml
+msgid "Backup code"
+msgstr "Резервен код"
+
+#: qml/PasswordLoginPage.qml
+msgid "Email or phone number"
+msgstr "Имейл или телефонен номер"
+
+#: qml/PasswordLoginPage.qml
+msgid "Password"
+msgstr "Парола"
+
+#: qml/PasswordLoginPage.qml
+msgid "Send me a code"
+msgstr "Изпрати ми код"
+
+#: qml/PasswordLoginPage.qml
+msgid "Sign in with a password"
+msgstr "Вход с парола"
+
+#: qml/PasswordLoginPage.qml
+msgid ""
+"Signing in with a password from an unofficial app makes Discord more "
+"suspicious of the account. The QR code is the safer way."
+msgstr "Входът с парола от неофициално приложение прави Discord по-подозрителен към профила. QR кодът е по-сигурният начин."
+
+#: qml/PasswordLoginPage.qml
+msgid "Start again"
+msgstr "Започни отначало"
+
+#: qml/PasswordLoginPage.qml
+msgid "Text message (SMS)"
+msgstr "Текстово съобщение (SMS)"
+
+#: qml/PasswordLoginPage.qml
+msgid ""
+"This account has two-factor authentication. Enter a code to finish signing "
+"in."
+msgstr "Този профил има двуфакторно удостоверяване. Въведи код, за да завършиш входа."
+
+#: qml/PasswordLoginPage.qml
+msgid "Verify"
+msgstr "Потвърди"
 
 #: qml/PollCard.qml
 msgid "%1 vote"
@@ -497,13 +572,120 @@ msgstr "%1 не можа да бъде прочетен."
 msgid "%1 could not be sent (error %2)."
 msgstr "%1 не можа да бъде изпратен (грешка %2)."
 
+#: src/PasswordLogin.cpp
+msgid "Enter your email or phone number and your password."
+msgstr "Въведи имейла или телефонния си номер и паролата си."
+
+#: src/PasswordLogin.cpp
+msgid ""
+"This account only has a security key for two-factor authentication, which "
+"Disports can't use. Sign in with the QR code instead."
+msgstr "Този профил използва само ключ за сигурност за двуфакторно удостоверяване, който Disports не може да използва. Влез с QR кода."
+
+#: src/PasswordLogin.cpp
+msgid "A code was sent to %1."
+msgstr "Изпратен е код до %1."
+
+#: src/PasswordLogin.cpp
+msgid "A code was sent to your phone."
+msgstr "Изпратен е код до телефона ти."
+
+#: src/PasswordLogin.cpp
+msgid "Enter the code."
+msgstr "Въведи кода."
+
+#: src/PasswordLogin.cpp
+msgid "Signing in took too long. Please start again."
+msgstr "Входът отне твърде дълго. Моля, започни отначало."
+
+#: src/PasswordLogin.cpp
+msgid "That code isn't right. Check it and try again."
+msgstr "Кодът не е правилен. Провери го и опитай отново."
+
+#: src/PasswordLogin.cpp
+msgid "Discord didn't send a sign-in token. Please try again."
+msgstr "Discord не изпрати ключ за вход. Моля, опитай отново."
+
+#: src/PasswordLogin.cpp
+msgid ""
+"Discord asks you to change your password. You can do that on discord.com."
+msgstr "Discord иска да смениш паролата си. Можеш да го направиш на discord.com."
+
+#: src/PasswordLogin.cpp
+msgid "Couldn't reach Discord. Check your internet connection and try again."
+msgstr "Няма връзка с Discord. Провери интернет връзката си и опитай отново."
+
+#: src/PasswordLogin.cpp
+msgid ""
+"Discord asked for a kind of captcha Disports can't show. Sign in with the QR "
+"code instead."
+msgstr "Discord поиска вид капча, която Disports не може да покаже. Влез с QR кода."
+
+#: src/PasswordLogin.cpp
+msgid "Discord needs the captcha solved before you can sign in."
+msgstr "Трябва да решиш капчата, преди да влезеш."
+
+#: src/PasswordLogin.cpp
+msgid "Too many attempts. Wait %1 s and try again."
+msgstr "Твърде много опити. Изчакай %1 сек. и опитай отново."
+
+#: src/PasswordLogin.cpp
+msgid ""
+"Discord has suspended this account. See discord.com to find out why and to "
+"appeal."
+msgstr "Discord е спрял този профил. Виж discord.com, за да разбереш защо и да обжалваш."
+
+#: src/PasswordLogin.cpp
+msgid "Discord is having trouble right now. Try again in a few minutes."
+msgstr "Discord има проблеми в момента. Опитай отново след няколко минути."
+
+#: src/PasswordLogin.cpp
+msgid ""
+"This account is disabled or scheduled for deletion. Restore it in the "
+"official Discord app first."
+msgstr "Този профил е деактивиран или насрочен за изтриване. Първо го възстанови в официалното приложение на Discord."
+
+#: src/PasswordLogin.cpp
+msgid ""
+"Discord sent a code to your phone to confirm this new sign-in. Disports "
+"can't take that code yet: sign in with your email address or the QR code "
+"instead."
+msgstr "Discord изпрати код на телефона ти, за да потвърди този нов вход. Disports все още не може да приеме този код: влез с имейла си или с QR кода."
+
+#: src/PasswordLogin.cpp
+msgid "The email, phone number or password isn't right."
+msgstr "Имейлът, телефонният номер или паролата не са правилни."
+
+#: src/PasswordLogin.cpp
+msgid ""
+"Discord sent you an email to confirm this new sign-in. Open it, confirm, "
+"then sign in here again."
+msgstr "Discord ти изпрати имейл, за да потвърди този нов вход. Отвори го, потвърди и после влез отново тук."
+
+#: src/PasswordLogin.cpp
+msgid "Discord said: %1"
+msgstr "Discord каза: %1"
+
+#: src/PasswordLogin.cpp
+msgid "Signing in didn't work (error %1). Please try again."
+msgstr "Входът не успя (грешка %1). Моля, опитай отново."
+
 #: src/RemoteAuth.cpp
 msgid "Preparing QR code..."
 msgstr "Подготвяне на QR кода..."
 
 #: src/RemoteAuth.cpp
+msgid "QR login only works with Discord's own servers."
+msgstr "Входът с QR код работи само със сървърите на Discord."
+
+#: src/RemoteAuth.cpp
 msgid "Discord QR login failed. Tap refresh to try again."
 msgstr "Входът с QR код не успя. Опресни кода, за да опиташ отново."
+
+#: src/RemoteAuth.cpp
+msgid ""
+"Couldn't reach Discord. Check your internet connection, then tap refresh."
+msgstr "Няма връзка с Discord. Провери интернет връзката си и опресни QR кода."
 
 #: src/RemoteAuth.cpp
 msgid "The QR code expired. Tap refresh to get a new one."
@@ -530,6 +712,12 @@ msgstr "Влизане..."
 #: src/RemoteAuth.cpp
 msgid "Signed in."
 msgstr "Влизането е успешно."
+
+#: src/Session.cpp
+msgid ""
+"Discord didn't accept this token. Make sure you copied all of it, and that "
+"it's still valid (signing out of Discord makes it invalid)."
+msgstr "Discord не прие този ключ. Провери дали си го копирал целия и дали още е валиден (излизането от Discord го прави невалиден)."
 
 #: src/Session.cpp
 msgid "Your session has expired. Please sign in again."
