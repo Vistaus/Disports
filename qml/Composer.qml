@@ -132,7 +132,7 @@ Item {
             return
         // Keep the text until slowmode lets it go.
         if (Session.sender.slowmodeRemaining > 0) {
-            Session.showNotice(i18n.tr("Slowmode is on: you can send another message in %1 s").arg(Session.sender.slowmodeRemaining))
+            Session.showNotice(i18n.tr("Slowmode: wait %1 s").arg(Session.sender.slowmodeRemaining))
             return
         }
         Session.sender.send(text, replyToId)
@@ -293,9 +293,9 @@ Item {
                         width: parent.width
                         autoSize: true
                         maximumLineCount: Session.preferences.composerMaxLines
-                        placeholderText: !Session.connection.connected ? i18n.tr("Waiting for connection...")
+                        placeholderText: !Session.connection.connected ? (Session.connection.networkOnline ? i18n.tr("Connecting to Discord...")
+                                                                                                          : i18n.tr("Waiting for network..."))
                                        : Session.sender.slowmodeRemaining > 0 ? i18n.tr("Slowmode: wait %1 s").arg(Session.sender.slowmodeRemaining)
-                                       : Session.permissions.slowmodeSeconds > 0 ? i18n.tr("Message %1 (slowmode: %2 s)").arg(Session.currentChannelName).arg(Session.permissions.slowmodeSeconds)
                                        : i18n.tr("Message %1").arg(Session.currentChannelName)
                         readOnly: !Session.connection.connected
                         wrapMode: TextEdit.Wrap

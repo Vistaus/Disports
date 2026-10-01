@@ -47,7 +47,7 @@ bool MessageSender::slowedDown()
 {
     const int wait = slowmodeRemaining();
     if (wait)
-        m_session->showNotice(tr("Slowmode is on: you can send another message in %n second(s).", nullptr, wait));
+        m_session->showNotice(tr("Slowmode: wait %1 s").arg(wait));
     return wait > 0;
 }
 
@@ -89,7 +89,7 @@ void MessageSender::send(const QString& text, const QString& replyToId)
     Snowflake nonce = 0;
     const Snowflake replyTo = replyToId.isEmpty() ? 0 : DiscordUrls::fromId(replyToId);
     if (!instance->SendMessageToCurrentChannel(content.toStdString(), nonce, replyTo, true)) {
-        m_session->showNotice(tr("You can't send messages in this channel."));
+        m_session->showNotice(tr("You can't send messages in this channel"));
         return;
     }
     startSlowmode();
@@ -179,7 +179,7 @@ void MessageSender::uploadFailed(const QString& name, int error)
         return;
     // Discord answers 400 or 413 to files over the server's limit.
     if (error == 400 || error == 413)
-        m_session->showNotice(tr("%1 could not be sent: it may be larger than this server allows.").arg(name));
+        m_session->showNotice(tr("%1 is too large to send.").arg(name));
     else
         m_session->showNotice(tr("%1 could not be sent (error %2).").arg(name).arg(error));
 }

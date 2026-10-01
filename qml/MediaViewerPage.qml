@@ -170,7 +170,7 @@ Page {
                 visible: !parent.canPlay || playerLoader.status === Loader.Error
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.WordWrap
-                text: i18n.tr("Videos can't be played on this device yet. Use \"Open in browser\".")
+                text: i18n.tr("Videos can't be played on this device.") + " " + i18n.tr("Use \"Open in browser\".")
                 color: "white"
             }
         }

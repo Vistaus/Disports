@@ -381,7 +381,7 @@ QString Session::currentGuildId() const
 QString Session::currentGuildName() const
 {
     if (inDirectMessages())
-        return tr("Direct Messages");
+        return tr("Direct messages");
     Guild* guild = m_instance->GetCurrentGuild();
     return guild ? QString::fromStdString(guild->m_name) : QString();
 }

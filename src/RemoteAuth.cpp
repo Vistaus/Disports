@@ -54,7 +54,7 @@ void RemoteAuth::start()
 
     m_key = EVP_RSA_gen(2048);
     if (!m_key) {
-        fail(tr("Could not create a login key."));
+        fail(tr("Discord QR login failed. Tap refresh to try again."));
         return;
     }
 
@@ -119,7 +119,7 @@ void RemoteAuth::handleMessage(const QString& text)
         unsigned char* der = nullptr;
         const int length = i2d_PUBKEY(m_key, &der);
         if (length <= 0) {
-            fail(tr("Could not encode the login key."));
+            fail(tr("Discord QR login failed. Tap refresh to try again."));
             return;
         }
         const QByteArray publicKey(reinterpret_cast<const char*>(der), length);
@@ -140,20 +140,14 @@ void RemoteAuth::handleMessage(const QString& text)
     } else if (op == QLatin1String("pending_remote_init")) {
         const QString fingerprint = message.value(QStringLiteral("fingerprint")).toString();
         if (fingerprint != m_fingerprint) {
-            fail(tr("Discord QR login fingerprint mismatch."));
+            fail(tr("Discord QR login failed. Tap refresh to try again."));
             return;
         }
         m_qrImage = renderQr(LoginUrlPrefix + fingerprint);
         emit qrImageChanged();
         setStatus(tr("Open Discord on your Android or iOS device and scan to sign in."), false);
     } else if (op == QLatin1String("pending_ticket")) {
-        // "id:discriminator:avatar:username"
-        const QString payload = QString::fromUtf8(
-            decrypt(message.value(QStringLiteral("encrypted_user_payload")).toString().toLatin1()));
-        const QString username = payload.section(QLatin1Char(':'), 3);
-        setStatus(username.isEmpty() ? tr("Confirm the login on your phone.")
-                                     : tr("Confirm the login for %1 on your phone.").arg(username),
-                  true);
+        setStatus(tr("Confirm the login on your phone."), true);
     } else if (op == QLatin1String("pending_login")) {
         completeLogin(message.value(QStringLiteral("ticket")).toString());
     } else if (op == QLatin1String("cancel")) {

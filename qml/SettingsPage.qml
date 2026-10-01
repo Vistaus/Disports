@@ -114,9 +114,6 @@ Page {
                 ListItemLayout {
                     id: picturesLayout
                     title.text: i18n.tr("Show profile pictures")
-                    summary.text: i18n.tr("Off: icons and status only, which loads fewer images")
-                    summary.wrapMode: Text.WordWrap
-                    summary.maximumLineCount: 3
 
                     Switch {
                         id: picturesSwitch
@@ -144,9 +141,6 @@ Page {
                 ListItemLayout {
                     id: chatPicturesLayout
                     title.text: i18n.tr("Show profile pictures")
-                    summary.text: i18n.tr("Off: messages use the full width")
-                    summary.wrapMode: Text.WordWrap
-                    summary.maximumLineCount: 3
 
                     Switch {
                         id: chatPicturesSwitch
@@ -223,10 +217,7 @@ Page {
 
                 ListItemLayout {
                     id: gifLayout
-                    title.text: i18n.tr("Play GIFs in the chat")
-                    summary.text: i18n.tr("Off: GIFs play when you open them, which saves data and battery")
-                    summary.wrapMode: Text.WordWrap
-                    summary.maximumLineCount: 3
+                    title.text: i18n.tr("Play GIFs automatically")
 
                     Switch {
                         id: gifSwitch
@@ -254,7 +245,7 @@ Page {
                 ListItemLayout {
                     id: processingLayout
                     title.text: i18n.tr("Echo cancellation")
-                    summary.text: i18n.tr("Keeps others from hearing themselves through your loudspeaker, and evens out your volume. Applies from the next call")
+                    summary.text: i18n.tr("Keeps others from hearing themselves through your loudspeaker, and evens out your volume.")
                     summary.wrapMode: Text.WordWrap
                     summary.maximumLineCount: 4
 
@@ -274,7 +265,7 @@ Page {
                 ListItemLayout {
                     id: denoiseLayout
                     title.text: i18n.tr("Noise suppression")
-                    summary.text: i18n.tr("Removes background noise such as typing, fans and traffic from your microphone. Applies from the next call")
+                    summary.text: i18n.tr("Removes background noise such as typing, fans and traffic from your microphone.")
                     summary.wrapMode: Text.WordWrap
                     summary.maximumLineCount: 4
 
@@ -303,7 +294,7 @@ Page {
                 anchors { left: parent.left; right: parent.right; margins: units.gu(2) }
                 topPadding: units.gu(2)
                 bottomPadding: units.gu(2)
-                text: i18n.tr("Disports %1").arg(Qt.application.version)
+                text: "Disports " + Qt.application.version
                 wrapMode: Text.WordWrap
                 textSize: Label.Small
                 color: theme.palette.normal.backgroundSecondaryText
@@ -316,7 +307,7 @@ Page {
 
         Popups.Dialog {
             id: dialog
-            title: i18n.tr("Log out?")
+            title: i18n.tr("Log out")
             text: i18n.tr("You'll need to sign in again to use Disports.")
 
             Button {

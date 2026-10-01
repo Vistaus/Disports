@@ -7,7 +7,7 @@ Page {
     id: loginPage
 
     header: PageHeader {
-        title: i18n.tr("Sign In")
+        title: i18n.tr("Sign in")
     }
 
     Flickable {
@@ -113,7 +113,7 @@ Page {
 
         Popups.Dialog {
             id: dialog
-            title: i18n.tr("Manual Login")
+            title: i18n.tr("Sign in with a token")
             text: i18n.tr("Paste your Discord account token to sign in directly.")
 
             TextField {
@@ -128,7 +128,7 @@ Page {
             }
 
             Button {
-                text: i18n.tr("Sign In")
+                text: i18n.tr("Sign in")
                 color: theme.palette.normal.positive
                 enabled: tokenField.text.trim() !== ""
                 onClicked: {

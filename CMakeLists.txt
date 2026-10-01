@@ -183,6 +183,27 @@ target_link_libraries(disports PRIVATE
 
 install(TARGETS disports RUNTIME DESTINATION bin)
 
+# Translations: each po/<lang>.po becomes
+# share/locale/<lang>/LC_MESSAGES/disports.jukfiuu.mo. The template is made
+# by tools/translations.sh, not by the build.
+file(GLOB PO_FILES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/po/*.po)
+find_program(MSGFMT msgfmt)
+if(PO_FILES AND NOT MSGFMT)
+    message(WARNING "msgfmt (gettext) not found: building without translations")
+elseif(PO_FILES)
+    foreach(PO ${PO_FILES})
+        get_filename_component(LANG ${PO} NAME_WE)
+        set(MO ${CMAKE_CURRENT_BINARY_DIR}/locale/${LANG}/LC_MESSAGES/${APP_ID}.mo)
+        add_custom_command(OUTPUT ${MO}
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/locale/${LANG}/LC_MESSAGES
+            COMMAND ${MSGFMT} --check-format -o ${MO} ${PO}
+            DEPENDS ${PO})
+        list(APPEND MO_FILES ${MO})
+        install(FILES ${MO} DESTINATION share/locale/${LANG}/LC_MESSAGES)
+    endforeach()
+    add_custom_target(translations ALL DEPENDS ${MO_FILES})
+endif()
+
 if(CLICK_MODE)
     configure_file(manifest.json.in ${CMAKE_CURRENT_BINARY_DIR}/manifest.json)
     configure_file(disports.desktop.in ${CMAKE_CURRENT_BINARY_DIR}/disports.desktop)

@@ -84,7 +84,7 @@ Rectangle {
                     return i18n.tr("Reconnecting - retrying in %1 second, tap to retry now",
                                    "Reconnecting - retrying in %1 seconds, tap to retry now",
                                    Session.connection.reconnectSeconds).arg(Session.connection.reconnectSeconds)
-                return i18n.tr("Reconnecting - connecting to Discord")
+                return i18n.tr("Connecting to Discord...")
             }
         }
     }

@@ -56,7 +56,7 @@ Item {
         visible: player.errorString !== ""
         horizontalAlignment: Text.AlignHCenter
         wrapMode: Text.WordWrap
-        text: i18n.tr("This video can't be played here. Use \"Open in browser\".")
+        text: i18n.tr("The video could not be played.") + " " + i18n.tr("Use \"Open in browser\".")
         color: "white"
     }
 }

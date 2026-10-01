@@ -29,10 +29,8 @@ Rectangle {
 
         Label {
             anchors.verticalCenter: parent.verticalCenter
-            text: (Session.currentCallElapsed !== ""
-                   ? i18n.tr("Call in progress · %1").arg(Session.currentCallElapsed)
-                   : i18n.tr("Call in progress"))
-                  + (canJoin ? " · " + i18n.tr("Tap to join") : "")
+            text: [i18n.tr("Call in progress"), Session.currentCallElapsed, canJoin ? i18n.tr("Tap to join") : ""]
+                  .filter(part => part !== "").join(" · ")
             color: theme.palette.normal.positiveText
         }
     }

@@ -1,0 +1,575 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR Martin Filipov
+# This file is distributed under the same license as the Disports package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Disports\n"
+"Report-Msgid-Bugs-To: https://github.com/jukfiuune/Disports/issues\n"
+"POT-Creation-Date: 2026-10-01 18:03+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: qml/AttachmentBar.qml
+msgid "Sending %1"
+msgstr ""
+
+#: qml/CallBanner.qml
+msgid "Tap to return to call"
+msgstr ""
+
+#: qml/CallBar.qml
+msgid "Call in progress"
+msgstr ""
+
+#: qml/CallBar.qml
+msgid "Tap to join"
+msgstr ""
+
+#: qml/CallPage.qml src/voice/CallManager.cpp
+msgid "Calling..."
+msgstr ""
+
+#: qml/CallPage.qml src/voice/CallManager.cpp
+msgid "Connecting..."
+msgstr ""
+
+#: qml/CallPage.qml
+msgid "You are deafened"
+msgstr ""
+
+#: qml/ChannelInfoPage.qml
+msgid "Age-restricted channel"
+msgstr ""
+
+#: qml/ChannelInfoPage.qml
+msgid "Blocked"
+msgstr ""
+
+#: qml/ChannelInfoPage.qml
+msgid "Category"
+msgstr ""
+
+#: qml/ChannelInfoPage.qml
+msgid "Channel"
+msgstr ""
+
+#: qml/ChannelInfoPage.qml qml/MessageDelegate.qml
+msgid "Copy"
+msgstr ""
+
+#: qml/ChannelInfoPage.qml
+msgid "ID"
+msgstr ""
+
+#: qml/ChannelInfoPage.qml qml/ChatPage.qml
+msgid "Info"
+msgstr ""
+
+#: qml/ChannelInfoPage.qml
+msgid "Members (%1)"
+msgstr ""
+
+#: qml/ChannelInfoPage.qml
+msgid "Server"
+msgstr ""
+
+#: qml/ChannelInfoPage.qml
+msgid "Topic"
+msgstr ""
+
+#: qml/ChannelPanel.qml qml/MessageList.qml
+msgid "Loading..."
+msgstr ""
+
+#: qml/ChannelPanel.qml
+msgid "No channels"
+msgstr ""
+
+#: qml/ChannelPanel.qml
+msgid "No conversations yet"
+msgstr ""
+
+#: qml/ChannelPanel.qml
+msgid "and %1 more"
+msgstr ""
+
+#: qml/ChatPage.qml
+msgid "Call"
+msgstr ""
+
+#: qml/ChatPage.qml
+msgid "Join call"
+msgstr ""
+
+#: qml/ChatPanel.qml
+msgid "Are you sure you want to permanently delete this message?"
+msgstr ""
+
+#: qml/ChatPanel.qml qml/LoginPage.qml qml/SettingsPage.qml
+msgid "Cancel"
+msgstr ""
+
+#: qml/ChatPanel.qml qml/MessageDelegate.qml
+msgid "Delete"
+msgstr ""
+
+#: qml/ChatPanel.qml
+msgid "Delete message"
+msgstr ""
+
+#: qml/Composer.qml qml/ConnectionBanner.qml qml/Main.qml
+msgid "Connecting to Discord..."
+msgstr ""
+
+#: qml/Composer.qml
+msgid "Editing message"
+msgstr ""
+
+#: qml/Composer.qml
+msgid "Message %1"
+msgstr ""
+
+#: qml/Composer.qml
+msgid ""
+"Messages cannot exceed %1 characters. Your text has been truncated to fit "
+"the limit."
+msgstr ""
+
+#: qml/Composer.qml
+msgid "Replying to %1"
+msgstr ""
+
+#: qml/Composer.qml src/MessageSender.cpp
+msgid "Slowmode: wait %1 s"
+msgstr ""
+
+#: qml/Composer.qml qml/Main.qml
+msgid "Waiting for network..."
+msgstr ""
+
+#: qml/Composer.qml src/MessageSender.cpp
+msgid "You can't send messages in this channel"
+msgstr ""
+
+#: qml/ConnectionBanner.qml src/voice/CallManager.cpp
+msgid "Connected"
+msgstr ""
+
+#: qml/ConnectionBanner.qml
+msgid "Offline - showing saved conversations"
+msgstr ""
+
+#: qml/ConnectionBanner.qml
+msgid "Reconnecting - retrying in %1 second, tap to retry now"
+msgid_plural "Reconnecting - retrying in %1 seconds, tap to retry now"
+msgstr[0] ""
+msgstr[1] ""
+
+#: qml/ContentPickerPage.qml
+msgid "Attach a file"
+msgstr ""
+
+#: qml/EmojiPicker.qml
+msgid "No emoji found"
+msgstr ""
+
+#: qml/EmojiPicker.qml
+msgid "Search emoji"
+msgstr ""
+
+#: qml/LoginPage.qml
+msgid "Paste a token instead (not recommended)"
+msgstr ""
+
+#: qml/LoginPage.qml
+msgid "Paste your Discord account token to sign in directly."
+msgstr ""
+
+#: qml/LoginPage.qml
+msgid "Refresh QR code"
+msgstr ""
+
+#: qml/LoginPage.qml
+msgid "Scan the QR code with the Discord mobile app, or paste a token instead."
+msgstr ""
+
+#: qml/LoginPage.qml
+msgid "Sign in"
+msgstr ""
+
+#: qml/LoginPage.qml
+msgid "Sign in with a token"
+msgstr ""
+
+#: qml/LoginPage.qml
+msgid "Token"
+msgstr ""
+
+#: qml/LoginPage.qml
+msgid ""
+"Using any unofficial Discord client is against Discord's Terms of Service "
+"and may result in your account being restricted or banned."
+msgstr ""
+
+#: qml/MainPage.qml
+msgid "Pick a conversation"
+msgstr ""
+
+#: qml/MainPage.qml qml/SettingsPage.qml
+msgid "Settings"
+msgstr ""
+
+#: qml/MediaViewerPage.qml
+msgid "Media"
+msgstr ""
+
+#: qml/MediaViewerPage.qml
+msgid "Open in browser"
+msgstr ""
+
+#: qml/MediaViewerPage.qml qml/VideoPlayer.qml
+msgid "Use \"Open in browser\"."
+msgstr ""
+
+#: qml/MediaViewerPage.qml src/media/GstVideoPlayer.cpp
+msgid "Videos can't be played on this device."
+msgstr ""
+
+#: qml/MessageDelegate.qml
+msgid "Edit"
+msgstr ""
+
+#: qml/MessageDelegate.qml
+msgid "Forwarded"
+msgstr ""
+
+#: qml/MessageDelegate.qml
+msgid "Message from a blocked user"
+msgstr ""
+
+#: qml/MessageDelegate.qml
+msgid "Original message was deleted"
+msgstr ""
+
+#: qml/MessageDelegate.qml
+msgid "React"
+msgstr ""
+
+#: qml/MessageDelegate.qml
+msgid "Reply"
+msgstr ""
+
+#: qml/MessageDelegate.qml
+msgid "Show"
+msgstr ""
+
+#: qml/MessageList.qml
+msgid "It isn't in the last %1 messages. Keep looking?"
+msgstr ""
+
+#: qml/MessageList.qml
+msgid "Keep looking"
+msgstr ""
+
+#: qml/MessageList.qml
+msgid "Load older messages"
+msgstr ""
+
+#: qml/MessageList.qml
+msgid "Stop"
+msgstr ""
+
+#: qml/MessageList.qml
+msgid "The message could not be found."
+msgstr ""
+
+#: qml/MessageList.qml
+msgid "The message is far back"
+msgstr ""
+
+#: qml/MessageList.qml
+msgid "This is the beginning of #%1"
+msgstr ""
+
+#: qml/MessageList.qml
+msgid "This is the beginning of your conversation with %1"
+msgstr ""
+
+#: qml/MessageList.qml
+msgid "You don't have permission to read earlier messages in this channel"
+msgstr ""
+
+#: qml/PollCard.qml
+msgid "%1 vote"
+msgid_plural "%1 votes"
+msgstr[0] ""
+msgstr[1] ""
+
+#: qml/PollCard.qml
+msgid "Poll"
+msgstr ""
+
+#: qml/PollCard.qml
+msgid "Poll closed"
+msgstr ""
+
+#: qml/PollCard.qml
+msgid "pick any"
+msgstr ""
+
+#: qml/SettingsPage.qml
+msgid "Calls"
+msgstr ""
+
+#: qml/SettingsPage.qml
+msgid "Chat"
+msgstr ""
+
+#: qml/SettingsPage.qml
+msgid "Dark"
+msgstr ""
+
+#: qml/SettingsPage.qml src/Session.cpp
+msgid "Direct messages"
+msgstr ""
+
+#: qml/SettingsPage.qml
+msgid "Echo cancellation"
+msgstr ""
+
+#: qml/SettingsPage.qml
+msgid "Follow system"
+msgstr ""
+
+#: qml/SettingsPage.qml
+msgid "Hide completely"
+msgstr ""
+
+#: qml/SettingsPage.qml
+msgid "How far the message box grows before it scrolls"
+msgstr ""
+
+#: qml/SettingsPage.qml
+msgid ""
+"Keeps others from hearing themselves through your loudspeaker, and evens out "
+"your volume."
+msgstr ""
+
+#: qml/SettingsPage.qml
+msgid "Light"
+msgstr ""
+
+#: qml/SettingsPage.qml
+msgid "Log out"
+msgstr ""
+
+#: qml/SettingsPage.qml
+msgid "Message box lines"
+msgstr ""
+
+#: qml/SettingsPage.qml
+msgid "Messages from blocked users"
+msgstr ""
+
+#: qml/SettingsPage.qml
+msgid "Noise suppression"
+msgstr ""
+
+#: qml/SettingsPage.qml
+msgid "Play GIFs automatically"
+msgstr ""
+
+#: qml/SettingsPage.qml
+msgid ""
+"Removes background noise such as typing, fans and traffic from your "
+"microphone."
+msgstr ""
+
+#: qml/SettingsPage.qml
+msgid "Show a placeholder to tap"
+msgstr ""
+
+#: qml/SettingsPage.qml
+msgid "Show normally"
+msgstr ""
+
+#: qml/SettingsPage.qml
+msgid "Show profile pictures"
+msgstr ""
+
+#: qml/SettingsPage.qml
+msgid "Theme"
+msgstr ""
+
+#: qml/SettingsPage.qml
+msgid "You'll need to sign in again to use Disports."
+msgstr ""
+
+#: qml/Sidebar.qml
+msgid "DMs"
+msgstr ""
+
+#: qml/VideoPlayer.qml src/media/GstVideoPlayer.cpp
+msgid "The video could not be played."
+msgstr ""
+
+#: src/ChannelInfo.cpp
+msgid "Direct message"
+msgstr ""
+
+#: src/ChannelInfo.cpp
+msgid "Group"
+msgstr ""
+
+#: src/ChannelInfo.cpp
+msgid "Voice channel"
+msgstr ""
+
+#: src/ChannelInfo.cpp
+msgid "Stage channel"
+msgstr ""
+
+#: src/ChannelInfo.cpp
+msgid "Announcement channel"
+msgstr ""
+
+#: src/ChannelInfo.cpp
+msgid "Forum"
+msgstr ""
+
+#: src/ChannelInfo.cpp
+msgid "Media channel"
+msgstr ""
+
+#: src/ChannelInfo.cpp
+msgid "Thread"
+msgstr ""
+
+#: src/ChannelInfo.cpp
+msgid "Text channel"
+msgstr ""
+
+#: src/ChannelPermissions.cpp
+msgid "You're timed out until %1"
+msgstr ""
+
+#: src/MentionSuggester.cpp
+msgid "Notify everyone who can see this channel"
+msgstr ""
+
+#: src/MentionSuggester.cpp
+msgid "Notify everyone online who can see this channel"
+msgstr ""
+
+#: src/MentionSuggester.cpp
+msgid "Role"
+msgstr ""
+
+#: src/MessageSender.cpp
+msgid "Wait for the file being sent to finish."
+msgstr ""
+
+#: src/MessageSender.cpp
+msgid "You can't attach files in this channel."
+msgstr ""
+
+#: src/MessageSender.cpp
+msgid "%1 is too large to send."
+msgstr ""
+
+#: src/MessageSender.cpp
+msgid "%1 could not be read."
+msgstr ""
+
+#: src/MessageSender.cpp
+msgid "%1 could not be sent (error %2)."
+msgstr ""
+
+#: src/RemoteAuth.cpp
+msgid "Preparing QR code..."
+msgstr ""
+
+#: src/RemoteAuth.cpp
+msgid "Discord QR login failed. Tap refresh to try again."
+msgstr ""
+
+#: src/RemoteAuth.cpp
+msgid "The QR code expired. Tap refresh to get a new one."
+msgstr ""
+
+#: src/RemoteAuth.cpp
+msgid "Open Discord on your Android or iOS device and scan to sign in."
+msgstr ""
+
+#: src/RemoteAuth.cpp
+msgid "Confirm the login on your phone."
+msgstr ""
+
+#: src/RemoteAuth.cpp
+msgid "QR login was canceled on your phone."
+msgstr ""
+
+#: src/RemoteAuth.cpp
+msgid "Signing in..."
+msgstr ""
+
+#: src/RemoteAuth.cpp
+msgid "Signed in."
+msgstr ""
+
+#: src/Session.cpp
+msgid "Your session has expired. Please sign in again."
+msgstr ""
+
+#: src/Session.cpp
+msgid "The message could not be edited."
+msgstr ""
+
+#: src/TypingIndicator.cpp
+msgid "Someone"
+msgstr ""
+
+#: src/TypingIndicator.cpp
+msgid "%1 is typing..."
+msgstr ""
+
+#: src/TypingIndicator.cpp
+msgid "%1 and %2 are typing..."
+msgstr ""
+
+#: src/TypingIndicator.cpp
+msgid "Several people are typing..."
+msgstr ""
+
+#: src/voice/CallManager.cpp
+msgid "You left the call: no one else joined for 3 minutes."
+msgstr ""
+
+#: src/voice/CallManager.cpp
+msgid "Incoming call"
+msgstr ""
+
+#: src/voice/CallManager.cpp
+msgid "Waiting for others..."
+msgstr ""
+
+#: src/voice/CallManager.cpp
+msgid "The call ended: the connection to Discord was lost."
+msgstr ""
+
+#: src/voice/CallManager.cpp
+msgid "You don't have permission to speak in this channel."
+msgstr ""
+
+#: src/voice/CallManager.cpp
+msgid "The call ended: %1"
+msgstr ""

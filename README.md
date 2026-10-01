@@ -42,6 +42,10 @@ If you still need to use token login, here's how to find your token:
 - [ ] Nitro features
 - [ ] Notifications
 
+## Translating
+
+See [TRANSLATING.md](TRANSLATING.md).
+
 ## Warnings
 
 - **Terms of Service** - Discord does not officially support third-party clients. Using Disports may violate Discord's Terms of Service and could lead to your account being restricted or banned. Disports tries to behave as closely to the official client as possible to minimise this risk, but no guarantees can be made.

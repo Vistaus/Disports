@@ -56,7 +56,7 @@ INNER
 # podman only stops the client, and the container would keep running).
 podman run --rm --timeout 150 --network=host --cap-add SYS_PTRACE \
     -v "$INSTALL":/app:ro -v "$OUT":/out:Z -v "$HERE":/tools:ro,Z -v "$ROOT/build/test/files":/files:ro,Z \
-    -e LANG=C.UTF-8 -e QT_QPA_PLATFORM=xcb -e LIBGL_ALWAYS_SOFTWARE=1 \
+    -e LANG=C.UTF-8 -e APP_DIR=/app -e QT_QPA_PLATFORM=xcb -e LIBGL_ALWAYS_SOFTWARE=1 \
     -e XDG_DATA_HOME=/out/data -e HOME=/out -e LD_LIBRARY_PATH=/app/lib/x86_64-linux-gnu \
     -e DISPORTS_SCREENSHOT=/out/shot.png:"$DELAY" \
     -e DISPORTS_API_URL=http://127.0.0.1:8811/api/v9/ -e DISPORTS_CDN_URL=http://127.0.0.1:8811/ \

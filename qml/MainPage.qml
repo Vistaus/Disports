@@ -17,7 +17,7 @@ Page {
     }
 
     header: PageHeader {
-        title: i18n.tr("Disports")
+        title: "Disports"
         trailingActionBar.actions: [
             Action {
                 iconName: "settings"
