@@ -10,6 +10,8 @@ Item {
     property string iconName: ""
     property string label: ""
     property bool showTileBackground: false
+    // Off on the selected row, whose background is already highlighted.
+    property bool shadow: true
 
     readonly property bool hasImage: imageSource != "" && image.status !== Image.Error
 
@@ -28,7 +30,7 @@ Item {
 
     LomiriShape {
         anchors.fill: parent
-        aspect: LomiriShape.DropShadow
+        aspect: iconItem.shadow ? LomiriShape.DropShadow : LomiriShape.Flat
         radius: iconItem.width > units.gu(3) ? "medium" : "small"
         backgroundColor: iconItem.showTileBackground || !iconItem.hasImage
                          ? theme.palette.highlighted.base

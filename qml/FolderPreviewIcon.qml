@@ -1,18 +1,20 @@
 import QtQuick
 import Lomiri.Components
 
-// A collapsed server folder: up to four server icons in a 2x2 grid, in one
-// Lomiri shape.
+// A collapsed server folder: up to four server icons in a 2x2 grid, filling
+// one Lomiri shape (which rounds the outer corners).
 Item {
     id: folderPreview
 
     property var previews: [] // [{iconUrl, initials}]
+    property bool shadow: true
 
     function refresh() {
         previewSource.scheduleUpdate()
     }
 
     onPreviewsChanged: Qt.callLater(refresh)
+    onShadowChanged: Qt.callLater(refresh)
     Component.onCompleted: Qt.callLater(refresh)
 
     ShaderEffectSource {
@@ -30,15 +32,15 @@ Item {
         width: folderPreview.width
         height: folderPreview.height
 
+        // Selected (no shadow): set off from the highlighted row.
         Rectangle {
             anchors.fill: parent
-            color: theme.palette.normal.base
+            color: folderPreview.shadow ? theme.palette.normal.base : theme.palette.normal.background
         }
 
         Grid {
             id: previewGrid
             anchors.fill: parent
-            anchors.margins: units.dp(3)
             spacing: units.dp(2)
             columns: 2
 
@@ -53,7 +55,6 @@ Item {
 
                     Rectangle {
                         anchors.fill: parent
-                        radius: units.dp(3)
                         color: theme.palette.highlighted.base
                         visible: previewImage.status !== Image.Ready
 
@@ -86,7 +87,7 @@ Item {
 
     LomiriShape {
         anchors.fill: parent
-        aspect: LomiriShape.DropShadow
+        aspect: folderPreview.shadow ? LomiriShape.DropShadow : LomiriShape.Flat
         radius: "medium"
         source: previewSource
     }

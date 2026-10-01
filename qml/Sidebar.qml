@@ -56,7 +56,7 @@ Item {
                 Rectangle {
                     anchors.fill: parent
                     color: dmMouse.pressed || Session.inDirectMessages
-                           ? theme.palette.highlighted.base
+                           ? theme.palette.highlighted.background
                            : "transparent"
                 }
 
@@ -65,6 +65,7 @@ Item {
                     iconName: "contact"
                     label: i18n.tr("DMs")
                     showTileBackground: true
+                    shadow: !(dmMouse.pressed || Session.inDirectMessages)
                 }
 
                 MouseArea {
@@ -92,12 +93,13 @@ Item {
 
                     Rectangle {
                         anchors.fill: parent
-                        color: dmRowMouse.pressed ? theme.palette.highlighted.base : "transparent"
+                        color: dmRowMouse.pressed ? theme.palette.highlighted.background : "transparent"
                     }
 
                     SidebarIcon {
                         anchors.centerIn: parent
                         imageSource: dmRow.iconUrl
+                        shadow: !dmRowMouse.pressed
                         label: dmRow.initials
                     }
 
@@ -172,7 +174,7 @@ Item {
                 anchors.fill: parent
                 anchors.leftMargin: stripe.width
                 visible: !(row.isFolder && row.expanded) && (rowMouse.pressed || row.selected)
-                color: theme.palette.highlighted.base
+                color: theme.palette.highlighted.background
             }
 
             // Server
@@ -180,6 +182,7 @@ Item {
                 anchors.centerIn: parent
                 anchors.horizontalCenterOffset: stripe.width / 2
                 visible: !row.isFolder
+                shadow: !(rowMouse.pressed || row.selected)
                 imageSource: row.iconUrl
                 label: row.initials
             }
@@ -189,6 +192,7 @@ Item {
                 anchors.centerIn: parent
                 anchors.horizontalCenterOffset: stripe.width / 2
                 visible: row.isFolder && !row.expanded
+                shadow: !(rowMouse.pressed || row.selected)
                 width: units.gu(5)
                 height: width
                 previews: row.previews

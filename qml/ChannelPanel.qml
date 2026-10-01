@@ -117,13 +117,17 @@ Item {
                             label: row.name.charAt(0)
                         }
 
-                        Rectangle {
+                        // The status, cut out of the picture's corner in
+                        // the same shape as the dot.
+                        LomiriShape {
                             visible: row.kind === "dm"
                             anchors { right: parent.right; bottom: parent.bottom; margins: -units.dp(2) }
-                            width: units.gu(1.6)
+                            width: units.gu(1.7)
                             height: width
-                            radius: width / 2
-                            color: theme.palette.normal.background
+                            aspect: LomiriShape.Flat
+                            radius: "small"
+                            // The row's own background, highlighted or not.
+                            backgroundColor: row.active ? theme.palette.highlighted.background : theme.palette.normal.background
 
                             StatusDot {
                                 anchors.centerIn: parent
