@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Disports\n"
 "Report-Msgid-Bugs-To: https://github.com/jukfiuune/Disports/issues\n"
-"POT-Creation-Date: 2026-10-01 18:03+0300\n"
+"POT-Creation-Date: 2026-10-01 19:55+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -44,6 +44,23 @@ msgstr ""
 
 #: qml/CallPage.qml
 msgid "You are deafened"
+msgstr ""
+
+#: qml/CaptchaPage.qml
+msgid "Are you human?"
+msgstr ""
+
+#: qml/CaptchaPage.qml qml/ChatPanel.qml qml/LoginPage.qml qml/SettingsPage.qml
+msgid "Cancel"
+msgstr ""
+
+#: qml/CaptchaPage.qml
+msgid ""
+"Discord wants to make sure you're a person. Solve the captcha to continue."
+msgstr ""
+
+#: qml/CaptchaPage.qml
+msgid "The captcha couldn't be loaded. Check your internet connection."
 msgstr ""
 
 #: qml/ChannelInfoPage.qml
@@ -112,10 +129,6 @@ msgstr ""
 
 #: qml/ChatPanel.qml
 msgid "Are you sure you want to permanently delete this message?"
-msgstr ""
-
-#: qml/ChatPanel.qml qml/LoginPage.qml qml/SettingsPage.qml
-msgid "Cancel"
 msgstr ""
 
 #: qml/ChatPanel.qml qml/MessageDelegate.qml
@@ -199,11 +212,15 @@ msgid "Refresh QR code"
 msgstr ""
 
 #: qml/LoginPage.qml
-msgid "Scan the QR code with the Discord mobile app, or paste a token instead."
+msgid "Scan the QR code with the Discord mobile app."
+msgstr ""
+
+#: qml/LoginPage.qml qml/PasswordLoginPage.qml
+msgid "Sign in"
 msgstr ""
 
 #: qml/LoginPage.qml
-msgid "Sign in"
+msgid "Sign in with a password (not recommended)"
 msgstr ""
 
 #: qml/LoginPage.qml
@@ -218,6 +235,12 @@ msgstr ""
 msgid ""
 "Using any unofficial Discord client is against Discord's Terms of Service "
 "and may result in your account being restricted or banned."
+msgstr ""
+
+#: qml/Main.qml
+msgid ""
+"Discord wants a captcha solved, but this version of Ubuntu Touch can't show "
+"one. Update to 24.04-2.x or newer."
 msgstr ""
 
 #: qml/MainPage.qml
@@ -306,6 +329,58 @@ msgstr ""
 
 #: qml/MessageList.qml
 msgid "You don't have permission to read earlier messages in this channel"
+msgstr ""
+
+#: qml/PasswordLoginPage.qml
+msgid "6-digit code"
+msgstr ""
+
+#: qml/PasswordLoginPage.qml
+msgid "Authenticator app"
+msgstr ""
+
+#: qml/PasswordLoginPage.qml
+msgid "Backup code"
+msgstr ""
+
+#: qml/PasswordLoginPage.qml
+msgid "Email or phone number"
+msgstr ""
+
+#: qml/PasswordLoginPage.qml
+msgid "Password"
+msgstr ""
+
+#: qml/PasswordLoginPage.qml
+msgid "Send me a code"
+msgstr ""
+
+#: qml/PasswordLoginPage.qml
+msgid "Sign in with a password"
+msgstr ""
+
+#: qml/PasswordLoginPage.qml
+msgid ""
+"Signing in with a password from an unofficial app makes Discord more "
+"suspicious of the account. The QR code is the safer way."
+msgstr ""
+
+#: qml/PasswordLoginPage.qml
+msgid "Start again"
+msgstr ""
+
+#: qml/PasswordLoginPage.qml
+msgid "Text message (SMS)"
+msgstr ""
+
+#: qml/PasswordLoginPage.qml
+msgid ""
+"This account has two-factor authentication. Enter a code to finish signing "
+"in."
+msgstr ""
+
+#: qml/PasswordLoginPage.qml
+msgid "Verify"
 msgstr ""
 
 #: qml/PollCard.qml
@@ -494,12 +569,119 @@ msgstr ""
 msgid "%1 could not be sent (error %2)."
 msgstr ""
 
+#: src/PasswordLogin.cpp
+msgid "Enter your email or phone number and your password."
+msgstr ""
+
+#: src/PasswordLogin.cpp
+msgid ""
+"This account only has a security key for two-factor authentication, which "
+"Disports can't use. Sign in with the QR code instead."
+msgstr ""
+
+#: src/PasswordLogin.cpp
+msgid "A code was sent to %1."
+msgstr ""
+
+#: src/PasswordLogin.cpp
+msgid "A code was sent to your phone."
+msgstr ""
+
+#: src/PasswordLogin.cpp
+msgid "Enter the code."
+msgstr ""
+
+#: src/PasswordLogin.cpp
+msgid "Signing in took too long. Please start again."
+msgstr ""
+
+#: src/PasswordLogin.cpp
+msgid "That code isn't right. Check it and try again."
+msgstr ""
+
+#: src/PasswordLogin.cpp
+msgid "Discord didn't send a sign-in token. Please try again."
+msgstr ""
+
+#: src/PasswordLogin.cpp
+msgid ""
+"Discord asks you to change your password. You can do that on discord.com."
+msgstr ""
+
+#: src/PasswordLogin.cpp
+msgid "Couldn't reach Discord. Check your internet connection and try again."
+msgstr ""
+
+#: src/PasswordLogin.cpp
+msgid ""
+"Discord asked for a kind of captcha Disports can't show. Sign in with the QR "
+"code instead."
+msgstr ""
+
+#: src/PasswordLogin.cpp
+msgid "Discord needs the captcha solved before you can sign in."
+msgstr ""
+
+#: src/PasswordLogin.cpp
+msgid "Too many attempts. Wait %1 s and try again."
+msgstr ""
+
+#: src/PasswordLogin.cpp
+msgid ""
+"Discord has suspended this account. See discord.com to find out why and to "
+"appeal."
+msgstr ""
+
+#: src/PasswordLogin.cpp
+msgid "Discord is having trouble right now. Try again in a few minutes."
+msgstr ""
+
+#: src/PasswordLogin.cpp
+msgid ""
+"This account is disabled or scheduled for deletion. Restore it in the "
+"official Discord app first."
+msgstr ""
+
+#: src/PasswordLogin.cpp
+msgid ""
+"Discord sent a code to your phone to confirm this new sign-in. Disports "
+"can't take that code yet: sign in with your email address or the QR code "
+"instead."
+msgstr ""
+
+#: src/PasswordLogin.cpp
+msgid "The email, phone number or password isn't right."
+msgstr ""
+
+#: src/PasswordLogin.cpp
+msgid ""
+"Discord sent you an email to confirm this new sign-in. Open it, confirm, "
+"then sign in here again."
+msgstr ""
+
+#: src/PasswordLogin.cpp
+msgid "Discord said: %1"
+msgstr ""
+
+#: src/PasswordLogin.cpp
+msgid "Signing in didn't work (error %1). Please try again."
+msgstr ""
+
 #: src/RemoteAuth.cpp
 msgid "Preparing QR code..."
 msgstr ""
 
 #: src/RemoteAuth.cpp
+msgid "QR login only works with Discord's own servers."
+msgstr ""
+
+#: src/RemoteAuth.cpp
 msgid "Discord QR login failed. Tap refresh to try again."
+msgstr ""
+
+#: src/RemoteAuth.cpp
+msgid ""
+"Couldn't reach Discord. Check your internet connection, then tap refresh."
 msgstr ""
 
 #: src/RemoteAuth.cpp
@@ -524,6 +706,12 @@ msgstr ""
 
 #: src/RemoteAuth.cpp
 msgid "Signed in."
+msgstr ""
+
+#: src/Session.cpp
+msgid ""
+"Discord didn't accept this token. Make sure you copied all of it, and that "
+"it's still valid (signing out of Discord makes it invalid)."
 msgstr ""
 
 #: src/Session.cpp

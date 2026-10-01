@@ -364,6 +364,16 @@ async def gateway(ws):
         clients.discard(ws)
 
 
+# Captchas, with hCaptcha's test site key: its solution is always this.
+CAPTCHA_SOLUTION = "10000000-aaaa-bbbb-cccc-000000000001"
+CAPTCHA = {"captcha_key": ["captcha-required"], "captcha_service": "hcaptcha",
+           "captcha_sitekey": "10000000-ffff-ffff-ffff-000000000001", "captcha_session_id": "test-session",
+           "captcha_rqdata": "test-rqdata", "captcha_rqtoken": "test-rqtoken"}
+# Accounts for the password sign-in; mfa@ has two-factor (code 123456).
+PASSWORD = "hunter22"
+MFA_TICKET = "test-ticket"
+
+
 class Rest(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
@@ -376,6 +386,21 @@ class Rest(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def captcha_solved(self, what):
+        """True when this request carries the solved captcha; else answers
+        with a captcha challenge."""
+        key = self.headers.get("X-Captcha-Key")
+        if key is None:
+            log("REST captcha asked", what)
+            self.reply(400, CAPTCHA)
+            return False
+        ok = (key == CAPTCHA_SOLUTION and self.headers.get("X-Captcha-Session-Id") == "test-session"
+              and self.headers.get("X-Captcha-Rqtoken") == "test-rqtoken")
+        log("REST captcha", "solved" if ok else "wrong", what)
+        if not ok:
+            self.reply(400, CAPTCHA)
+        return ok
+
     def body(self):
         length = int(self.headers.get("Content-Length") or 0)
         return self.rfile.read(length)
@@ -385,6 +410,8 @@ class Rest(BaseHTTPRequestHandler):
         if re.match(r"/assets/[0-9a-f]+\.mp3$", path):
             log("REST ringtone", path)
             return self.reply(200, raw=b"\xff\xfb" * 2048, content_type="audio/mpeg")
+        if path == "/api/v9/experiments":
+            return self.reply(200, {"fingerprint": "test-fingerprint", "assignments": []})
         if path == "/api/v9/gateway":
             return self.reply(200, {"url": "ws://127.0.0.1:8812"})
         m = re.match(r"/api/v9/channels/(\d+)/messages$", path)
@@ -429,6 +456,34 @@ class Rest(BaseHTTPRequestHandler):
         except ValueError:
             body = {}
         path = self.path
+        if path == "/api/v9/auth/login":
+            if self.headers.get("X-Fingerprint") != "test-fingerprint":
+                log("REST login without fingerprint")
+            if not self.captcha_solved("login"):
+                return
+            login = body.get("login", "")
+            if body.get("password") != PASSWORD or login not in ("tester@example.com", "mfa@example.com"):
+                log("REST login invalid", login)
+                return self.reply(400, {"code": 50035, "message": "Invalid Form Body", "errors": {
+                    "login": {"_errors": [{"code": "INVALID_LOGIN", "message": "Login or password is invalid."}]},
+                    "password": {"_errors": [{"code": "INVALID_LOGIN", "message": "Login or password is invalid."}]}}})
+            if login == "mfa@example.com":
+                log("REST login needs mfa")
+                return self.reply(200, {"user_id": ME["id"], "mfa": True, "sms": True, "totp": True, "backup": True,
+                                        "ticket": MFA_TICKET, "login_instance_id": "test-instance"})
+            log("REST login ok", login)
+            return self.reply(200, {"user_id": ME["id"], "token": TOKEN,
+                                    "user_settings": {"locale": "en-US", "theme": "dark"}})
+        if path == "/api/v9/auth/mfa/sms/send":
+            log("REST mfa sms")
+            return self.reply(200, {"phone": "+*******1234"})
+        m = re.match(r"/api/v9/auth/mfa/(totp|sms|backup)$", path)
+        if m:
+            if body.get("ticket") != MFA_TICKET or body.get("code") != "123456":
+                log("REST mfa wrong", m.group(1))
+                return self.reply(400, {"code": 60008, "message": "Invalid two-factor code"})
+            log("REST mfa ok", m.group(1))
+            return self.reply(200, {"token": TOKEN, "user_settings": {"locale": "en-US", "theme": "dark"}})
         m = re.match(r"/api/v9/channels/(\d+)/attachments$", path)
         if m:
             results = []
@@ -442,6 +497,9 @@ class Rest(BaseHTTPRequestHandler):
         m = re.match(r"/api/v9/channels/(\d+)/messages$", path)
         if m:
             channel = m.group(1)
+            # Messages asking for one get a captcha first (any request can).
+            if "captcha" in body.get("content", "") and not self.captcha_solved("send " + channel):
+                return
             log("REST send", channel, json.dumps(body, ensure_ascii=False))
             attachments = []
             for a in body.get("attachments", []):

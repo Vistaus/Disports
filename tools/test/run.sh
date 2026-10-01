@@ -19,7 +19,8 @@ NAME=$1; DELAY=$2; shift 2
 INSTALL=${APP_INSTALL:-$ROOT/build/asan/app/install}
 OUT=$ROOT/build/test/$NAME
 rm -rf "$OUT"; mkdir -p "$OUT/data/disports.jukfiuu" "$ROOT/build/test/files"
-echo '{"Token": "test-token"}' > "$OUT/data/disports.jukfiuu/settings.json"
+# LOGGED_OUT=1: no saved token, the app starts at the sign-in page.
+[ -n "${LOGGED_OUT:-}" ] || echo '{"Token": "test-token"}' > "$OUT/data/disports.jukfiuu/settings.json"
 # THEME=dark (or light): the app's theme setting.
 if [ -n "${THEME:-}" ]; then
     mkdir -p "$OUT/.config/disports.jukfiuu"

@@ -5,6 +5,7 @@
 #include <QString>
 #include <QTimer>
 
+class CaptchaPrompt;
 class QJsonObject;
 class QNetworkAccessManager;
 class QWebSocket;
@@ -29,6 +30,8 @@ public:
     bool busy() const { return m_busy; }
     bool failed() const { return m_failed; }
 
+    void setCaptchaPrompt(CaptchaPrompt* prompt) { m_captcha = prompt; }
+
     Q_INVOKABLE void start();
     Q_INVOKABLE void stop();
 
@@ -47,6 +50,7 @@ private:
     static QString renderQr(const QString& url);
 
     QNetworkAccessManager* m_nam;
+    CaptchaPrompt* m_captcha = nullptr;
     QWebSocket* m_socket = nullptr;
     EVP_PKEY* m_key = nullptr;
     QString m_fingerprint;

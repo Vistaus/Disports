@@ -65,6 +65,8 @@ void registerQmlTypes(Session* session)
 
 int main(int argc, char* argv[])
 {
+    // For the captcha page's web view (Qt WebEngine, from QML).
+    QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
     QGuiApplication app(argc, argv);
     // Also the data folder name: ~/.local/share/disports.jukfiuu is the
     // app's writable space on Ubuntu Touch.

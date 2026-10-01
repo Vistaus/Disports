@@ -10,11 +10,13 @@
 #include "discord/models/Snowflake.hpp"
 
 // Complete types: moc needs them for the QObject* properties below.
+#include "Captcha.h"
 #include "ChannelPermissions.h"
 #include "GatewayConnection.h"
 #include "MentionSuggester.h"
 #include "MessageSender.h"
 #include "OfflineCache.h"
+#include "PasswordLogin.h"
 #include "Preferences.h"
 #include "RemoteAuth.h"
 #include "TypingIndicator.h"
@@ -78,6 +80,9 @@ class Session : public QObject
     Q_PROPERTY(Preferences* preferences READ preferences CONSTANT)
     Q_PROPERTY(EmojiPickerModel* emoji READ emoji CONSTANT)
     Q_PROPERTY(RemoteAuth* qrLogin READ qrLogin CONSTANT)
+    Q_PROPERTY(PasswordLogin* passwordLogin READ passwordLogin CONSTANT)
+    // Captchas Discord wants solved (qml/CaptchaPage.qml).
+    Q_PROPERTY(CaptchaPrompt* captcha READ captcha CONSTANT)
     Q_PROPERTY(CallManager* call READ call CONSTANT)
 
 public:
@@ -132,10 +137,14 @@ public:
     Preferences* preferences() const { return m_preferences; }
     EmojiPickerModel* emoji() const { return m_emoji; }
     RemoteAuth* qrLogin() const { return m_qrLogin; }
+    PasswordLogin* passwordLogin() const { return m_passwordLogin; }
+    CaptchaPrompt* captcha() const { return m_captcha; }
     CallManager* call() const { return m_call; }
     OfflineCache* offlineCache() const { return m_offline; }
     VoiceStates* voiceStates() const { return m_voiceStates; }
     QNetworkAccessManager* networkAccessManager() const;
+    // The browser Disports says it is, for the captcha page.
+    Q_INVOKABLE QString userAgent() const;
     DiscordInstance* instance() const { return m_instance; }
 
     Q_INVOKABLE void loginWithToken(const QString& token);
@@ -252,6 +261,10 @@ private:
     EmojiPickerModel* m_emoji = nullptr;
     OfflineCache* m_offline = nullptr;
     RemoteAuth* m_qrLogin = nullptr;
+    PasswordLogin* m_passwordLogin = nullptr;
+    CaptchaPrompt* m_captcha = nullptr;
+    // A token entered just now, not yet accepted by Discord.
+    bool m_newToken = false;
     CallManager* m_call = nullptr;
     VoiceStates* m_voiceStates = nullptr;
     QTimer m_callClock; // ticks currentCallElapsed

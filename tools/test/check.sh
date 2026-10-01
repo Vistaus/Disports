@@ -173,13 +173,33 @@ scenario_reply() {      # tap a reply to a message 390 back: five pages, the que
     fi
 }
 
+CAPTCHA=DISPORTS_CAPTCHA_TOKEN=10000000-aaaa-bbbb-cccc-000000000001
+scenario_login() {      # password sign-in: captcha first, then in; a wrong password; 2FA
+    LOGGED_OUT=1 STEPS="sleep 4;click 225 449;sleep 2;click 225 128;type tester@example.com;click 225 176;type hunter22;click 225 224;sleep 4" \
+        "$HERE/run.sh" login 13000 $CAPTCHA
+    expect login 'REST captcha asked login'
+    expect login 'REST captcha solved login'
+    expect login 'REST login ok tester@example.com'
+    expect login 'GATEWAY connect'
+    LOGGED_OUT=1 STEPS="sleep 6" "$HERE/run.sh" login-wrong 7000 $CAPTCHA DISPORTS_PASSWORD_LOGIN=tester@example.com:nope1234
+    expect login-wrong 'REST login invalid'
+    LOGGED_OUT=1 STEPS="sleep 7" "$HERE/run.sh" login-mfa 8000 $CAPTCHA \
+        DISPORTS_PASSWORD_LOGIN=mfa@example.com:hunter22 DISPORTS_MFA=totp:123456
+    expect login-mfa 'REST mfa ok totp'
+}
+scenario_captcha() {    # any request can need a captcha: sending a message
+    STEPS="sleep 7" "$HERE/run.sh" captcha 8000 DISPORTS_OPEN_CHANNEL=1101 "DISPORTS_SEND_MESSAGE=this one needs a captcha" $CAPTCHA "${WIDE[@]}"
+    expect captcha 'REST captcha solved send 1101'
+    expect captcha 'REST send 1101 .*"this one needs a captcha"'
+}
+
 scenario_permissions() { # read-only, no history, no files, slowmode
     for channel in 1103 1104 1106 1105; do
         STEPS="sleep 5" "$HERE/run.sh" permissions-$channel 6500 DISPORTS_OPEN_CHANNEL=$channel "${WIDE[@]}"
     done
 }
 
-ALL=(channels mentions upload zoom nicknames dmcall call switch threads reply permissions)
+ALL=(channels mentions upload zoom nicknames dmcall call switch threads reply login captcha permissions)
 SCENARIOS=("${@:-${ALL[@]}}")
 [ $# -eq 0 ] && SCENARIOS=("${ALL[@]}")
 

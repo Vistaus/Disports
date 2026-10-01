@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "discord/DiscordInstance.hpp"
+#include "discord/config/DiscordClientConfig.hpp"
 #include "discord/config/LocalSettings.hpp"
 #include "discord/state/MessageCache.hpp"
 
@@ -76,8 +77,14 @@ Session::Session(QObject* parent)
     connect(m_call, &CallManager::callFailed, this, &Session::showNotice);
     connect(m_call, &CallManager::notice, this, &Session::showNotice);
 
+    m_captcha = new CaptchaPrompt(this);
+    m_http->setCaptchaPrompt(m_captcha);
     m_qrLogin = new RemoteAuth(m_http->networkAccessManager(), this);
+    m_qrLogin->setCaptchaPrompt(m_captcha);
     connect(m_qrLogin, &RemoteAuth::tokenReceived, this, &Session::loginWithToken);
+    m_passwordLogin = new PasswordLogin(m_http->networkAccessManager(), m_captcha, this);
+    connect(m_passwordLogin, &PasswordLogin::tokenReceived, this, &Session::loginWithToken);
+    connect(m_passwordLogin, &PasswordLogin::signedInNotice, this, &Session::showNotice);
 
     m_noticeTimer.setSingleShot(true);
     m_noticeTimer.setInterval(6000);
@@ -106,6 +113,11 @@ QString Session::configPath() const
 bool Session::applicationActive() const
 {
     return QGuiApplication::applicationState() == Qt::ApplicationActive;
+}
+
+QString Session::userAgent() const
+{
+    return QString::fromStdString(GetClientConfig()->GetUserAgent());
 }
 
 QNetworkAccessManager* Session::networkAccessManager() const
@@ -278,6 +290,7 @@ void Session::loginWithToken(const QString& token)
 
     m_qrLogin->stop();
     setErrorText(QString());
+    m_newToken = true;
     destroyInstance();
     GetLocalSettings()->SetToken(trimmed);
     GetLocalSettings()->Save();
@@ -290,6 +303,8 @@ void Session::loginWithToken(const QString& token)
 
 void Session::logout()
 {
+    m_captcha->cancelAll();
+    m_newToken = false;
     destroyInstance();
     m_offline->clear();
     // The pictures are this account's contacts and servers.
@@ -301,9 +316,12 @@ void Session::logout()
 
 void Session::coreLoggedOut()
 {
-    // The token was rejected.
+    // The token was rejected: one just entered, or the saved one.
+    const bool newToken = m_newToken;
     logout();
-    setErrorText(tr("Your session has expired. Please sign in again."));
+    setErrorText(newToken ? tr("Discord didn't accept this token. Make sure you copied all of it, and that it's "
+                               "still valid (signing out of Discord makes it invalid).")
+                          : tr("Your session has expired. Please sign in again."));
 }
 
 void Session::coreConnected()
@@ -315,6 +333,7 @@ void Session::coreConnected()
     const QString guild = restore && m_instance->GetCurrentGuildID() ? DiscordUrls::id(m_instance->GetCurrentGuildID()) : QString();
     const QString channel = restore && m_instance->GetCurrentChannelID() ? DiscordUrls::id(m_instance->GetCurrentChannelID()) : QString();
     m_cachedStart = false;
+    m_newToken = false;
     m_fetchedChannels.clear();
     m_requestedMembers.clear();
     setErrorText(QString());

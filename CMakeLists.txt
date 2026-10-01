@@ -52,6 +52,7 @@ add_subdirectory(src/discord)
 
 qt_add_executable(disports
     src/main.cpp
+    src/Captcha.cpp src/Captcha.h
     src/ChannelInfo.cpp src/ChannelInfo.h
     src/ChannelPermissions.cpp src/ChannelPermissions.h
     src/DiscordUrls.cpp src/DiscordUrls.h
@@ -62,6 +63,7 @@ qt_add_executable(disports
     src/MessageSender.cpp src/MessageSender.h
     src/OfflineCache.cpp src/OfflineCache.h
     src/ImageCache.cpp src/ImageCache.h
+    src/PasswordLogin.cpp src/PasswordLogin.h
     src/Preferences.cpp src/Preferences.h
     src/RemoteAuth.cpp src/RemoteAuth.h
     src/Session.cpp src/Session.h
@@ -122,6 +124,7 @@ qt_add_qml_module(disports
         qml/AttachmentBar.qml
         qml/ChatPage.qml
         qml/MessageCitation.qml
+        qml/PasswordLoginPage.qml
         qml/MessageDelegate.qml
         qml/PanelHeader.qml
         qml/UnreadBadge.qml
@@ -144,6 +147,15 @@ qt_add_qml_module(disports
         qml/CallBadge.qml
         qml/MediaSize.js
         ${TEST_QML_FILES}
+)
+
+# Next to the module's QML, but read only when shown: it imports the
+# system's QtWebEngine, which the build doesn't need.
+qt_add_resources(disports "captcha"
+    PREFIX "/qt/qml/Disports"
+    BASE ${PROJECT_SOURCE_DIR}
+    FILES
+        ${PROJECT_SOURCE_DIR}/qml/CaptchaPage.qml
 )
 
 qt_add_resources(disports "assets"

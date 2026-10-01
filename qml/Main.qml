@@ -82,6 +82,30 @@ MainView {
         function onPhaseChanged() { root.showPhase() }
     }
 
+    // Captchas Discord wants solved: their page comes up over everything.
+    // It needs the system's Qt WebEngine (Ubuntu Touch 24.04-2.x).
+    Connections {
+        target: Session.captcha
+        function onRequested() {
+            if (root.currentPageName === "captchaPage")
+                return
+            // Test runs answer it themselves (DISPORTS_CAPTCHA_TOKEN).
+            if (typeof testHooks !== "undefined" && testHooks.answersCaptchas)
+                return
+            const page = Qt.createComponent(Qt.resolvedUrl("CaptchaPage.qml"))
+            if (page.status !== Component.Ready) {
+                Session.captcha.cancel()
+                Session.showNotice(i18n.tr("Discord wants a captcha solved, but this version of Ubuntu Touch can't show one. Update to 24.04-2.x or newer."))
+                return
+            }
+            stack.push(page)
+        }
+        function onChanged() {
+            if (!Session.captcha.active && root.currentPageName === "captchaPage")
+                stack.pop()
+        }
+    }
+
     // Calls: the call screen comes up when one starts or rings, and goes
     // away when it ends.
     Connections {

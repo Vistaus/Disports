@@ -6,6 +6,7 @@
 
 #include "discord/config/DiscordClientConfig.hpp"
 #include "discord/config/LocalSettings.hpp"
+#include "Captcha.h"
 #include "Log.h"
 
 QtHttpClient::QtHttpClient(QObject* parent)
@@ -105,40 +106,43 @@ void QtHttpClient::PerformRequest(
     const QByteArray formType = "application/x-www-form-urlencoded";
     const QByteArray jsonType = "application/json";
 
-    QNetworkReply* reply = nullptr;
+    QByteArray verb;
+    QByteArray payload = body;
     switch (type) {
     case NetRequest::GET:
     case NetRequest::GET_PROGRESS:
-        reply = m_nam.get(request);
+        verb = "GET";
+        payload.clear();
         break;
     case NetRequest::POST:
+        verb = "POST";
         request.setHeader(QNetworkRequest::ContentTypeHeader, formType);
-        reply = m_nam.post(request, body);
         break;
     case NetRequest::POST_JSON:
+        verb = "POST";
         request.setHeader(QNetworkRequest::ContentTypeHeader, jsonType);
-        reply = m_nam.post(request, body);
         break;
     case NetRequest::PUT:
+        verb = "PUT";
         request.setHeader(QNetworkRequest::ContentTypeHeader, formType);
-        reply = m_nam.put(request, body);
         break;
     case NetRequest::PUT_JSON:
+        verb = "PUT";
         request.setHeader(QNetworkRequest::ContentTypeHeader, jsonType);
-        reply = m_nam.put(request, body);
         break;
     case NetRequest::PUT_OCTETS:
     case NetRequest::PUT_OCTETS_PROGRESS:
+        verb = "PUT";
+        payload = octets;
         request.setHeader(QNetworkRequest::ContentTypeHeader, QByteArray("application/octet-stream"));
-        reply = m_nam.put(request, octets);
         break;
     case NetRequest::PATCH:
+        verb = "PATCH";
         request.setHeader(QNetworkRequest::ContentTypeHeader, jsonType);
-        reply = m_nam.sendCustomRequest(request, "PATCH", body);
         break;
     case NetRequest::DELETE_:
+        verb = "DELETE";
         request.setHeader(QNetworkRequest::ContentTypeHeader, jsonType);
-        reply = m_nam.sendCustomRequest(request, "DELETE", body);
         break;
     default:
         qCWarning(lcCore, "HTTP: unsupported request type %d for %s", int(type), url.c_str());
@@ -146,9 +150,14 @@ void QtHttpClient::PerformRequest(
         return;
     }
 
-    m_pending.insert(reply);
-    // Uploads with progress: the core is told as it goes, and may cancel.
-    if (type == NetRequest::PUT_OCTETS_PROGRESS) {
+    // Every reply sent for this request (again after a captcha) can be
+    // aborted, and uploads report their progress to the core, which may
+    // cancel them.
+    auto started = [this, req, type](QNetworkReply* reply) {
+        m_pending.insert(reply);
+        connect(reply, &QNetworkReply::finished, this, [this, reply]() { m_pending.remove(reply); });
+        if (type != NetRequest::PUT_OCTETS_PROGRESS)
+            return;
         connect(reply, &QNetworkReply::uploadProgress, this, [this, reply, req](qint64 sent, qint64 total) {
             if (total <= 0 || m_quitting)
                 return;
@@ -159,25 +168,21 @@ void QtHttpClient::PerformRequest(
             if (req->m_bCancelOp)
                 reply->abort();
         });
-    }
-    connect(reply, &QNetworkReply::finished, this, [this, reply, req]() {
-        m_pending.remove(reply);
-        reply->deleteLater();
-
-        const QVariant status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
-        if (status.isValid()) {
-            req->result = status.toInt();
-            req->response = reply->readAll().toStdString();
-        } else if (reply->error() == QNetworkReply::OperationCanceledError) {
+    };
+    auto done = [this, req](const HttpResult& result) {
+        if (result.status) {
+            req->result = result.status;
+            req->response = result.body.toStdString();
+        } else if (result.error == QNetworkReply::OperationCanceledError) {
             req->result = HTTP_CANCELED;
             req->response = "Operation canceled";
         } else {
             req->result = HTTP_OOPS;
-            req->response = reply->errorString().toStdString();
+            req->response = result.errorString.toStdString();
         }
-
         if (!m_quitting)
             req->pFunc(req);
         delete req;
-    });
+    };
+    sendWithCaptcha(&m_nam, request, verb, payload, m_captcha, this, done, started);
 }

@@ -22,6 +22,7 @@ TestHooks::TestHooks(Session* session, QQuickView* view)
     , m_view(view)
     , m_openChannel(qEnvironmentVariable("DISPORTS_OPEN_CHANNEL"))
     , m_videoUrl(qEnvironmentVariable("DISPORTS_PLAY_VIDEO"))
+    , m_captchaToken(qEnvironmentVariable("DISPORTS_CAPTCHA_TOKEN"))
 {
     const QString api = qEnvironmentVariable("DISPORTS_API_URL");
     const QString cdn = qEnvironmentVariable("DISPORTS_CDN_URL");
@@ -36,6 +37,36 @@ TestHooks::TestHooks(Session* session, QQuickView* view)
     scheduleScreenshot();
     scheduleChannelActions();
     scheduleFolder();
+    scheduleLogin();
+
+    if (!m_captchaToken.isEmpty()) {
+        connect(session->captcha(), &CaptchaPrompt::requested, this, [this]() {
+            QTimer::singleShot(300, this, [this]() { m_session->captcha()->solve(m_captchaToken); });
+        });
+    }
+}
+
+void TestHooks::scheduleLogin()
+{
+    const QString login = qEnvironmentVariable("DISPORTS_PASSWORD_LOGIN");
+    if (login.isEmpty())
+        return;
+    PasswordLogin* password = m_session->passwordLogin();
+    QTimer::singleShot(2000, this, [password, login]() {
+        password->login(login.section(QLatin1Char(':'), 0, 0), login.section(QLatin1Char(':'), 1));
+    });
+    const QString mfa = qEnvironmentVariable("DISPORTS_MFA");
+    if (mfa.isEmpty())
+        return;
+    auto sent = std::make_shared<bool>(false);
+    connect(password, &PasswordLogin::changed, this, [password, mfa, sent]() {
+        if (*sent || password->step() != QLatin1String("mfa") || password->busy())
+            return;
+        *sent = true;
+        QTimer::singleShot(500, password, [password, mfa]() {
+            password->verify(mfa.section(QLatin1Char(':'), 0, 0), mfa.section(QLatin1Char(':'), 1));
+        });
+    });
 }
 
 void TestHooks::scheduleScreenshot()

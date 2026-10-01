@@ -6,6 +6,7 @@
 
 #include "discord/network/HTTPClient.hpp"
 
+class CaptchaPrompt;
 class QNetworkReply;
 
 // HTTPClient for the core, backed by QNetworkAccessManager. Replies arrive
@@ -42,9 +43,12 @@ public:
     static void applyClientHeaders(QNetworkRequest& request);
 
     QNetworkAccessManager* networkAccessManager() { return &m_nam; }
+    // Asked when Discord wants a captcha solved before answering.
+    void setCaptchaPrompt(CaptchaPrompt* prompt) { m_captcha = prompt; }
 
 private:
     QNetworkAccessManager m_nam;
+    CaptchaPrompt* m_captcha = nullptr;
     QSet<QNetworkReply*> m_pending;
     bool m_quitting = false;
 };

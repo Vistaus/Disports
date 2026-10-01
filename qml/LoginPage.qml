@@ -28,7 +28,7 @@ Page {
 
             Label {
                 width: parent.width
-                text: i18n.tr("Scan the QR code with the Discord mobile app, or paste a token instead.")
+                text: i18n.tr("Scan the QR code with the Discord mobile app.")
                 wrapMode: Text.WordWrap
                 color: theme.palette.normal.backgroundSecondaryText
             }
@@ -90,6 +90,12 @@ Page {
                 width: parent.width
                 height: units.dp(1)
                 color: theme.palette.normal.base
+            }
+
+            Button {
+                width: parent.width
+                text: i18n.tr("Sign in with a password (not recommended)")
+                onClicked: loginPage.pageStack.push(Qt.resolvedUrl("PasswordLoginPage.qml"))
             }
 
             Button {

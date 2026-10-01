@@ -17,6 +17,8 @@
 
 #include "qrcodegen.hpp"
 
+#include "Captcha.h"
+#include "PasswordLogin.h"
 #include "backend/QtHttpClient.h"
 #include "discord/network/DiscordAPI.hpp"
 
@@ -51,6 +53,12 @@ void RemoteAuth::start()
     m_qrImage.clear();
     emit qrImageChanged();
     setStatus(tr("Preparing QR code..."), true);
+    // The remote-auth gateway is Discord's; another server (the test one)
+    // has none.
+    if (!QString::fromStdString(GetDiscordAPI()).startsWith(QLatin1String("https://discord.com/"))) {
+        fail(tr("QR login only works with Discord's own servers."));
+        return;
+    }
 
     m_key = EVP_RSA_gen(2048);
     if (!m_key) {
@@ -62,7 +70,12 @@ void RemoteAuth::start()
     connect(m_socket, &QWebSocket::textMessageReceived, this, &RemoteAuth::handleMessage);
     connect(m_socket, &QWebSocket::disconnected, this, [this]() {
         m_heartbeat.stop();
-        if (!m_finished)
+        if (m_finished)
+            return;
+        // Never got as far as a code: no connection.
+        if (m_qrImage.isEmpty())
+            fail(tr("Couldn't reach Discord. Check your internet connection, then tap refresh."));
+        else
             fail(tr("The QR code expired. Tap refresh to get a new one."));
     });
 
@@ -166,10 +179,12 @@ void RemoteAuth::completeLogin(const QString& ticket)
     request.setHeader(QNetworkRequest::ContentTypeHeader, QByteArray("application/json"));
     const QByteArray body = QJsonDocument(QJsonObject{{QStringLiteral("ticket"), ticket}}).toJson(QJsonDocument::Compact);
 
-    QNetworkReply* reply = m_nam->post(request, body);
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        reply->deleteLater();
-        const QJsonObject response = QJsonDocument::fromJson(reply->readAll()).object();
+    sendWithCaptcha(m_nam, request, "POST", body, m_captcha, this, [this](const HttpResult& result) {
+        if (result.status != 200) {
+            fail(PasswordLogin::describe(result));
+            return;
+        }
+        const QJsonObject response = QJsonDocument::fromJson(result.body).object();
         const QByteArray token = decrypt(response.value(QStringLiteral("encrypted_token")).toString().toLatin1());
         if (token.isEmpty()) {
             fail(tr("Discord QR login failed. Tap refresh to try again."));
