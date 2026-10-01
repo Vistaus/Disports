@@ -7,6 +7,27 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(APP_NAME "disports")
 set(APP_ID "disports.jukfiuu")
 
+# Builds from a tagged commit are 1.0.0; any other is 1.0.0.<commit>, so
+# each one installs as a new version (and gets a fresh AppArmor profile).
+set(APP_VERSION ${PROJECT_VERSION})
+find_package(Git QUIET)
+if(GIT_FOUND AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
+    # The build container runs as another user than the checkout's owner.
+    set(GIT ${GIT_EXECUTABLE} -c safe.directory=* -C ${CMAKE_CURRENT_SOURCE_DIR})
+    execute_process(COMMAND ${GIT} describe --tags --exact-match
+        RESULT_VARIABLE TAGGED OUTPUT_QUIET ERROR_QUIET)
+    execute_process(COMMAND ${GIT} rev-parse --short=7 HEAD
+        OUTPUT_VARIABLE COMMIT OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    if(NOT TAGGED EQUAL 0 AND COMMIT)
+        set(APP_VERSION ${PROJECT_VERSION}.${COMMIT})
+    endif()
+    # Configure again after each commit.
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git/logs/HEAD)
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/.git/logs/HEAD)
+    endif()
+endif()
+message(STATUS "Disports ${APP_VERSION}")
+
 option(CLICK_MODE "Install as an Ubuntu Touch click package" ON)
 
 find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Qml Quick Network WebSockets DBus)
@@ -140,7 +161,7 @@ qt_add_resources(disports "data"
 )
 
 target_include_directories(disports PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_compile_definitions(disports PRIVATE DISPORTS_VERSION="${PROJECT_VERSION}"
+target_compile_definitions(disports PRIVATE DISPORTS_VERSION="${APP_VERSION}"
     DISPORTS_ARCH_TRIPLET="${CMAKE_LIBRARY_ARCHITECTURE}")
 
 target_link_libraries(disports PRIVATE
