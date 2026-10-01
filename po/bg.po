@@ -55,11 +55,12 @@ msgstr "Отказ"
 #: qml/CaptchaPage.qml
 msgid ""
 "Discord wants to make sure you're a person. Solve the captcha to continue."
-msgstr "Discord иска да се увери, че си човек. Реши капчата, за да продължиш."
+msgstr ""
+"Discord иска да се увери, че си човек. Мини проверката, за да продължиш."
 
 #: qml/CaptchaPage.qml
 msgid "The captcha couldn't be loaded. Check your internet connection."
-msgstr "Капчата не можа да се зареди. Провери интернет връзката си."
+msgstr "Проверката не можа да се зареди. Провери интернет връзката си."
 
 #: qml/ChannelInfoPage.qml
 msgid "Age-restricted channel"
@@ -242,8 +243,8 @@ msgid ""
 "Discord wants a captcha solved, but this version of Ubuntu Touch can't show "
 "one. Update to 24.04-2.x or newer."
 msgstr ""
-"Discord иска да решиш капча, но тази версия на Ubuntu Touch не може да я "
-"покаже. Обнови до 24.04-2.x или по-нова."
+"Discord иска да провери дали си човек, но тази версия на Ubuntu Touch не "
+"може да покаже проверката. Обнови до 24.04-2.x или по-нова."
 
 #: qml/MainPage.qml
 msgid "Pick a conversation"
@@ -629,11 +630,12 @@ msgid ""
 "Discord asked for a kind of captcha Disports can't show. Sign in with the QR "
 "code instead."
 msgstr ""
-"Discord поиска вид капча, която Disports не може да покаже. Влез с QR кода."
+"Discord поиска вид проверка дали си човек, която Disports не може да покаже. "
+"Влез с QR кода."
 
 #: src/PasswordLogin.cpp
 msgid "Discord needs the captcha solved before you can sign in."
-msgstr "Трябва да решиш капчата, преди да влезеш."
+msgstr "Трябва да минеш проверката дали си човек, преди да влезеш."
 
 #: src/PasswordLogin.cpp
 msgid "Too many attempts. Wait %1 s and try again."
