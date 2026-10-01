@@ -1,0 +1,59 @@
+name: Release
+
+# Pushing a tag such as v1.0.0 makes a GitHub release with both clicks. A
+# tagged build is versioned without the commit (see CMakeLists.txt), so the
+# tag has to match the version there.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  # Before the long build: the tag and the version must agree.
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check the version
+        run: |
+          version=$(sed -n 's/^project(disports VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::The tag is $GITHUB_REF_NAME but CMakeLists.txt says $version"
+            exit 1
+          fi
+
+  build:
+    needs: version
+    uses: ./.github/workflows/build.yaml
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: clicks
+          merge-multiple: true
+
+      # The clicks themselves must carry the plain version, not a commit.
+      - name: Check the clicks
+        run: |
+          ls clicks
+          for click in clicks/*.click; do
+            case "$(basename "$click")" in
+              disports.jukfiuu_${GITHUB_REF_NAME#v}_*.click) ;;
+              *) echo "::error::$(basename "$click") isn't version ${GITHUB_REF_NAME#v}"; exit 1 ;;
+            esac
+          done
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          name: ${{ github.ref_name }}
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+          generate_release_notes: true
+          files: clicks/*.click

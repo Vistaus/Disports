@@ -1,20 +1,18 @@
 name: Build
 
-# Every push builds the clicks for both architectures. Pushing a tag such
-# as v1.0.0 also makes a GitHub release with them; the tag has to match the
-# version in CMakeLists.txt, since a tagged build is versioned without the
-# commit (see CMakeLists.txt).
+# The clicks for both architectures, on every push and pull request. The
+# release workflow (release.yaml) builds with this too.
 
 on:
   push:
     branches: ['**']
-    tags: ['v*']
     paths-ignore: ['**.md', 'LICENSE', 'tools/test/**']
   pull_request:
   workflow_dispatch:
+  workflow_call:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: build-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -27,14 +25,14 @@ jobs:
         arch: [arm64, amd64]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
           # The tags, to tell a release build from a dev build.
           fetch-depth: 0
 
       # Rebuilding WebRTC, Abseil and the rest from scratch takes a while.
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: build
           key: build-${{ matrix.arch }}-${{ hashFiles('.gitmodules', 'clickable.yaml', 'third_party/CMakeLists.txt') }}-${{ github.sha }}
@@ -47,39 +45,9 @@ jobs:
             clickable/ci-ut24.04-2.x-${{ matrix.arch }}:8 \
             clickable build --arch ${{ matrix.arch }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: disports-${{ matrix.arch }}
           path: build/*/app/*.click
           if-no-files-found: error
           retention-days: 30
-
-  release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: clicks
-          merge-multiple: true
-
-      - name: Check the version
-        run: |
-          version=${GITHUB_REF_NAME#v}
-          ls clicks
-          for click in clicks/*.click; do
-            case "$(basename "$click")" in
-              disports.jukfiuu_${version}_*.click) ;;
-              *) echo "::error::$(basename "$click") is not version $version: update the version in CMakeLists.txt or the tag"; exit 1 ;;
-            esac
-          done
-
-      - uses: softprops/action-gh-release@v2
-        with:
-          name: ${{ github.ref_name }}
-          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
-          generate_release_notes: true
-          files: clicks/*.click
