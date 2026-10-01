@@ -1,0 +1,580 @@
+# Bulgarian translation of Disports.
+# Copyright (C) 2026 Martin Filipov
+# This file is distributed under the same license as the Disports package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Disports\n"
+"Report-Msgid-Bugs-To: https://github.com/jukfiuune/Disports/issues\n"
+"POT-Creation-Date: 2026-10-01 18:03+0300\n"
+"PO-Revision-Date: 2026-10-01 16:00+0300\n"
+"Last-Translator: Martin Filipov\n"
+"Language-Team: Bulgarian\n"
+"Language: bg\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: qml/AttachmentBar.qml
+msgid "Sending %1"
+msgstr "Изпращане на %1"
+
+#: qml/CallBanner.qml
+msgid "Tap to return to call"
+msgstr "Докосни, за да се върнеш в разговора"
+
+#: qml/CallBar.qml
+msgid "Call in progress"
+msgstr "Протича разговор"
+
+#: qml/CallBar.qml
+msgid "Tap to join"
+msgstr "Докосни, за да се включиш"
+
+#: qml/CallPage.qml src/voice/CallManager.cpp
+msgid "Calling..."
+msgstr "Набирам..."
+
+#: qml/CallPage.qml src/voice/CallManager.cpp
+msgid "Connecting..."
+msgstr "Свързване..."
+
+#: qml/CallPage.qml
+msgid "You are deafened"
+msgstr "Заглушен си"
+
+#: qml/ChannelInfoPage.qml
+msgid "Age-restricted channel"
+msgstr "Канал с възрастово ограничение"
+
+#: qml/ChannelInfoPage.qml
+msgid "Blocked"
+msgstr "Блокиран"
+
+#: qml/ChannelInfoPage.qml
+msgid "Category"
+msgstr "Категория"
+
+#: qml/ChannelInfoPage.qml
+msgid "Channel"
+msgstr "Канал"
+
+#: qml/ChannelInfoPage.qml qml/MessageDelegate.qml
+msgid "Copy"
+msgstr "Копирай"
+
+#: qml/ChannelInfoPage.qml
+msgid "ID"
+msgstr "ID"
+
+#: qml/ChannelInfoPage.qml qml/ChatPage.qml
+msgid "Info"
+msgstr "Информация"
+
+#: qml/ChannelInfoPage.qml
+msgid "Members (%1)"
+msgstr "Членове (%1)"
+
+#: qml/ChannelInfoPage.qml
+msgid "Server"
+msgstr "Сървър"
+
+#: qml/ChannelInfoPage.qml
+msgid "Topic"
+msgstr "Тема"
+
+#: qml/ChannelPanel.qml qml/MessageList.qml
+msgid "Loading..."
+msgstr "Зареждане..."
+
+#: qml/ChannelPanel.qml
+msgid "No channels"
+msgstr "Няма канали"
+
+#: qml/ChannelPanel.qml
+msgid "No conversations yet"
+msgstr "Все още няма разговори"
+
+#: qml/ChannelPanel.qml
+msgid "and %1 more"
+msgstr "и още %1"
+
+#: qml/ChatPage.qml
+msgid "Call"
+msgstr "Обади се"
+
+#: qml/ChatPage.qml
+msgid "Join call"
+msgstr "Присъедини се"
+
+#: qml/ChatPanel.qml
+msgid "Are you sure you want to permanently delete this message?"
+msgstr "Сигурен ли си, че искаш да изтриеш съобщението окончателно?"
+
+#: qml/ChatPanel.qml qml/LoginPage.qml qml/SettingsPage.qml
+msgid "Cancel"
+msgstr "Отказ"
+
+#: qml/ChatPanel.qml qml/MessageDelegate.qml
+msgid "Delete"
+msgstr "Изтрий"
+
+#: qml/ChatPanel.qml
+msgid "Delete message"
+msgstr "Изтриване на съобщение"
+
+#: qml/Composer.qml qml/ConnectionBanner.qml qml/Main.qml
+msgid "Connecting to Discord..."
+msgstr "Свързване с Discord..."
+
+#: qml/Composer.qml
+msgid "Editing message"
+msgstr "Редактиране на съобщение"
+
+#: qml/Composer.qml
+msgid "Message %1"
+msgstr "Пиши в %1"
+
+#: qml/Composer.qml
+msgid ""
+"Messages cannot exceed %1 characters. Your text has been truncated to fit "
+"the limit."
+msgstr "Съобщенията не могат да надвишават %1 знака. Текстът ти беше съкратен."
+
+#: qml/Composer.qml
+msgid "Replying to %1"
+msgstr "Отговор на %1"
+
+#: qml/Composer.qml src/MessageSender.cpp
+msgid "Slowmode: wait %1 s"
+msgstr "Бавен режим: изчакай %1 сек."
+
+#: qml/Composer.qml qml/Main.qml
+msgid "Waiting for network..."
+msgstr "Изчакване на мрежа..."
+
+#: qml/Composer.qml src/MessageSender.cpp
+msgid "You can't send messages in this channel"
+msgstr "Не можеш да изпращаш съобщения в този канал"
+
+#: qml/ConnectionBanner.qml src/voice/CallManager.cpp
+msgid "Connected"
+msgstr "Свързан"
+
+#: qml/ConnectionBanner.qml
+msgid "Offline - showing saved conversations"
+msgstr "Офлайн - показани са запазените разговори"
+
+#: qml/ConnectionBanner.qml
+msgid "Reconnecting - retrying in %1 second, tap to retry now"
+msgid_plural "Reconnecting - retrying in %1 seconds, tap to retry now"
+msgstr[0] "Повторно свързване след %1 секунда, докосни за опит сега"
+msgstr[1] "Повторно свързване след %1 секунди, докосни за опит сега"
+
+#: qml/ContentPickerPage.qml
+msgid "Attach a file"
+msgstr "Прикачи файл"
+
+#: qml/EmojiPicker.qml
+msgid "No emoji found"
+msgstr "Няма намерени emoji"
+
+#: qml/EmojiPicker.qml
+msgid "Search emoji"
+msgstr "Търси emoji"
+
+#: qml/LoginPage.qml
+msgid "Paste a token instead (not recommended)"
+msgstr "Постави ключ (не се препоръчва)"
+
+#: qml/LoginPage.qml
+msgid "Paste your Discord account token to sign in directly."
+msgstr "Постави ключа на профила си в Discord, за да влезеш директно."
+
+#: qml/LoginPage.qml
+msgid "Refresh QR code"
+msgstr "Опресни QR кода"
+
+#: qml/LoginPage.qml
+msgid "Scan the QR code with the Discord mobile app, or paste a token instead."
+msgstr "Сканирай QR кода с мобилното приложение на Discord или постави ключ."
+
+#: qml/LoginPage.qml
+msgid "Sign in"
+msgstr "Вход"
+
+#: qml/LoginPage.qml
+msgid "Sign in with a token"
+msgstr "Вход с ключ"
+
+#: qml/LoginPage.qml
+msgid "Token"
+msgstr "Ключ"
+
+#: qml/LoginPage.qml
+msgid ""
+"Using any unofficial Discord client is against Discord's Terms of Service "
+"and may result in your account being restricted or banned."
+msgstr ""
+"Използването на неофициален клиент за Discord нарушава Условията за ползване "
+"на Discord и може да доведе до ограничаване или блокиране на профила ти."
+
+#: qml/MainPage.qml
+msgid "Pick a conversation"
+msgstr "Избери разговор"
+
+#: qml/MainPage.qml qml/SettingsPage.qml
+msgid "Settings"
+msgstr "Настройки"
+
+#: qml/MediaViewerPage.qml
+msgid "Media"
+msgstr "Мултимедия"
+
+#: qml/MediaViewerPage.qml
+msgid "Open in browser"
+msgstr "Отвори в браузъра"
+
+#: qml/MediaViewerPage.qml qml/VideoPlayer.qml
+msgid "Use \"Open in browser\"."
+msgstr "Използвай \"Отвори в браузъра\"."
+
+#: qml/MediaViewerPage.qml src/media/GstVideoPlayer.cpp
+msgid "Videos can't be played on this device."
+msgstr "Видеоклиповете не могат да се възпроизвеждат на това устройство."
+
+#: qml/MessageDelegate.qml
+msgid "Edit"
+msgstr "Редактирай"
+
+#: qml/MessageDelegate.qml
+msgid "Forwarded"
+msgstr "Препратено"
+
+#: qml/MessageDelegate.qml
+msgid "Message from a blocked user"
+msgstr "Съобщение от блокиран потребител"
+
+#: qml/MessageDelegate.qml
+msgid "Original message was deleted"
+msgstr "Оригиналното съобщение е изтрито"
+
+#: qml/MessageDelegate.qml
+msgid "React"
+msgstr "Реагирай"
+
+#: qml/MessageDelegate.qml
+msgid "Reply"
+msgstr "Отговори"
+
+#: qml/MessageDelegate.qml
+msgid "Show"
+msgstr "Покажи"
+
+#: qml/MessageList.qml
+msgid "It isn't in the last %1 messages. Keep looking?"
+msgstr "Не е сред последните %1 съобщения. Да продължа ли да търся?"
+
+#: qml/MessageList.qml
+msgid "Keep looking"
+msgstr "Продължи търсенето"
+
+#: qml/MessageList.qml
+msgid "Load older messages"
+msgstr "Зареди по-стари съобщения"
+
+#: qml/MessageList.qml
+msgid "Stop"
+msgstr "Спри"
+
+#: qml/MessageList.qml
+msgid "The message could not be found."
+msgstr "Съобщението не беше намерено."
+
+#: qml/MessageList.qml
+msgid "The message is far back"
+msgstr "Съобщението е далеч назад"
+
+#: qml/MessageList.qml
+msgid "This is the beginning of #%1"
+msgstr "Това е началото на #%1"
+
+#: qml/MessageList.qml
+msgid "This is the beginning of your conversation with %1"
+msgstr "Това е началото на разговора ти с %1"
+
+#: qml/MessageList.qml
+msgid "You don't have permission to read earlier messages in this channel"
+msgstr "Нямаш право да четеш по-стари съобщения в този канал"
+
+#: qml/PollCard.qml
+msgid "%1 vote"
+msgid_plural "%1 votes"
+msgstr[0] "%1 глас"
+msgstr[1] "%1 гласа"
+
+#: qml/PollCard.qml
+msgid "Poll"
+msgstr "Анкета"
+
+#: qml/PollCard.qml
+msgid "Poll closed"
+msgstr "Анкетата приключи"
+
+#: qml/PollCard.qml
+msgid "pick any"
+msgstr "избери няколко"
+
+#: qml/SettingsPage.qml
+msgid "Calls"
+msgstr "Обаждания"
+
+#: qml/SettingsPage.qml
+msgid "Chat"
+msgstr "Чат"
+
+#: qml/SettingsPage.qml
+msgid "Dark"
+msgstr "Тъмна"
+
+#: qml/SettingsPage.qml src/Session.cpp
+msgid "Direct messages"
+msgstr "Лични съобщения"
+
+#: qml/SettingsPage.qml
+msgid "Echo cancellation"
+msgstr "Потискане на ехото"
+
+#: qml/SettingsPage.qml
+msgid "Follow system"
+msgstr "Следвай системата"
+
+#: qml/SettingsPage.qml
+msgid "Hide completely"
+msgstr "Скрий напълно"
+
+#: qml/SettingsPage.qml
+msgid "How far the message box grows before it scrolls"
+msgstr "Докъде расте полето за съобщения, преди да започне превъртане"
+
+#: qml/SettingsPage.qml
+msgid ""
+"Keeps others from hearing themselves through your loudspeaker, and evens out "
+"your volume."
+msgstr ""
+"Пречи на другите да чуват себе си през високоговорителя ти и изравнява "
+"силата на звука."
+
+#: qml/SettingsPage.qml
+msgid "Light"
+msgstr "Светла"
+
+#: qml/SettingsPage.qml
+msgid "Log out"
+msgstr "Изход"
+
+#: qml/SettingsPage.qml
+msgid "Message box lines"
+msgstr "Редове в полето за съобщения"
+
+#: qml/SettingsPage.qml
+msgid "Messages from blocked users"
+msgstr "Съобщения от блокирани потребители"
+
+#: qml/SettingsPage.qml
+msgid "Noise suppression"
+msgstr "Потискане на шума"
+
+#: qml/SettingsPage.qml
+msgid "Play GIFs automatically"
+msgstr "Автоматично пускане на GIF-ове"
+
+#: qml/SettingsPage.qml
+msgid ""
+"Removes background noise such as typing, fans and traffic from your "
+"microphone."
+msgstr ""
+"Премахва фоновия шум от микрофона ти, като писане, вентилатори и трафик."
+
+#: qml/SettingsPage.qml
+msgid "Show a placeholder to tap"
+msgstr "Покажи заместител за докосване"
+
+#: qml/SettingsPage.qml
+msgid "Show normally"
+msgstr "Покажи нормално"
+
+#: qml/SettingsPage.qml
+msgid "Show profile pictures"
+msgstr "Показвай профилни снимки"
+
+#: qml/SettingsPage.qml
+msgid "Theme"
+msgstr "Тема"
+
+#: qml/SettingsPage.qml
+msgid "You'll need to sign in again to use Disports."
+msgstr "Ще трябва да влезеш отново, за да използваш Disports."
+
+#: qml/Sidebar.qml
+msgid "DMs"
+msgstr "ЛС"
+
+#: qml/VideoPlayer.qml src/media/GstVideoPlayer.cpp
+msgid "The video could not be played."
+msgstr "Видеоклипът не може да се възпроизведе."
+
+#: src/ChannelInfo.cpp
+msgid "Direct message"
+msgstr "Лично съобщение"
+
+#: src/ChannelInfo.cpp
+msgid "Group"
+msgstr "Група"
+
+#: src/ChannelInfo.cpp
+msgid "Voice channel"
+msgstr "Гласов канал"
+
+#: src/ChannelInfo.cpp
+msgid "Stage channel"
+msgstr "Сценичен канал"
+
+#: src/ChannelInfo.cpp
+msgid "Announcement channel"
+msgstr "Канал за обявления"
+
+#: src/ChannelInfo.cpp
+msgid "Forum"
+msgstr "Форум"
+
+#: src/ChannelInfo.cpp
+msgid "Media channel"
+msgstr "Мултимедиен канал"
+
+#: src/ChannelInfo.cpp
+msgid "Thread"
+msgstr "Нишка"
+
+#: src/ChannelInfo.cpp
+msgid "Text channel"
+msgstr "Текстов канал"
+
+#: src/ChannelPermissions.cpp
+msgid "You're timed out until %1"
+msgstr "Имаш ограничение до %1"
+
+#: src/MentionSuggester.cpp
+msgid "Notify everyone who can see this channel"
+msgstr "Уведоми всички, които виждат този канал"
+
+#: src/MentionSuggester.cpp
+msgid "Notify everyone online who can see this channel"
+msgstr "Уведоми всички на линия, които виждат този канал"
+
+#: src/MentionSuggester.cpp
+msgid "Role"
+msgstr "Роля"
+
+#: src/MessageSender.cpp
+msgid "Wait for the file being sent to finish."
+msgstr "Изчакай файлът да се изпрати."
+
+#: src/MessageSender.cpp
+msgid "You can't attach files in this channel."
+msgstr "Не можеш да прикачваш файлове в този канал."
+
+#: src/MessageSender.cpp
+msgid "%1 is too large to send."
+msgstr "%1 е твърде голям за изпращане."
+
+#: src/MessageSender.cpp
+msgid "%1 could not be read."
+msgstr "%1 не можа да бъде прочетен."
+
+#: src/MessageSender.cpp
+msgid "%1 could not be sent (error %2)."
+msgstr "%1 не можа да бъде изпратен (грешка %2)."
+
+#: src/RemoteAuth.cpp
+msgid "Preparing QR code..."
+msgstr "Подготвяне на QR кода..."
+
+#: src/RemoteAuth.cpp
+msgid "Discord QR login failed. Tap refresh to try again."
+msgstr "Входът с QR код не успя. Опресни кода, за да опиташ отново."
+
+#: src/RemoteAuth.cpp
+msgid "The QR code expired. Tap refresh to get a new one."
+msgstr "QR кодът изтече. Опресни го, за да получиш нов."
+
+#: src/RemoteAuth.cpp
+msgid "Open Discord on your Android or iOS device and scan to sign in."
+msgstr ""
+"Отвори Discord на устройството си с Android или iOS и сканирай кода, за да "
+"влезеш."
+
+#: src/RemoteAuth.cpp
+msgid "Confirm the login on your phone."
+msgstr "Потвърди входа на телефона си."
+
+#: src/RemoteAuth.cpp
+msgid "QR login was canceled on your phone."
+msgstr "Входът с QR код беше отказан от телефона ти."
+
+#: src/RemoteAuth.cpp
+msgid "Signing in..."
+msgstr "Влизане..."
+
+#: src/RemoteAuth.cpp
+msgid "Signed in."
+msgstr "Влизането е успешно."
+
+#: src/Session.cpp
+msgid "Your session has expired. Please sign in again."
+msgstr "Сесията ти изтече. Моля, влез отново."
+
+#: src/Session.cpp
+msgid "The message could not be edited."
+msgstr "Съобщението не можа да бъде редактирано."
+
+#: src/TypingIndicator.cpp
+msgid "Someone"
+msgstr "Някой"
+
+#: src/TypingIndicator.cpp
+msgid "%1 is typing..."
+msgstr "%1 пише..."
+
+#: src/TypingIndicator.cpp
+msgid "%1 and %2 are typing..."
+msgstr "%1 и %2 пишат..."
+
+#: src/TypingIndicator.cpp
+msgid "Several people are typing..."
+msgstr "Няколко души пишат..."
+
+#: src/voice/CallManager.cpp
+msgid "You left the call: no one else joined for 3 minutes."
+msgstr "Напусна разговора: никой друг не се включи за 3 минути."
+
+#: src/voice/CallManager.cpp
+msgid "Incoming call"
+msgstr "Входящо обаждане"
+
+#: src/voice/CallManager.cpp
+msgid "Waiting for others..."
+msgstr "Изчакване на другите..."
+
+#: src/voice/CallManager.cpp
+msgid "The call ended: the connection to Discord was lost."
+msgstr "Разговорът приключи: връзката с Discord беше загубена."
+
+#: src/voice/CallManager.cpp
+msgid "You don't have permission to speak in this channel."
+msgstr "Нямаш право да говориш в този канал."
+
+#: src/voice/CallManager.cpp
+msgid "The call ended: %1"
+msgstr "Разговорът приключи: %1"
