@@ -9,7 +9,7 @@ on:
   push:
     branches: ['**']
     tags: ['v*']
-    paths-ignore: ['**.md', 'LICENSE', 'po/**', 'tools/test/**']
+    paths-ignore: ['**.md', 'LICENSE', 'tools/test/**']
   pull_request:
   workflow_dispatch:
 
