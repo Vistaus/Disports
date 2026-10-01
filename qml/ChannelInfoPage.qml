@@ -95,6 +95,17 @@ Page {
             }
 
             ListItem {
+                visible: (infoPage.info.channel || "") !== ""
+                height: visible ? channelLayout.height + divider.height : 0
+
+                ListItemLayout {
+                    id: channelLayout
+                    title.text: i18n.tr("Channel")
+                    subtitle.text: infoPage.info.channel || ""
+                }
+            }
+
+            ListItem {
                 visible: (infoPage.info.category || "") !== ""
                 height: visible ? categoryLayout.height + divider.height : 0
 

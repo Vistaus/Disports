@@ -53,7 +53,7 @@ GUILD = "1000"
 ROLE_MODS = "1900"
 ROLE_MUTED = "1901"
 VIEW, SEND, HISTORY, ATTACH, MENTION_EVERYONE = 0x400, 0x800, 0x10000, 0x8000, 0x20000
-EVERYONE_PERMS = 0x400 | 0x800 | 0x10000 | 0x8000 | 0x40 | 0x100000 | 0x200000
+EVERYONE_PERMS = 0x400 | 0x800 | 0x10000 | 0x8000 | 0x40 | 0x100000 | 0x200000 | 0x4000000000
 
 CATEGORY, GENERAL, HIDDEN, READONLY, NOHISTORY, SLOW, NOFILES = "1100", "1101", "1102", "1103", "1104", "1105", "1106"
 LOUNGE, EMPTY_VOICE = "1107", "1108"
@@ -69,6 +69,20 @@ GROUP = "2003"
 
 def overwrite(target, allow=0, deny=0, member=False):
     return {"id": target, "type": 1 if member else 0, "allow": str(allow), "deny": str(deny)}
+
+
+# Threads in #general, sent once we subscribe to the server. Listed: one
+# with a message an hour ago, and an old locked one we are in. Not listed:
+# an old one we aren't in, and an archived one.
+def thread(tid, name, archived=False, locked=False):
+    return {"id": tid, "type": 11, "name": name, "guild_id": GUILD, "parent_id": GENERAL, "owner_id": "200",
+            "thread_metadata": {"archived": archived, "locked": locked, "auto_archive_duration": 1440}}
+
+
+THREAD, LOCKED_THREAD, OLD_THREAD, ARCHIVED_THREAD = str((int(time.time() * 1000) - 3600000 - 1420070400000) << 22), "1202", "1203", "1204"
+THREADS = [thread(THREAD, "release plans"), thread(LOCKED_THREAD, "announcements chat", locked=True),
+           thread(OLD_THREAD, "old chatter"), thread(ARCHIVED_THREAD, "old thread", archived=True)]
+THREAD_MEMBERS = [{"id": LOCKED_THREAD, "user_id": "100", "join_timestamp": "2025-01-01T00:00:00+00:00", "flags": 0}]
 
 
 CHANNELS = [
@@ -134,7 +148,7 @@ def message(channel, author, content, **extra):
     return m
 
 
-for ch in (GENERAL, NOHISTORY, SLOW, NOFILES, READONLY, DM):
+for ch in (GENERAL, NOHISTORY, SLOW, NOFILES, READONLY, DM, THREAD):
     HISTORY_MSGS[ch] = [message(ch, ALICE, "Hello from Alice in %s" % ch)]
 
 # #media: 200 messages of pictures, videos, several pictures, link previews,
@@ -323,6 +337,11 @@ async def gateway(ws):
                 if d.get("channel_id") == LOUNGE:
                     for u in LOUNGE_PEOPLE[:4]:
                         await dispatch(ws, "VOICE_STATE_UPDATE", lounge_state(u))
+            elif op == 14:
+                log("GATEWAY subscribe", json.dumps(d)[:200])
+                if d.get("guild_id") == GUILD:
+                    await dispatch(ws, "THREAD_LIST_SYNC", {"guild_id": GUILD, "channel_ids": [GENERAL],
+                                                            "threads": THREADS, "members": THREAD_MEMBERS})
             elif op == 8:
                 query = (d.get("query") or "").lower()
                 ids = d.get("user_ids") or []

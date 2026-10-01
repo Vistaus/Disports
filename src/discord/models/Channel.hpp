@@ -32,12 +32,14 @@ struct Channel
 	Snowflake m_snowflake = 0;
 	Snowflake m_lastSentMsg = 0; // The message that was sent last.
 	Snowflake m_lastViewedMsg = 0; // The last message that was read in this channel.
-	Snowflake m_parentCateg = 0;
+	Snowflake m_parentCateg = 0; // threads: the channel they are in
 	Snowflake m_parentGuild = 0;
 	std::vector<Snowflake> m_recipients; // valid only for DM and group DM channels
 	std::string m_name = "";
 	std::string m_topic = "";
 	bool m_bNSFW = false; // age-restricted
+	bool m_bLocked = false; // threads: only moderators can write
+	bool m_bJoined = false; // threads: we are a member
 	int m_slowmodeSeconds = 0; // rate_limit_per_user
 	std::string m_avatarLnk = ""; // valid only for DM channels
 	int m_pos = 0;
@@ -111,6 +113,11 @@ struct Channel
 	bool IsVoice() const {
 		auto t = m_channelType;
 		return t == VOICE || t == STAGEVOICE;
+	}
+
+	bool IsThread() const {
+		auto t = m_channelType;
+		return t == NEWSTHREAD || t == PUBTHREAD || t == PRIVTHREAD;
 	}
 
 	bool IsText() const {

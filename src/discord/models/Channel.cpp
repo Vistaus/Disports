@@ -10,6 +10,20 @@ uint64_t Channel::ComputePermissionOverwrites(Snowflake Member, uint64_t BasePer
 	if (BasePermissions & PERM_ADMINISTRATOR)
 		return PERM_ALL;
 
+	// Threads take their channel's permissions; writing in them needs
+	// "Send Messages in Threads" instead.
+	if (IsThread())
+	{
+		Guild* pGuild = GetDiscordInstance()->GetGuild(m_parentGuild);
+		Channel* pParent = pGuild ? pGuild->GetChannel(m_parentCateg) : nullptr;
+		uint64_t perms = pParent && !pParent->IsThread() ? pParent->ComputePermissionOverwrites(Member, BasePermissions) : 0;
+		if ((perms & PERM_SEND_MESSAGES_IN_THREADS) && (!m_bLocked || (perms & PERM_MANAGE_THREADS)))
+			perms |= PERM_SEND_MESSAGES;
+		else
+			perms &= ~PERM_SEND_MESSAGES;
+		return perms;
+	}
+
 	// Find @everyone overwrite and apply it.
 	auto everyoneIter = m_overwrites.find(m_parentGuild);
 	if (everyoneIter != m_overwrites.end())

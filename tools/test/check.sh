@@ -156,6 +156,13 @@ scenario_switch() {     # from the voice channel straight to calling Bob, who de
     fi
 }
 
+scenario_threads() {    # #general's threads in the list; open one and write in it
+    STEPS="sleep 6;click 165 187;sleep 2;click 700 772;sleep 1;type in the thread;key Return;sleep 2" \
+        "$HERE/run.sh" threads 13000 DISPORTS_OPEN_CHANNEL=1101 "${WIDE[@]}"
+    expect threads 'GATEWAY subscribe .*"threads": true'
+    expect threads 'REST send [0-9]{15,} .*"in the thread"'
+}
+
 scenario_reply() {      # tap a reply to a message 390 back: five pages, the question, keep looking
     STEPS="sleep 6;click 560 702;sleep 8;click 500 417;sleep 4" \
         "$HERE/run.sh" reply 20000 DISPORTS_OPEN_CHANNEL=1110 "${WIDE[@]}"
@@ -172,7 +179,7 @@ scenario_permissions() { # read-only, no history, no files, slowmode
     done
 }
 
-ALL=(channels mentions upload zoom nicknames dmcall call switch reply permissions)
+ALL=(channels mentions upload zoom nicknames dmcall call switch threads reply permissions)
 SCENARIOS=("${@:-${ALL[@]}}")
 [ $# -eq 0 ] && SCENARIOS=("${ALL[@]}")
 

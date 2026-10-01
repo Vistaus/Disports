@@ -2155,6 +2155,8 @@ void DiscordInstance::ParseChannel(Channel& c, nlohmann::json& chan, int& num)
 	c.m_topic = GetFieldSafe(chan, "topic");
 	c.m_bNSFW = GetFieldSafeBool(chan, "nsfw", false);
 	c.m_slowmodeSeconds = GetFieldSafeInt(chan, "rate_limit_per_user");
+	if (chan.contains("thread_metadata") && chan["thread_metadata"].is_object())
+		c.m_bLocked = GetFieldSafeBool(chan["thread_metadata"], "locked", false);
 
 	ParsePermissionOverwrites(c, chan);
 
@@ -2314,6 +2316,13 @@ void DiscordInstance::ParseAndAddGuild(nlohmann::json& elem)
 		ParseChannel(c, chan, order);
 		c.m_parentGuild = g.m_snowflake;
 		g.m_channels.push_back(c);
+	}
+
+	// Active threads, when Discord includes them.
+	if (elem.contains("threads") && elem["threads"].is_array())
+	{
+		for (auto& thread : elem["threads"])
+			UpdateThread(g, thread);
 	}
 
 	g.m_channels.sort();
@@ -2534,6 +2543,12 @@ void DiscordInstance::InitDispatchFunctions()
 	DECL(CHANNEL_CREATE);
 	DECL(CHANNEL_DELETE);
 	DECL(CHANNEL_UPDATE);
+	DECL(THREAD_CREATE);
+	DECL(THREAD_UPDATE);
+	DECL(THREAD_DELETE);
+	DECL(THREAD_LIST_SYNC);
+	DECL(THREAD_MEMBER_UPDATE);
+	DECL(THREAD_MEMBERS_UPDATE);
 	DECL(GUILD_MEMBER_LIST_UPDATE);
 	DECL(GUILD_MEMBERS_CHUNK);
 	DECL(TYPING_START);
@@ -3042,6 +3057,130 @@ void DiscordInstance::HandleCHANNEL_CREATE(Json& j)
 
 	if (m_CurrentGuild == guildId)
 		GetFrontend()->UpdateChannelList();
+}
+
+bool DiscordInstance::UpdateThread(Guild& guild, Json& data)
+{
+	const Snowflake id = GetSnowflake(data, "id");
+	if (!id)
+		return false;
+	bool archived = false;
+	if (data.contains("thread_metadata") && data["thread_metadata"].is_object())
+		archived = GetFieldSafeBool(data["thread_metadata"], "archived", false);
+
+	for (auto it = guild.m_channels.begin(); it != guild.m_channels.end(); ++it)
+	{
+		if (it->m_snowflake != id)
+			continue;
+		if (archived) {
+			guild.m_channels.erase(it);
+			return true;
+		}
+		int ord = it->m_pos;
+		ParseChannel(*it, data, ord);
+		it->m_parentGuild = guild.m_snowflake;
+		// Our membership comes along when we are in it.
+		if (data.contains("member") && data["member"].is_object())
+			it->m_bJoined = true;
+		return true;
+	}
+	if (archived)
+		return false;
+
+	int ord = 0;
+	Channel thread;
+	ParseChannel(thread, data, ord);
+	thread.m_parentGuild = guild.m_snowflake;
+	thread.m_bJoined = data.contains("member") && data["member"].is_object();
+	guild.m_channels.push_back(thread);
+	return true;
+}
+
+void DiscordInstance::HandleTHREAD_CREATE(Json& j)
+{
+	Json& data = j["d"];
+	const Snowflake guildId = GetSnowflake(data, "guild_id");
+	Guild* pGuild = GetGuild(guildId);
+	if (pGuild && UpdateThread(*pGuild, data) && m_CurrentGuild == guildId)
+		GetFrontend()->UpdateChannelList();
+}
+
+void DiscordInstance::HandleTHREAD_UPDATE(Json& j)
+{
+	HandleTHREAD_CREATE(j);
+}
+
+void DiscordInstance::HandleTHREAD_DELETE(Json& j)
+{
+	HandleCHANNEL_DELETE(j);
+}
+
+// The active threads of a server's channels, after subscribing to it.
+void DiscordInstance::HandleTHREAD_LIST_SYNC(Json& j)
+{
+	Json& data = j["d"];
+	const Snowflake guildId = GetSnowflake(data, "guild_id");
+	Guild* pGuild = GetGuild(guildId);
+	if (!pGuild || !data.contains("threads") || !data["threads"].is_array())
+		return;
+	bool changed = false;
+	for (auto& thread : data["threads"])
+		changed = UpdateThread(*pGuild, thread) || changed;
+	// Our memberships: the threads we are in.
+	if (data.contains("members") && data["members"].is_array())
+	{
+		for (auto& member : data["members"])
+		{
+			if (GetSnowflake(member, "user_id") != m_mySnowflake)
+				continue;
+			if (Channel* pThread = pGuild->GetChannel(GetSnowflake(member, "id")))
+				pThread->m_bJoined = true;
+		}
+	}
+	if (changed && m_CurrentGuild == guildId)
+		GetFrontend()->UpdateChannelList();
+}
+
+void DiscordInstance::SetThreadJoined(Snowflake guildId, Snowflake threadId, bool joined)
+{
+	Guild* pGuild = GetGuild(guildId);
+	Channel* pThread = pGuild ? pGuild->GetChannel(threadId) : nullptr;
+	if (!pThread || !pThread->IsThread() || pThread->m_bJoined == joined)
+		return;
+	pThread->m_bJoined = joined;
+	if (m_CurrentGuild == guildId)
+		GetFrontend()->UpdateChannelList();
+}
+
+// Our own membership of a thread.
+void DiscordInstance::HandleTHREAD_MEMBER_UPDATE(Json& j)
+{
+	Json& data = j["d"];
+	SetThreadJoined(GetSnowflake(data, "guild_id"), GetSnowflake(data, "id"), true);
+}
+
+// People joining and leaving a thread, us among them.
+void DiscordInstance::HandleTHREAD_MEMBERS_UPDATE(Json& j)
+{
+	Json& data = j["d"];
+	const Snowflake guildId = GetSnowflake(data, "guild_id");
+	const Snowflake threadId = GetSnowflake(data, "id");
+	if (data.contains("added_members") && data["added_members"].is_array())
+	{
+		for (auto& member : data["added_members"])
+		{
+			if (GetSnowflake(member, "user_id") == m_mySnowflake)
+				SetThreadJoined(guildId, threadId, true);
+		}
+	}
+	if (data.contains("removed_member_ids") && data["removed_member_ids"].is_array())
+	{
+		for (auto& id : data["removed_member_ids"])
+		{
+			if (GetSnowflakeFromJsonObject(id) == m_mySnowflake)
+				SetThreadJoined(guildId, threadId, false);
+		}
+	}
 }
 
 void DiscordInstance::HandleCHANNEL_UPDATE(Json& j)

@@ -21,14 +21,14 @@ public:
     enum Roles {
         ChannelIdRole = Qt::UserRole + 1,
         NameRole,
-        KindRole,        // "text", "announcement", "voice", "forum", "category", "dm", "group"
+        KindRole,        // "text", "announcement", "voice", "forum", "thread", "category", "dm", "group"
         IsCategoryRole,
         OpenableRole,
         UnreadRole,
         MentionsRole,
         IconUrlRole,     // direct messages only
         TopicRole,
-        IndentedRole,    // belongs to a category
+        IndentedRole,    // belongs to a category (threads: their channel does)
         StatusRole,      // 1:1 direct messages: "online", "idle", "dnd" or "offline"
         BlockedRole,     // 1:1 direct messages with a user the account blocked
         InCallRole,      // a call in this conversation, or people in this voice channel

@@ -97,7 +97,8 @@ Item {
                     anchors {
                         left: parent.left
                         right: parent.right
-                        leftMargin: units.gu(row.indented ? 3 : 2)
+                        // Threads one step further in, under their channel.
+                        leftMargin: units.gu((row.indented ? 3 : 2) + (row.kind === "thread" ? 2 : 0))
                         rightMargin: units.gu(2)
                         verticalCenter: mainLine.verticalCenter
                     }
@@ -185,8 +186,10 @@ Item {
                             width: units.gu(2)
                             height: width
                             visible: row.kind === "voice" || row.kind === "announcement" || row.kind === "forum"
+                                     || row.kind === "thread"
                             name: row.kind === "voice" ? "audio-speakers-symbolic"
-                                                       : (row.kind === "announcement" ? "notification" : "message")
+                                : row.kind === "announcement" ? "notification"
+                                : row.kind === "thread" ? "mail-reply" : "message"
                             // A voice channel with people in it
                             color: row.inCall ? theme.palette.normal.positive : theme.palette.normal.backgroundSecondaryText
                         }

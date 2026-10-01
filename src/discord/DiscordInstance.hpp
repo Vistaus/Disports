@@ -575,6 +575,17 @@ private:
 	void HandleGUILD_DELETE(nlohmann::json& j);
 	void HandleCHANNEL_CREATE(nlohmann::json& j);
 	void HandleCHANNEL_DELETE(nlohmann::json& j);
+	void HandleTHREAD_CREATE(nlohmann::json& j);
+	void HandleTHREAD_UPDATE(nlohmann::json& j);
+	void HandleTHREAD_DELETE(nlohmann::json& j);
+	void HandleTHREAD_LIST_SYNC(nlohmann::json& j);
+	void HandleTHREAD_MEMBER_UPDATE(nlohmann::json& j);
+	void HandleTHREAD_MEMBERS_UPDATE(nlohmann::json& j);
+	// We joined or left a thread.
+	void SetThreadJoined(Snowflake guild, Snowflake thread, bool joined);
+	// Adds or updates an active thread; archived ones are removed.
+	// Returns whether the list changed.
+	bool UpdateThread(Guild& guild, nlohmann::json& data);
 	void HandleCHANNEL_UPDATE(nlohmann::json& j);
 	void HandleGUILD_MEMBER_UPDATE(nlohmann::json& j);
 	void HandleGUILD_ROLE_CREATE(nlohmann::json& j);

@@ -1,5 +1,7 @@
 #include "ChannelListModel.h"
 
+#include <QDateTime>
+
 #include <algorithm>
 
 #include "discord/DiscordInstance.hpp"
@@ -22,11 +24,15 @@ QString kindOf(const Channel& channel)
     case Channel::STAGEVOICE: return QStringLiteral("voice");
     case Channel::FORUM:
     case Channel::MEDIA:      return QStringLiteral("forum");
+    case Channel::NEWSTHREAD:
+    case Channel::PUBTHREAD:
+    case Channel::PRIVTHREAD: return QStringLiteral("thread");
     default:                  return QStringLiteral("text");
     }
 }
 
-// Voice channels have a text chat too; forums need thread support first.
+// Voice channels have a text chat too. Forums are only lists of threads,
+// which are listed under them.
 bool isOpenable(const Channel& channel)
 {
     switch (channel.m_channelType) {
@@ -41,10 +47,16 @@ bool isOpenable(const Channel& channel)
     }
 }
 
-bool isThread(const Channel& channel)
+// Threads we aren't in, listed per channel because they had messages
+// lately.
+const int MaxRecentThreads = 3;
+
+// When the last message was sent (or the thread was made), from the
+// snowflake.
+qint64 lastActivityMs(const Channel& channel)
 {
-    const int type = channel.m_channelType;
-    return type == Channel::NEWSTHREAD || type == Channel::PUBTHREAD || type == Channel::PRIVTHREAD;
+    const uint64_t id = std::max(channel.m_lastSentMsg, channel.m_snowflake);
+    return qint64(id >> 22) + 1420070400000ll;
 }
 
 bool byPosition(const Channel* a, const Channel* b)
@@ -121,9 +133,14 @@ QVariant ChannelListModel::data(const QModelIndex& index, int role) const
     case UnreadRole:     return channel->HasUnreadMessages();
     case MentionsRole:   return channel->m_mentionCount;
     case TopicRole:      return QString::fromStdString(channel->m_topic);
-    case IndentedRole:
-        return !channel->IsCategory() && !channel->IsDM()
-               && channel->m_parentCateg != 0 && channel->m_parentCateg != channel->m_snowflake;
+    case IndentedRole: {
+        // Threads: when their channel is.
+        const Channel* inCategory = channel;
+        if (channel->IsThread() && guild)
+            inCategory = guild->GetChannel(channel->m_parentCateg);
+        return inCategory && !inCategory->IsCategory() && !inCategory->IsDM()
+               && inCategory->m_parentCateg != 0 && inCategory->m_parentCateg != inCategory->m_snowflake;
+    }
     case IconUrlRole:    return iconUrl(*channel);
     case StatusRole:     return statusOf(*channel);
     case BlockedRole: {
@@ -205,9 +222,13 @@ void ChannelListModel::reload()
     } else if (guild) {
         std::vector<Channel*> categories;
         std::vector<Channel*> children;
+        std::vector<Channel*> threads;
         for (Channel& channel : guild->m_channels) {
-            if (isThread(channel))
+            if (channel.IsThread()) {
+                if (channel.HasPermission(PERM_VIEW_CHANNEL))
+                    threads.push_back(&channel);
                 continue;
+            }
             // A category is listed when a channel in it can be seen, even if
             // the category itself cannot (as on Discord); see below.
             if (channel.IsCategory())
@@ -217,6 +238,25 @@ void ChannelListModel::reload()
         }
         std::sort(categories.begin(), categories.end(), byPosition);
         std::sort(children.begin(), children.end(), byPosition);
+        // Under their channel, the most recently active first: the ones we
+        // are in, the open one, and a few with messages in the last day.
+        std::sort(threads.begin(), threads.end(), [](const Channel* a, const Channel* b) {
+            return lastActivityMs(*a) > lastActivityMs(*b);
+        });
+        const qint64 dayAgo = QDateTime::currentMSecsSinceEpoch() - 24 * 3600 * 1000;
+        const Snowflake open = instance->GetCurrentChannelID();
+        auto addChannel = [&](const Channel* channel) {
+            m_ids.push_back(channel->m_snowflake);
+            int recent = 0;
+            for (const Channel* thread : threads) {
+                if (thread->m_parentCateg != channel->m_snowflake)
+                    continue;
+                const bool listed = thread->m_bJoined || thread->m_snowflake == open
+                    || (lastActivityMs(*thread) > dayAgo && recent++ < MaxRecentThreads);
+                if (listed)
+                    m_ids.push_back(thread->m_snowflake);
+            }
+        };
 
         // Channels outside any category come first, then each category with
         // its channels. Empty categories are left out.
@@ -227,7 +267,7 @@ void ChannelListModel::reload()
         };
         for (const Channel* channel : children) {
             if (isUncategorized(channel))
-                m_ids.push_back(channel->m_snowflake);
+                addChannel(channel);
         }
         for (const Channel* category : categories) {
             bool headerAdded = false;
@@ -238,7 +278,7 @@ void ChannelListModel::reload()
                     m_ids.push_back(category->m_snowflake);
                     headerAdded = true;
                 }
-                m_ids.push_back(channel->m_snowflake);
+                addChannel(channel);
             }
         }
     }

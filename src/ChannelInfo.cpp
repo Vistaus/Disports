@@ -77,7 +77,14 @@ QVariantMap describeChannel(DiscordInstance& instance, const Channel& channel)
         {QStringLiteral("nsfw"), channel.m_bNSFW},
         {QStringLiteral("iconUrl"), ChannelListModel::iconUrl(channel)},
     };
-    if (Channel* category = channel.m_parentCateg ? instance.GetChannel(channel.m_parentCateg) : nullptr)
+    const Channel* inCategory = &channel;
+    if (channel.IsThread()) {
+        // The channel the thread is in, and that channel's category.
+        inCategory = channel.m_parentCateg ? instance.GetChannel(channel.m_parentCateg) : nullptr;
+        if (inCategory)
+            info.insert(QStringLiteral("channel"), QLatin1Char('#') + qstr(inCategory->m_name));
+    }
+    if (Channel* category = inCategory && inCategory->m_parentCateg ? instance.GetChannel(inCategory->m_parentCateg) : nullptr)
         info.insert(QStringLiteral("category"), qstr(category->m_name));
     if (Guild* guild = channel.m_parentGuild ? instance.GetGuild(channel.m_parentGuild) : nullptr)
         info.insert(QStringLiteral("server"), qstr(guild->m_name));
