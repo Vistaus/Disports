@@ -4,6 +4,7 @@
 #include <QJsonDocument>
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
+#include <QRegularExpression>
 #include <QUrl>
 #include <QtMath>
 
@@ -49,6 +50,7 @@ void PasswordLogin::reset()
     m_ticket.clear();
     m_loginInstance.clear();
     m_methods.clear();
+    m_smsSent = false;
     m_step = QStringLiteral("credentials");
     m_error.clear();
     m_notice.clear();
@@ -143,6 +145,9 @@ void PasswordLogin::loginAnswered(const HttpResult& result)
     }
     m_step = QStringLiteral("mfa");
     setBusy(false);
+    // Without an authenticator app, the code comes by SMS: ask for it now.
+    if (!m_methods.contains(QLatin1String("totp")) && m_methods.contains(QLatin1String("sms")))
+        sendSmsCode();
 }
 
 void PasswordLogin::sendSmsCode()
@@ -156,19 +161,35 @@ void PasswordLogin::sendSmsCode()
             setError(describe(result));
             return;
         }
+        m_smsSent = true;
         const QString phone = jsonOf(result.body).value(QLatin1String("phone")).toString();
         m_notice = phone.isEmpty() ? tr("A code was sent to your phone.") : tr("A code was sent to %1.").arg(phone);
         setBusy(false);
     });
 }
 
-void PasswordLogin::verify(const QString& method, const QString& code)
+void PasswordLogin::verify(const QString& code)
 {
-    if (m_busy || m_ticket.isEmpty() || !m_methods.contains(method))
+    if (m_busy || m_ticket.isEmpty())
         return;
     const QString trimmed = QString(code).remove(QLatin1Char(' ')).remove(QLatin1Char('-'));
     if (trimmed.isEmpty()) {
         setError(tr("Enter the code."));
+        return;
+    }
+    static const QRegularExpression sixDigits(QStringLiteral("^\\d{6}$"));
+    static const QRegularExpression backupCode(QStringLiteral("^[A-Za-z0-9]{8}$"));
+    QString method;
+    if (backupCode.match(trimmed).hasMatch() && m_methods.contains(QLatin1String("backup")))
+        method = QStringLiteral("backup");
+    else if (sixDigits.match(trimmed).hasMatch() && m_smsSent)
+        method = QStringLiteral("sms");
+    else if (sixDigits.match(trimmed).hasMatch() && m_methods.contains(QLatin1String("totp")))
+        method = QStringLiteral("totp");
+    if (method.isEmpty()) {
+        setError(m_methods.contains(QLatin1String("backup"))
+                     ? tr("Enter a 6-digit code, or an 8-character backup code.")
+                     : tr("Enter the 6-digit code."));
         return;
     }
     m_error.clear();

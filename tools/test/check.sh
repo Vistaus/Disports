@@ -184,8 +184,12 @@ scenario_login() {      # password sign-in: captcha first, then in; a wrong pass
     LOGGED_OUT=1 STEPS="sleep 6" "$HERE/run.sh" login-wrong 7000 $CAPTCHA DISPORTS_PASSWORD_LOGIN=tester@example.com:nope1234
     expect login-wrong 'REST login invalid'
     LOGGED_OUT=1 STEPS="sleep 7" "$HERE/run.sh" login-mfa 8000 $CAPTCHA \
-        DISPORTS_PASSWORD_LOGIN=mfa@example.com:hunter22 DISPORTS_MFA=totp:123456
+        DISPORTS_PASSWORD_LOGIN=mfa@example.com:hunter22 DISPORTS_MFA=123456
     expect login-mfa 'REST mfa ok totp'
+    # A backup code is told apart by its shape.
+    LOGGED_OUT=1 STEPS="sleep 7" "$HERE/run.sh" login-backup 8000 $CAPTCHA \
+        DISPORTS_PASSWORD_LOGIN=mfa@example.com:hunter22 DISPORTS_MFA=abcd-1234
+    expect login-backup 'REST mfa ok backup'
 }
 scenario_captcha() {    # any request can need a captcha: sending a message
     STEPS="sleep 7" "$HERE/run.sh" captcha 8000 DISPORTS_OPEN_CHANNEL=1101 "DISPORTS_SEND_MESSAGE=this one needs a captcha" $CAPTCHA "${WIDE[@]}"

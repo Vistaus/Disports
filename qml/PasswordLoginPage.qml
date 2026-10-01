@@ -10,20 +10,15 @@ Page {
 
     readonly property var login: Session.passwordLogin
     readonly property bool mfa: login.step === "mfa"
-    // The two-factor method picked: "totp", "sms" or "backup".
-    property string method: login.methods.length > 0 ? login.methods[0] : ""
+    readonly property bool hasApp: login.methods.indexOf("totp") >= 0
+    readonly property bool hasSms: login.methods.indexOf("sms") >= 0
+    readonly property bool hasBackup: login.methods.indexOf("backup") >= 0
 
     header: PageHeader {
         title: i18n.tr("Sign in with a password")
     }
 
     Component.onDestruction: login.reset()
-
-    function methodName(method) {
-        return method === "totp" ? i18n.tr("Authenticator app")
-             : method === "sms" ? i18n.tr("Text message (SMS)")
-             : i18n.tr("Backup code")
-    }
 
     Flickable {
         anchors {
@@ -78,37 +73,24 @@ Page {
                 onClicked: passwordPage.login.login(loginField.text, passwordField.text)
             }
 
-            // Two-factor authentication
+            // Two-factor authentication: one field; the kind of code is told
+            // by its shape (see PasswordLogin::verify).
             Label {
                 width: parent.width
                 visible: passwordPage.mfa
-                text: i18n.tr("This account has two-factor authentication. Enter a code to finish signing in.")
+                text: ((passwordPage.login.smsSent ? i18n.tr("Enter the code from the text message.")
+                       : passwordPage.hasApp ? i18n.tr("Enter the code from your authenticator app.")
+                       : "")
+                      + (passwordPage.hasBackup ? " " + i18n.tr("You can also use a backup code.") : "")).trim()
                 wrapMode: Text.WordWrap
-            }
-
-            OptionSelector {
-                width: parent.width
-                visible: passwordPage.mfa && passwordPage.login.methods.length > 1
-                model: passwordPage.login.methods.map(passwordPage.methodName)
-                selectedIndex: Math.max(0, passwordPage.login.methods.indexOf(passwordPage.method))
-                onSelectedIndexChanged: passwordPage.method = passwordPage.login.methods[selectedIndex] || ""
-            }
-
-            Button {
-                width: parent.width
-                visible: passwordPage.mfa && passwordPage.method === "sms"
-                text: i18n.tr("Send me a code")
-                enabled: !passwordPage.login.busy
-                onClicked: passwordPage.login.sendSmsCode()
             }
 
             TextField {
                 id: codeField
                 width: parent.width
                 visible: passwordPage.mfa
-                placeholderText: passwordPage.method === "backup" ? i18n.tr("Backup code") : i18n.tr("6-digit code")
-                inputMethodHints: passwordPage.method === "backup" ? Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText
-                                                                   : Qt.ImhDigitsOnly
+                placeholderText: i18n.tr("Code")
+                inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText
                 enabled: !passwordPage.login.busy
                 onAccepted: verifyButton.clicked()
             }
@@ -120,7 +102,15 @@ Page {
                 text: i18n.tr("Verify")
                 color: theme.palette.normal.positive
                 enabled: !passwordPage.login.busy && codeField.text.trim() !== ""
-                onClicked: passwordPage.login.verify(passwordPage.method, codeField.text)
+                onClicked: passwordPage.login.verify(codeField.text)
+            }
+
+            Button {
+                width: parent.width
+                visible: passwordPage.mfa && passwordPage.hasSms && passwordPage.hasApp && !passwordPage.login.smsSent
+                text: i18n.tr("Text me a code instead")
+                enabled: !passwordPage.login.busy
+                onClicked: passwordPage.login.sendSmsCode()
             }
 
             Button {

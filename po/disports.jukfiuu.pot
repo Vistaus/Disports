@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Disports\n"
 "Report-Msgid-Bugs-To: https://github.com/jukfiuune/Disports/issues\n"
-"POT-Creation-Date: 2026-10-01 19:55+0300\n"
+"POT-Creation-Date: 2026-10-01 20:15+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -332,15 +332,7 @@ msgid "You don't have permission to read earlier messages in this channel"
 msgstr ""
 
 #: qml/PasswordLoginPage.qml
-msgid "6-digit code"
-msgstr ""
-
-#: qml/PasswordLoginPage.qml
-msgid "Authenticator app"
-msgstr ""
-
-#: qml/PasswordLoginPage.qml
-msgid "Backup code"
+msgid "Code"
 msgstr ""
 
 #: qml/PasswordLoginPage.qml
@@ -348,11 +340,15 @@ msgid "Email or phone number"
 msgstr ""
 
 #: qml/PasswordLoginPage.qml
-msgid "Password"
+msgid "Enter the code from the text message."
 msgstr ""
 
 #: qml/PasswordLoginPage.qml
-msgid "Send me a code"
+msgid "Enter the code from your authenticator app."
+msgstr ""
+
+#: qml/PasswordLoginPage.qml
+msgid "Password"
 msgstr ""
 
 #: qml/PasswordLoginPage.qml
@@ -370,17 +366,15 @@ msgid "Start again"
 msgstr ""
 
 #: qml/PasswordLoginPage.qml
-msgid "Text message (SMS)"
-msgstr ""
-
-#: qml/PasswordLoginPage.qml
-msgid ""
-"This account has two-factor authentication. Enter a code to finish signing "
-"in."
+msgid "Text me a code instead"
 msgstr ""
 
 #: qml/PasswordLoginPage.qml
 msgid "Verify"
+msgstr ""
+
+#: qml/PasswordLoginPage.qml
+msgid "You can also use a backup code."
 msgstr ""
 
 #: qml/PollCard.qml
@@ -589,6 +583,14 @@ msgstr ""
 
 #: src/PasswordLogin.cpp
 msgid "Enter the code."
+msgstr ""
+
+#: src/PasswordLogin.cpp
+msgid "Enter a 6-digit code, or an 8-character backup code."
+msgstr ""
+
+#: src/PasswordLogin.cpp
+msgid "Enter the 6-digit code."
 msgstr ""
 
 #: src/PasswordLogin.cpp

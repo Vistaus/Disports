@@ -26,6 +26,8 @@ class PasswordLogin : public QObject
     Q_PROPERTY(QString notice READ notice NOTIFY changed)
     // The two-factor methods the account has: "totp", "sms", "backup".
     Q_PROPERTY(QStringList methods READ methods NOTIFY changed)
+    // An SMS code was asked for: 6 digits are that code.
+    Q_PROPERTY(bool smsSent READ smsSent NOTIFY changed)
 
 public:
     PasswordLogin(QNetworkAccessManager* nam, CaptchaPrompt* captcha, QObject* parent = nullptr);
@@ -35,10 +37,14 @@ public:
     QString error() const { return m_error; }
     QString notice() const { return m_notice; }
     QStringList methods() const { return m_methods; }
+    bool smsSent() const { return m_smsSent; }
 
     Q_INVOKABLE void login(const QString& login, const QString& password);
     Q_INVOKABLE void sendSmsCode();
-    Q_INVOKABLE void verify(const QString& method, const QString& code);
+    // The kind of code is told by its shape: 8 letters and digits are a
+    // backup code, 6 digits the SMS code if one was sent, else the
+    // authenticator app's.
+    Q_INVOKABLE void verify(const QString& code);
     // Back to the start, forgetting everything entered.
     Q_INVOKABLE void reset();
 
@@ -71,4 +77,5 @@ private:
     QString m_error;
     QString m_notice;
     bool m_busy = false;
+    bool m_smsSent = false;
 };

@@ -64,7 +64,7 @@ void TestHooks::scheduleLogin()
             return;
         *sent = true;
         QTimer::singleShot(500, password, [password, mfa]() {
-            password->verify(mfa.section(QLatin1Char(':'), 0, 0), mfa.section(QLatin1Char(':'), 1));
+            password->verify(mfa);
         });
     });
 }

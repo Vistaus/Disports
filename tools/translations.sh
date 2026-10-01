@@ -42,6 +42,8 @@ update() {
     for po in "$PO"/*.po; do
         [ -e "$po" ] || continue
         msgmerge --update --backup=none --quiet "$po" "$POT"
+        # Texts the app no longer has.
+        msgattrib --no-obsolete --output-file="$po" "$po"
         echo "$(basename "$po" .po): $(msgfmt --statistics -o /dev/null "$po" 2>&1)"
     done
 }

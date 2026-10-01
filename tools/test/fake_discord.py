@@ -369,7 +369,8 @@ CAPTCHA_SOLUTION = "10000000-aaaa-bbbb-cccc-000000000001"
 CAPTCHA = {"captcha_key": ["captcha-required"], "captcha_service": "hcaptcha",
            "captcha_sitekey": "10000000-ffff-ffff-ffff-000000000001", "captcha_session_id": "test-session",
            "captcha_rqdata": "test-rqdata", "captcha_rqtoken": "test-rqtoken"}
-# Accounts for the password sign-in; mfa@ has two-factor (code 123456).
+# Accounts for the password sign-in; mfa@ has two-factor: code 123456 (app
+# or SMS), or the backup code abcd1234.
 PASSWORD = "hunter22"
 MFA_TICKET = "test-ticket"
 
@@ -479,7 +480,8 @@ class Rest(BaseHTTPRequestHandler):
             return self.reply(200, {"phone": "+*******1234"})
         m = re.match(r"/api/v9/auth/mfa/(totp|sms|backup)$", path)
         if m:
-            if body.get("ticket") != MFA_TICKET or body.get("code") != "123456":
+            code = "abcd1234" if m.group(1) == "backup" else "123456"
+            if body.get("ticket") != MFA_TICKET or body.get("code") != code:
                 log("REST mfa wrong", m.group(1))
                 return self.reply(400, {"code": 60008, "message": "Invalid two-factor code"})
             log("REST mfa ok", m.group(1))

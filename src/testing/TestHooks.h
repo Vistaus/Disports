@@ -20,7 +20,7 @@ class Session;
 //   DISPORTS_PLAY_VIDEO=[gif:|preview:]url  open a video (TestHooks.qml)
 //   DISPORTS_CAPTCHA_TOKEN=solution      answer captchas with it (no page)
 //   DISPORTS_PASSWORD_LOGIN=login:password  sign in with a password, then
-//     DISPORTS_MFA=method:code           give the two-factor code
+//     DISPORTS_MFA=code                  give the two-factor code
 class TestHooks : public QObject
 {
     Q_OBJECT

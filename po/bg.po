@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Disports\n"
 "Report-Msgid-Bugs-To: https://github.com/jukfiuune/Disports/issues\n"
-"POT-Creation-Date: 2026-10-01 19:55+0300\n"
+"POT-Creation-Date: 2026-10-01 20:15+0300\n"
 "PO-Revision-Date: 2026-10-01 16:00+0300\n"
 "Last-Translator: Martin Filipov\n"
 "Language-Team: Bulgarian\n"
@@ -241,7 +241,9 @@ msgstr ""
 msgid ""
 "Discord wants a captcha solved, but this version of Ubuntu Touch can't show "
 "one. Update to 24.04-2.x or newer."
-msgstr "Discord иска да решиш капча, но тази версия на Ubuntu Touch не може да я покаже. Обнови до 24.04-2.x или по-нова."
+msgstr ""
+"Discord иска да решиш капча, но тази версия на Ubuntu Touch не може да я "
+"покаже. Обнови до 24.04-2.x или по-нова."
 
 #: qml/MainPage.qml
 msgid "Pick a conversation"
@@ -332,28 +334,24 @@ msgid "You don't have permission to read earlier messages in this channel"
 msgstr "Нямаш право да четеш по-стари съобщения в този канал"
 
 #: qml/PasswordLoginPage.qml
-msgid "6-digit code"
-msgstr "6-цифрен код"
-
-#: qml/PasswordLoginPage.qml
-msgid "Authenticator app"
-msgstr "Приложение за удостоверяване"
-
-#: qml/PasswordLoginPage.qml
-msgid "Backup code"
-msgstr "Резервен код"
+msgid "Code"
+msgstr "Код"
 
 #: qml/PasswordLoginPage.qml
 msgid "Email or phone number"
 msgstr "Имейл или телефонен номер"
 
 #: qml/PasswordLoginPage.qml
-msgid "Password"
-msgstr "Парола"
+msgid "Enter the code from the text message."
+msgstr "Въведи кода от SMS съобщението."
 
 #: qml/PasswordLoginPage.qml
-msgid "Send me a code"
-msgstr "Изпрати ми код"
+msgid "Enter the code from your authenticator app."
+msgstr "Въведи кода от приложението си за удостоверяване."
+
+#: qml/PasswordLoginPage.qml
+msgid "Password"
+msgstr "Парола"
 
 #: qml/PasswordLoginPage.qml
 msgid "Sign in with a password"
@@ -363,25 +361,25 @@ msgstr "Вход с парола"
 msgid ""
 "Signing in with a password from an unofficial app makes Discord more "
 "suspicious of the account. The QR code is the safer way."
-msgstr "Входът с парола от неофициално приложение прави Discord по-подозрителен към профила. QR кодът е по-сигурният начин."
+msgstr ""
+"Входът с парола от неофициално приложение прави Discord по-подозрителен към "
+"профила. QR кодът е по-сигурният начин."
 
 #: qml/PasswordLoginPage.qml
 msgid "Start again"
 msgstr "Започни отначало"
 
 #: qml/PasswordLoginPage.qml
-msgid "Text message (SMS)"
-msgstr "Текстово съобщение (SMS)"
-
-#: qml/PasswordLoginPage.qml
-msgid ""
-"This account has two-factor authentication. Enter a code to finish signing "
-"in."
-msgstr "Този профил има двуфакторно удостоверяване. Въведи код, за да завършиш входа."
+msgid "Text me a code instead"
+msgstr "Изпрати ми код с SMS"
 
 #: qml/PasswordLoginPage.qml
 msgid "Verify"
 msgstr "Потвърди"
+
+#: qml/PasswordLoginPage.qml
+msgid "You can also use a backup code."
+msgstr "Можеш да използваш и резервен код."
 
 #: qml/PollCard.qml
 msgid "%1 vote"
@@ -580,7 +578,9 @@ msgstr "Въведи имейла или телефонния си номер и
 msgid ""
 "This account only has a security key for two-factor authentication, which "
 "Disports can't use. Sign in with the QR code instead."
-msgstr "Този профил използва само ключ за сигурност за двуфакторно удостоверяване, който Disports не може да използва. Влез с QR кода."
+msgstr ""
+"Този профил използва само ключ за сигурност за двуфакторно удостоверяване, "
+"който Disports не може да използва. Влез с QR кода."
 
 #: src/PasswordLogin.cpp
 msgid "A code was sent to %1."
@@ -593,6 +593,14 @@ msgstr "Изпратен е код до телефона ти."
 #: src/PasswordLogin.cpp
 msgid "Enter the code."
 msgstr "Въведи кода."
+
+#: src/PasswordLogin.cpp
+msgid "Enter a 6-digit code, or an 8-character backup code."
+msgstr "Въведи 6-цифрен код или резервен код от 8 знака."
+
+#: src/PasswordLogin.cpp
+msgid "Enter the 6-digit code."
+msgstr "Въведи 6-цифрения код."
 
 #: src/PasswordLogin.cpp
 msgid "Signing in took too long. Please start again."
@@ -609,7 +617,8 @@ msgstr "Discord не изпрати ключ за вход. Моля, опита
 #: src/PasswordLogin.cpp
 msgid ""
 "Discord asks you to change your password. You can do that on discord.com."
-msgstr "Discord иска да смениш паролата си. Можеш да го направиш на discord.com."
+msgstr ""
+"Discord иска да смениш паролата си. Можеш да го направиш на discord.com."
 
 #: src/PasswordLogin.cpp
 msgid "Couldn't reach Discord. Check your internet connection and try again."
@@ -619,7 +628,8 @@ msgstr "Няма връзка с Discord. Провери интернет връ
 msgid ""
 "Discord asked for a kind of captcha Disports can't show. Sign in with the QR "
 "code instead."
-msgstr "Discord поиска вид капча, която Disports не може да покаже. Влез с QR кода."
+msgstr ""
+"Discord поиска вид капча, която Disports не може да покаже. Влез с QR кода."
 
 #: src/PasswordLogin.cpp
 msgid "Discord needs the captcha solved before you can sign in."
@@ -633,7 +643,9 @@ msgstr "Твърде много опити. Изчакай %1 сек. и опи�
 msgid ""
 "Discord has suspended this account. See discord.com to find out why and to "
 "appeal."
-msgstr "Discord е спрял този профил. Виж discord.com, за да разбереш защо и да обжалваш."
+msgstr ""
+"Discord е спрял този профил. Виж discord.com, за да разбереш защо и да "
+"обжалваш."
 
 #: src/PasswordLogin.cpp
 msgid "Discord is having trouble right now. Try again in a few minutes."
@@ -643,14 +655,18 @@ msgstr "Discord има проблеми в момента. Опитай отно
 msgid ""
 "This account is disabled or scheduled for deletion. Restore it in the "
 "official Discord app first."
-msgstr "Този профил е деактивиран или насрочен за изтриване. Първо го възстанови в официалното приложение на Discord."
+msgstr ""
+"Този профил е деактивиран или насрочен за изтриване. Първо го възстанови в "
+"официалното приложение на Discord."
 
 #: src/PasswordLogin.cpp
 msgid ""
 "Discord sent a code to your phone to confirm this new sign-in. Disports "
 "can't take that code yet: sign in with your email address or the QR code "
 "instead."
-msgstr "Discord изпрати код на телефона ти, за да потвърди този нов вход. Disports все още не може да приеме този код: влез с имейла си или с QR кода."
+msgstr ""
+"Discord изпрати код на телефона ти, за да потвърди този нов вход. Disports "
+"все още не може да приеме този код: влез с имейла си или с QR кода."
 
 #: src/PasswordLogin.cpp
 msgid "The email, phone number or password isn't right."
@@ -660,7 +676,9 @@ msgstr "Имейлът, телефонният номер или паролат�
 msgid ""
 "Discord sent you an email to confirm this new sign-in. Open it, confirm, "
 "then sign in here again."
-msgstr "Discord ти изпрати имейл, за да потвърди този нов вход. Отвори го, потвърди и после влез отново тук."
+msgstr ""
+"Discord ти изпрати имейл, за да потвърди този нов вход. Отвори го, потвърди "
+"и после влез отново тук."
 
 #: src/PasswordLogin.cpp
 msgid "Discord said: %1"
@@ -717,7 +735,9 @@ msgstr "Влизането е успешно."
 msgid ""
 "Discord didn't accept this token. Make sure you copied all of it, and that "
 "it's still valid (signing out of Discord makes it invalid)."
-msgstr "Discord не прие този ключ. Провери дали си го копирал целия и дали още е валиден (излизането от Discord го прави невалиден)."
+msgstr ""
+"Discord не прие този ключ. Провери дали си го копирал целия и дали още е "
+"валиден (излизането от Discord го прави невалиден)."
 
 #: src/Session.cpp
 msgid "Your session has expired. Please sign in again."
