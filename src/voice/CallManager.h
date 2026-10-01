@@ -30,6 +30,8 @@ class CallManager : public QObject
     Q_PROPERTY(bool directCall READ directCall NOTIFY stateChanged)
     Q_PROPERTY(QString title READ title NOTIFY stateChanged)
     Q_PROPERTY(QString avatarUrl READ avatarUrl NOTIFY stateChanged)
+    // For groups without a picture.
+    Q_PROPERTY(QString initials READ initials NOTIFY stateChanged)
     Q_PROPERTY(QString statusText READ statusText NOTIFY statusTextChanged)
     Q_PROPERTY(bool muted READ muted NOTIFY mutedChanged)
     Q_PROPERTY(bool deafened READ deafened NOTIFY mutedChanged)
@@ -37,9 +39,10 @@ class CallManager : public QObject
     Q_PROPERTY(bool canSpeak READ canSpeak NOTIFY stateChanged)
     Q_PROPERTY(bool speaker READ speaker NOTIFY speakerChanged)
     Q_PROPERTY(bool speakerAvailable READ speakerAvailable NOTIFY speakerChanged)
-    // [{id, name, avatarUrl, speaking, muted, deafened, self, joined}], us
-    // first.
-    // In DM calls, people still being rung have joined: false.
+    // [{id, name, avatarUrl, speaking, muted, deafened, self, joined,
+    // ringing}], us first.
+    // In DM calls, the others who haven't picked up have joined: false,
+    // and ringing: true while they are being rung.
     Q_PROPERTY(QVariantList participants READ participants NOTIFY participantsChanged)
 
 public:
@@ -59,6 +62,7 @@ public:
     bool directCall() const { return m_direct; }
     QString title() const { return m_title; }
     QString avatarUrl() const { return m_avatarUrl; }
+    QString initials() const;
     QString statusText() const;
     bool muted() const { return m_muted; }
     bool deafened() const { return m_deafened; }
@@ -100,11 +104,15 @@ private:
     void describe(Snowflake channel);
     void join(Snowflake channel);
     void maybeConnect();
+    // Out of the call, but not Idle (yet): see endCall().
+    void leave();
     void endCall(const QString& reason = QString());
     void stopVoice();
     void setVoiceConnected(bool connected);
     void addParticipant(Snowflake user);
     void removeParticipant(Snowflake user);
+    // Starts or stops m_aloneTimer.
+    void updateAlone();
     void keepDisplayOn(bool on);
     void updateRingtone();
 
@@ -117,6 +125,7 @@ private:
     QString m_avatarUrl;
     bool m_muted = false;
     bool m_deafened = false;
+    bool m_mutedBeforeDeafen = false;
     bool m_canSpeak = true;
     bool m_mutedByPermission = false; // unmuted again after the call
     bool m_speaker = true; // calls start on the loudspeaker
@@ -130,6 +139,11 @@ private:
 
     QList<Snowflake> m_participants; // in the order they joined
     QSet<Snowflake> m_speaking;
+    QSet<Snowflake> m_ringing; // DM calls: still being rung
+    // Our voice state update for this call hasn't come back yet; until it
+    // does, the one for the previous call may still arrive.
+    bool m_joinPending = false;
+    QTimer m_aloneTimer;
     qint64 m_talkStartedMs = 0; // someone else joined / the channel was joined
     QTimer m_clock;
 

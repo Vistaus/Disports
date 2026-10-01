@@ -29,6 +29,7 @@
 class Channel;
 class DiscordInstance;
 class Message;
+class QNetworkAccessManager;
 class QtFrontend;
 class QtHttpClient;
 class QtWebsocketClient;
@@ -134,6 +135,7 @@ public:
     CallManager* call() const { return m_call; }
     OfflineCache* offlineCache() const { return m_offline; }
     VoiceStates* voiceStates() const { return m_voiceStates; }
+    QNetworkAccessManager* networkAccessManager() const;
     DiscordInstance* instance() const { return m_instance; }
 
     Q_INVOKABLE void loginWithToken(const QString& token);

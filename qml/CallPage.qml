@@ -59,6 +59,7 @@ Page {
         id: wide
         property string iconName
         property color color
+        property color iconColor
 
         height: units.gu(6)
 
@@ -75,7 +76,7 @@ Page {
             width: units.gu(3)
             height: width
             name: wide.iconName
-            color: "white"
+            color: wide.iconColor
         }
     }
 
@@ -161,7 +162,7 @@ Page {
 
                             Label {
                                 anchors.horizontalCenter: parent.horizontalCenter
-                                visible: !modelData.joined
+                                visible: !modelData.joined && (modelData.self || modelData.ringing)
                                 text: modelData.self ? i18n.tr("Connecting...") : i18n.tr("Calling...")
                                 textSize: Label.Small
                                 color: theme.palette.normal.backgroundSecondaryText
@@ -184,6 +185,7 @@ Page {
             width: units.gu(18)
             height: width
             source: callPage.call.avatarUrl
+            label: callPage.call.initials
         }
     }
 
@@ -272,6 +274,7 @@ Page {
                 width: units.gu(16)
                 iconName: "call-end"
                 color: theme.palette.normal.negative
+                iconColor: theme.palette.normal.negativeText
                 onClicked: callPage.call.decline()
             }
 
@@ -279,6 +282,7 @@ Page {
                 width: units.gu(16)
                 iconName: "call-start"
                 color: theme.palette.normal.positive
+                iconColor: theme.palette.normal.positiveText
                 onClicked: callPage.call.accept()
             }
         }

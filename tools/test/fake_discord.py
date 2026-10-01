@@ -61,6 +61,10 @@ MEDIA = "1109"
 TEXT = "1110"
 QUIET, QUIET_CHAN = "5000", "5001"
 DM = "2001"
+# A DM with Bob, no call: calling him rings, and he declines.
+BOB_DM = "2002"
+# A group without a picture; INCOMING=1 rings us from it.
+GROUP = "2003"
 
 
 def overwrite(target, allow=0, deny=0, member=False):
@@ -190,6 +194,31 @@ HISTORY_MSGS[DM].append(message(DM, ALICE, "", message_reference={"type": 1, "ch
 MANY_SERVERS = int(os.environ.get("MANY_SERVERS", "0"))
 
 
+def varint(n):
+    out = b""
+    while True:
+        byte, n = n & 0x7F, n >> 7
+        out += bytes([byte | (0x80 if n else 0)])
+        if not n:
+            return out
+
+
+def field(number, data):
+    return varint(number << 3 | 2) + varint(len(data)) + data
+
+
+# FOLDER=1: both test servers in a folder (the user settings protobuf).
+def user_settings():
+    if not os.environ.get("FOLDER"):
+        return ""
+    import base64
+    import struct
+    ids = b"".join(struct.pack("<Q", int(g)) for g in (GUILD, QUIET))
+    folder = (field(1, ids) + field(2, varint(1 << 3) + varint(77)) + field(3, field(1, b"Folder"))
+              + field(4, varint(1 << 3) + varint(0x3498DB)))
+    return base64.b64encode(field(14, field(1, folder))).decode()
+
+
 def extra_servers(everyone):
     return [{"id": str(6000 + i * 10), "properties": {"name": "Server %d" % (i + 1), "icon": None, "owner_id": "300"},
              "channels": [{"id": str(6001 + i * 10), "type": 0, "name": "chat", "position": 0}],
@@ -213,7 +242,7 @@ def ready():
         "v": 9, "session_id": "s1", "session_type": "normal",
         "resume_gateway_url": "ws://127.0.0.1:8812",
         "user": ME,
-        "user_settings_proto": "",
+        "user_settings_proto": user_settings(),
         "guilds": [{"id": GUILD, "properties": {"name": "Test Server", "icon": None, "owner_id": "300"},
                     "channels": CHANNELS, "roles": roles, "emojis": [], "member_count": 9,
                     "voice_states": [lounge_state(u) for u in LOUNGE_PEOPLE]},
@@ -226,9 +255,13 @@ def ready():
                            [{"user_id": "100", "roles": [], "nick": None}]]
                           + [[{"user_id": "100", "roles": [], "nick": None}] for _ in range(MANY_SERVERS)],
         "private_channels": [{"id": DM, "type": 1, "recipient_ids": ["200"],
-                              "last_message_id": HISTORY_MSGS[DM][-1]["id"]}],
+                              "last_message_id": HISTORY_MSGS[DM][-1]["id"]},
+                             {"id": BOB_DM, "type": 1, "recipient_ids": ["300"], "last_message_id": None},
+                             {"id": GROUP, "type": 3, "name": "Weekend plans", "icon": None,
+                              "recipient_ids": ["200", "300"], "last_message_id": None}],
         "read_state": {"entries": [], "version": 1},
-        "relationships": [{"id": "200", "user_id": "200", "type": 1, "user": ALICE}],
+        "relationships": [{"id": "200", "user_id": "200", "type": 1, "user": ALICE},
+                          {"id": "300", "user_id": "300", "type": 1, "user": BOB}],
         "user_guild_settings": {"entries": [], "version": 0},
         "sessions": [], "guild_join_requests": [], "connected_accounts": [],
     }
@@ -272,6 +305,10 @@ async def gateway(ws):
                         log("LIVE dm", msg["id"])
                         await dispatch(ws, "MESSAGE_CREATE", msg)
                     asyncio.create_task(live_dm())
+                if os.environ.get("INCOMING"):
+                    await dispatch(ws, "CALL_CREATE", {"channel_id": GROUP, "message_id": new_id(), "region": "x",
+                                   "ringing": [ME["id"]], "voice_states": [
+                                       {"user_id": "200", "channel_id": GROUP, "session_id": "z"}]})
                 # Calls going on in DMs arrive after READY.
                 await dispatch(ws, "CALL_CREATE", {"channel_id": DM, "message_id": DM_CALL_MESSAGE,
                                "region": "x", "ringing": [], "voice_states": [
@@ -280,9 +317,10 @@ async def gateway(ws):
                 # Joining a voice channel: our voice state, and who is there.
                 # (No voice server: the call stays connecting.)
                 log("VOICE join", d.get("channel_id"))
+                await dispatch(ws, "VOICE_STATE_UPDATE", dict(guild_id=d.get("guild_id"), user_id=ME["id"],
+                               channel_id=d.get("channel_id"), session_id="me",
+                               self_mute=d.get("self_mute", False), self_deaf=d.get("self_deaf", False)))
                 if d.get("channel_id") == LOUNGE:
-                    await dispatch(ws, "VOICE_STATE_UPDATE", dict(guild_id=GUILD, user_id=ME["id"], channel_id=LOUNGE,
-                                   session_id="me", self_mute=d.get("self_mute", False), self_deaf=d.get("self_deaf", False)))
                     for u in LOUNGE_PEOPLE[:4]:
                         await dispatch(ws, "VOICE_STATE_UPDATE", lounge_state(u))
             elif op == 8:
@@ -325,6 +363,9 @@ class Rest(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split("?")[0]
+        if re.match(r"/assets/[0-9a-f]+\.mp3$", path):
+            log("REST ringtone", path)
+            return self.reply(200, raw=b"\xff\xfb" * 2048, content_type="audio/mpeg")
         if path == "/api/v9/gateway":
             return self.reply(200, {"url": "ws://127.0.0.1:8812"})
         m = re.match(r"/api/v9/channels/(\d+)/messages$", path)
@@ -397,6 +438,18 @@ class Rest(BaseHTTPRequestHandler):
             HISTORY_MSGS.setdefault(channel, []).append(msg)
             broadcast("MESSAGE_CREATE", msg)
             return self.reply(200, msg)
+        m = re.match(r"/api/v9/channels/(\d+)/call/ring$", path)
+        if m:
+            channel = m.group(1)
+            log("REST ring", channel)
+            broadcast("CALL_CREATE", {"channel_id": channel, "message_id": new_id(), "region": "x",
+                                      "ringing": ["300"], "voice_states": []})
+            # Bob declines after 3 seconds.
+            def decline():
+                log("LIVE decline", channel)
+                broadcast("CALL_UPDATE", {"channel_id": channel, "region": "x", "ringing": [], "voice_states": []})
+            threading.Timer(3, decline).start()
+            return self.reply(204)
         if path.endswith("/ack"):
             return self.reply(200, {"token": None})
         if path.endswith("/typing"):

@@ -143,6 +143,19 @@ scenario_call() {       # join the voice channel: the call screen, Bob muted, Ca
     expect call 'VOICE join 1107'
 }
 
+scenario_switch() {     # from the voice channel straight to calling Bob, who declines
+    STEPS="sleep 10" "$HERE/run.sh" switch 12000 DISPORTS_OPEN_CHANNEL=1107 DISPORTS_START_CALL=1 DISPORTS_SWITCH_CALL=2002
+    expect switch 'VOICE join 1107'
+    expect switch 'REST ring 2002'
+    expect switch 'LIVE decline 2002'
+    expect switch 'REST ringtone'
+    # Still in Bob's call: the last voice state is for it, not a leave.
+    if [ "$(grep -a -o 'VOICE join .*' "$LOG" | tail -1)" != "VOICE join 2002" ]; then
+        echo "   FAIL switch: the call to Bob ended"
+        FAILED=1
+    fi
+}
+
 scenario_reply() {      # tap a reply to a message 390 back: five pages, the question, keep looking
     STEPS="sleep 6;click 560 702;sleep 8;click 500 417;sleep 4" \
         "$HERE/run.sh" reply 20000 DISPORTS_OPEN_CHANNEL=1110 "${WIDE[@]}"
@@ -159,7 +172,7 @@ scenario_permissions() { # read-only, no history, no files, slowmode
     done
 }
 
-ALL=(channels mentions upload zoom nicknames dmcall call reply permissions)
+ALL=(channels mentions upload zoom nicknames dmcall call switch reply permissions)
 SCENARIOS=("${@:-${ALL[@]}}")
 [ $# -eq 0 ] && SCENARIOS=("${ALL[@]}")
 

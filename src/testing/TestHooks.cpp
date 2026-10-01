@@ -79,6 +79,11 @@ void TestHooks::scheduleChannelActions()
 
         if (qEnvironmentVariableIsSet("DISPORTS_START_CALL"))
             QTimer::singleShot(1500, this, [this]() { m_session->call()->start(m_openChannel); });
+
+        // Then straight to another call.
+        const QString next = qEnvironmentVariable("DISPORTS_SWITCH_CALL");
+        if (!next.isEmpty())
+            QTimer::singleShot(4000, this, [this, next]() { m_session->call()->start(next); });
     });
 }
 

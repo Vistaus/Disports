@@ -108,6 +108,11 @@ bool Session::applicationActive() const
     return QGuiApplication::applicationState() == Qt::ApplicationActive;
 }
 
+QNetworkAccessManager* Session::networkAccessManager() const
+{
+    return m_http->networkAccessManager();
+}
+
 void Session::setServerUrls(const QString& api, const QString& cdn)
 {
     m_apiUrl = api;

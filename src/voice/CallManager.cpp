@@ -54,6 +54,14 @@ CallManager::CallManager(Session* session)
 {
     m_clock.setInterval(1000);
     connect(&m_clock, &QTimer::timeout, this, &CallManager::statusTextChanged);
+    // As on Discord: alone in a DM or group call for 3 minutes, we leave.
+    m_aloneTimer.setSingleShot(true);
+    m_aloneTimer.setInterval(3 * 60 * 1000);
+    connect(&m_aloneTimer, &QTimer::timeout, this, [this]() {
+        endCall();
+        emit notice(tr("You left the call: no one else joined for 3 minutes."));
+    });
+    m_ringtone = new Ringtone(session->networkAccessManager(), this);
     connect(session->voiceStates(), &VoiceStates::userFlagsChanged, this, [this](Snowflake user) {
         if (m_participants.contains(user))
             emit participantsChanged();
@@ -71,6 +79,11 @@ QString CallManager::channelId() const
     return m_channel ? DiscordUrls::id(m_channel) : QString();
 }
 
+QString CallManager::initials() const
+{
+    return DiscordUrls::initials(m_title);
+}
+
 QString CallManager::statusText() const
 {
     switch (m_state) {
@@ -84,7 +97,7 @@ QString CallManager::statusText() const
         break;
     }
     if (m_direct && m_participants.isEmpty())
-        return tr("Calling...");
+        return m_ringing.isEmpty() ? tr("Waiting for others...") : tr("Calling...");
     if (!m_talkStartedMs)
         return tr("Connected");
     const qint64 seconds = (QDateTime::currentMSecsSinceEpoch() - m_talkStartedMs) / 1000;
@@ -99,7 +112,7 @@ QVariantList CallManager::participants() const
     DiscordInstance* instance = m_session->instance();
     if (!instance || m_state == Idle)
         return list;
-    auto entry = [this](Snowflake id, bool self, bool joined, bool muted, bool deafened) {
+    auto entry = [this](Snowflake id, bool self, bool joined, bool muted, bool deafened, bool ringing = false) {
         Profile* profile = GetProfileCache()->LookupProfile(id, "", "", "", false);
         const QString name = !profile ? QString()
             : QString::fromStdString(profile->m_globalName.empty() ? profile->m_name : profile->m_globalName);
@@ -112,6 +125,7 @@ QVariantList CallManager::participants() const
             {QStringLiteral("deafened"), deafened},
             {QStringLiteral("self"), self},
             {QStringLiteral("joined"), joined},
+            {QStringLiteral("ringing"), ringing},
         };
     };
     const Snowflake me = instance->GetUserID();
@@ -125,7 +139,7 @@ QVariantList CallManager::participants() const
         if (Channel* channel = instance->GetChannel(m_channel)) {
             for (Snowflake id : channel->m_recipients) {
                 if (id != me && !m_participants.contains(id))
-                    list.append(entry(id, false, false, false, false));
+                    list.append(entry(id, false, false, false, false, m_ringing.contains(id)));
             }
         }
     }
@@ -181,14 +195,23 @@ void CallManager::start(const QString& channelId)
         emit showRequested();
         return;
     }
+    // Straight from one call to the other, without closing the call screen.
     if (m_state != Idle)
-        endCall();
+        leave();
     describe(channel);
     // Joining a call already going on does not ring everyone again.
     const bool newCall = !m_session->voiceStates()->hasCall(channel);
     join(channel);
-    if (m_direct && newCall)
+    if (m_direct && newCall) {
         m_session->instance()->RequestRingCall(channel);
+        if (Channel* dm = m_session->instance()->GetChannel(channel)) {
+            const Snowflake me = m_session->instance()->GetUserID();
+            for (Snowflake id : dm->m_recipients) {
+                if (id != me)
+                    m_ringing.insert(id);
+            }
+        }
+    }
     emit showRequested();
 }
 
@@ -205,14 +228,22 @@ void CallManager::join(Snowflake channel)
     m_voiceEndpoint.clear();
     m_participants.clear();
     m_speaking.clear();
+    m_ringing.clear();
     m_talkStartedMs = 0;
+    m_joinPending = true;
     emit participantsChanged();
     if (!m_canSpeak && !m_muted) {
         m_muted = true;
         m_mutedByPermission = true;
         emit mutedChanged();
     }
+    if (m_state == Connecting) {
+        // Switched calls: a new title and picture.
+        emit stateChanged();
+        emit statusTextChanged();
+    }
     setState(Connecting);
+    updateAlone();
     m_session->instance()->SendVoiceStateUpdate(m_guild, channel, m_muted, m_deafened);
 }
 
@@ -241,7 +272,7 @@ void CallManager::hangUp()
     endCall();
 }
 
-void CallManager::endCall(const QString& reason)
+void CallManager::leave()
 {
     const bool joined = m_state == Connecting || m_state == Active;
     stopVoice();
@@ -250,6 +281,8 @@ void CallManager::endCall(const QString& reason)
             instance->SendVoiceStateUpdate(0, 0, m_muted, m_deafened);
     }
     m_clock.stop();
+    m_aloneTimer.stop();
+    m_joinPending = false;
     if (m_mutedByPermission) {
         m_mutedByPermission = false;
         m_muted = false;
@@ -257,9 +290,15 @@ void CallManager::endCall(const QString& reason)
     }
     m_participants.clear();
     m_speaking.clear();
+    m_ringing.clear();
     m_channel = 0;
     m_guild = 0;
     emit participantsChanged();
+}
+
+void CallManager::endCall(const QString& reason)
+{
+    leave();
     setState(Idle);
     if (!reason.isEmpty())
         emit callFailed(reason);
@@ -293,9 +332,14 @@ void CallManager::toggleMute()
 void CallManager::toggleDeafen()
 {
     m_deafened = !m_deafened;
-    // Deafening mutes too, as on Discord.
-    if (m_deafened)
+    // Deafening mutes too, as on Discord; undeafening unmutes only if we
+    // weren't muted before.
+    if (m_deafened) {
+        m_mutedBeforeDeafen = m_muted;
         m_muted = true;
+    } else {
+        m_muted = m_mutedBeforeDeafen || !m_canSpeak;
+    }
     emit mutedChanged();
     emit participantsChanged();
     if (m_voice) {
@@ -320,6 +364,11 @@ void CallManager::toggleSpeaker()
 
 void CallManager::gatewayDispatch(const std::string& type, const nlohmann::json& message)
 {
+    if (type == "READY") {
+        // Ready for the first call, without slowing down the start.
+        QTimer::singleShot(5000, m_ringtone, &Ringtone::fetch);
+        return;
+    }
     if (type.rfind("VOICE_", 0) != 0 && type.rfind("CALL_", 0) != 0)
         return;
     DiscordInstance* instance = m_session->instance();
@@ -335,10 +384,14 @@ void CallManager::gatewayDispatch(const std::string& type, const nlohmann::json&
             if (m_state == Idle)
                 return;
             if (channel != m_channel) {
+                // Leaving the previous call, when switching.
+                if (m_joinPending)
+                    return;
                 // Moved or disconnected elsewhere (another device).
                 endCall();
                 return;
             }
+            m_joinPending = false;
             m_voiceSessionId = stringOf(d, "session_id");
             maybeConnect();
         } else if (m_channel && channel == m_channel && m_state != Incoming) {
@@ -377,6 +430,17 @@ void CallManager::gatewayDispatch(const std::string& type, const nlohmann::json&
             // Answered elsewhere, or the caller gave up.
             endCall();
         }
+        if (channel == m_channel && m_state != Idle && m_state != Incoming && d.contains("ringing")
+                && d["ringing"].is_array()) {
+            // Who is still being rung: not those who declined or didn't
+            // answer.
+            m_ringing.clear();
+            for (const nlohmann::json& id : d["ringing"])
+                m_ringing.insert(id.is_string() ? Snowflake(std::stoull(id.get<std::string>()))
+                                                : Snowflake(id.is_number_unsigned() ? id.get<uint64_t>() : 0));
+            emit participantsChanged();
+            emit statusTextChanged();
+        }
         if (channel == m_channel && m_state != Idle && m_state != Incoming && d.contains("voice_states")
                 && d["voice_states"].is_array()) {
             for (const nlohmann::json& state : d["voice_states"]) {
@@ -396,6 +460,8 @@ void CallManager::addParticipant(Snowflake user)
     if (!user || user == m_session->instance()->GetUserID() || m_participants.contains(user))
         return;
     m_participants.append(user);
+    m_ringing.remove(user);
+    updateAlone();
     if (m_direct && m_voiceConnected && !m_talkStartedMs) {
         m_talkStartedMs = QDateTime::currentMSecsSinceEpoch();
         m_clock.start();
@@ -411,9 +477,16 @@ void CallManager::removeParticipant(Snowflake user)
     m_speaking.remove(user);
     emit participantsChanged();
     emit statusTextChanged();
-    // A DM call ends when the others hang up, like a phone call.
-    if (m_direct && m_participants.isEmpty() && m_talkStartedMs)
-        endCall();
+    updateAlone();
+}
+
+void CallManager::updateAlone()
+{
+    const bool alone = m_direct && (m_state == Connecting || m_state == Active) && m_participants.isEmpty();
+    if (!alone)
+        m_aloneTimer.stop();
+    else if (!m_aloneTimer.isActive())
+        m_aloneTimer.start();
 }
 
 // The voice connection
@@ -529,11 +602,8 @@ void CallManager::keepDisplayOn(bool on)
 
 void CallManager::updateRingtone()
 {
-    if (m_state == Incoming) {
-        if (!m_ringtone)
-            m_ringtone = new Ringtone(this);
+    if (m_state == Incoming)
         m_ringtone->play();
-    } else if (m_ringtone) {
+    else
         m_ringtone->stop();
-    }
 }
