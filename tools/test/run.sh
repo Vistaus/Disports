@@ -21,6 +21,15 @@ OUT=$ROOT/build/test/$NAME
 rm -rf "$OUT"; mkdir -p "$OUT/data/disports.jukfiuu" "$ROOT/build/test/files"
 # LOGGED_OUT=1: no saved token, the app starts at the sign-in page.
 [ -n "${LOGGED_OUT:-}" ] || echo '{"Token": "test-token"}' > "$OUT/data/disports.jukfiuu/settings.json"
+# LEGACY=1: what Disports 0.8.5 (Qt 5) left, to be migrated (src/Migration.h):
+# its token file and settings, and none of this version's.
+if [ -n "${LEGACY:-}" ]; then
+    rm -f "$OUT/data/disports.jukfiuu/settings.json"
+    printf 'test-token\n' > "$OUT/data/disports.jukfiuu/token"
+    mkdir -p "$OUT/.config/disports.jukfiuu"
+    printf '[General]\nblockedMessageVisibility=hide\ninlineGifPlayback=true\nmaxComposerLines=5\nthemeMode=1\ntoken=\nuitkTheme=Lomiri.Components.Themes.SuruDark\n' \
+        > "$OUT/.config/disports.jukfiuu/disports.jukfiuu.conf"
+fi
 # THEME=dark (or light): the app's theme setting.
 if [ -n "${THEME:-}" ]; then
     mkdir -p "$OUT/.config/disports.jukfiuu"

@@ -77,6 +77,7 @@ qt_add_executable(disports
     src/MessageSender.cpp src/MessageSender.h
     src/OfflineCache.cpp src/OfflineCache.h
     src/ImageCache.cpp src/ImageCache.h
+    src/Migration.cpp src/Migration.h
     src/PasswordLogin.cpp src/PasswordLogin.h
     src/Preferences.cpp src/Preferences.h
     src/RemoteAuth.cpp src/RemoteAuth.h

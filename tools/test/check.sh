@@ -197,13 +197,26 @@ scenario_captcha() {    # any request can need a captcha: sending a message
     expect captcha 'REST send 1101 .*"this one needs a captcha"'
 }
 
+scenario_migration() {  # from 0.8.5: its token and settings carried over, its files gone
+    LEGACY=1 STEPS="sleep 6" "$HERE/run.sh" migration 7000
+    expect migration 'GATEWAY connect'
+    local out=$ROOT/build/test/migration
+    for f in data/disports.jukfiuu/token .config/disports.jukfiuu/disports.jukfiuu.conf; do
+        [ ! -e "$out/$f" ] || { echo "   FAIL migration: $f was left behind"; FAILED=1; }
+    done
+    local prefs=$out/.config/disports.jukfiuu/preferences.ini
+    for setting in 'theme=1' 'autoplayGifs=true' 'blockedMessages=hide' 'composerMaxLines=5'; do
+        grep -q "^$setting$" "$prefs" 2>/dev/null || { echo "   FAIL migration: $setting not carried over"; FAILED=1; }
+    done
+}
+
 scenario_permissions() { # read-only, no history, no files, slowmode
     for channel in 1103 1104 1106 1105; do
         STEPS="sleep 5" "$HERE/run.sh" permissions-$channel 6500 DISPORTS_OPEN_CHANNEL=$channel "${WIDE[@]}"
     done
 }
 
-ALL=(channels mentions upload zoom nicknames dmcall call switch threads reply login captcha permissions)
+ALL=(channels mentions upload zoom nicknames dmcall call switch threads reply login captcha migration permissions)
 SCENARIOS=("${@:-${ALL[@]}}")
 [ $# -eq 0 ] && SCENARIOS=("${ALL[@]}")
 

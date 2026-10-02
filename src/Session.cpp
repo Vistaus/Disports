@@ -15,6 +15,7 @@
 #include "ChannelInfo.h"
 #include "DiscordUrls.h"
 #include "Log.h"
+#include "Migration.h"
 #include "backend/CoreGlobals.h"
 #include "backend/QtFrontend.h"
 #include "backend/QtHttpClient.h"
@@ -138,6 +139,8 @@ void Session::start()
         GetLocalSettings()->SetDiscordAPI(m_apiUrl.toStdString());
     if (!m_cdnUrl.isEmpty())
         GetLocalSettings()->SetDiscordCDN(m_cdnUrl.toStdString());
+    // Coming from 0.8: its sign-in and settings.
+    Migration::fromVersion08(m_preferences);
 
     const std::string token = GetLocalSettings()->GetToken();
     if (token.empty()) {

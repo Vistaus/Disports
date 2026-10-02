@@ -27,6 +27,9 @@ class Preferences : public QObject
 public:
     explicit Preferences(QObject* parent = nullptr);
 
+    // Nothing changed from the defaults yet (a first start).
+    bool untouched() const { return m_settings.allKeys().isEmpty(); }
+
     bool dmProfilePictures() const { return m_dmProfilePictures; }
     void setDmProfilePictures(bool enabled);
     int themeMode() const { return m_themeMode; }
