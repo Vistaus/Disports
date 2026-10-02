@@ -208,6 +208,15 @@ scenario_migration() {  # from 0.8.5: its token and settings carried over, its f
     for setting in 'theme=1' 'autoplayGifs=true' 'blockedMessages=hide' 'composerMaxLines=5'; do
         grep -q "^$setting$" "$prefs" 2>/dev/null || { echo "   FAIL migration: $setting not carried over"; FAILED=1; }
     done
+    grep -q "update notice shown" "$out/log.txt" || { echo "   FAIL migration: no update notice"; FAILED=1; }
+    # A sign-in Discord no longer takes: the sign-in page, and still the notice.
+    LEGACY=1 LEGACY_TOKEN=revoked-token STEPS="sleep 6" "$HERE/run.sh" migration-revoked 7000
+    grep -q "update notice shown" "$ROOT/build/test/migration-revoked/log.txt" \
+        || { echo "   FAIL migration-revoked: no update notice"; FAILED=1; }
+    # Never signed in to 0.8 (settings only): no notice.
+    LEGACY=1 LEGACY_TOKEN=none STEPS="sleep 4" "$HERE/run.sh" migration-unused 5000
+    ! grep -q "update notice shown" "$ROOT/build/test/migration-unused/log.txt" \
+        || { echo "   FAIL migration-unused: update notice for someone who never signed in"; FAILED=1; }
 }
 
 scenario_permissions() { # read-only, no history, no files, slowmode

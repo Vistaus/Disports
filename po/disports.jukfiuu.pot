@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Disports\n"
 "Report-Msgid-Bugs-To: https://github.com/jukfiuune/Disports/issues\n"
-"POT-Creation-Date: 2026-10-01 20:15+0300\n"
+"POT-Creation-Date: 2026-10-02 12:41+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -485,6 +485,45 @@ msgstr ""
 
 #: qml/Sidebar.qml
 msgid "DMs"
+msgstr ""
+
+#: qml/UpdateNotice.qml
+msgid "A look more consistent with Ubuntu Touch"
+msgstr ""
+
+#: qml/UpdateNotice.qml
+msgid "Calls in DMs, groups and voice channels"
+msgstr ""
+
+#: qml/UpdateNotice.qml
+msgid ""
+"Disports has been rebuilt from scratch for Ubuntu Touch 24.04. Your sign-in "
+"and settings were carried over from the old version."
+msgstr ""
+
+#: qml/UpdateNotice.qml
+msgid "Got it"
+msgstr ""
+
+#: qml/UpdateNotice.qml
+msgid "New in this version:"
+msgstr ""
+
+#: qml/UpdateNotice.qml
+msgid "Recent conversations stay readable without a connection"
+msgstr ""
+
+#: qml/UpdateNotice.qml
+msgid "Signing in with your email and password"
+msgstr ""
+
+#: qml/UpdateNotice.qml
+msgid ""
+"Something not working like before? <a href=\"%1\">Let us know on GitHub</a>."
+msgstr ""
+
+#: qml/UpdateNotice.qml
+msgid "Welcome to Disports %1"
 msgstr ""
 
 #: qml/VideoPlayer.qml src/media/GstVideoPlayer.cpp

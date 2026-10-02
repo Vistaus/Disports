@@ -83,6 +83,8 @@ class Session : public QObject
     Q_PROPERTY(PasswordLogin* passwordLogin READ passwordLogin CONSTANT)
     // Captchas Discord wants solved (qml/CaptchaPage.qml).
     Q_PROPERTY(CaptchaPrompt* captcha READ captcha CONSTANT)
+    // Updated from 0.8 just now: tell about the new version (qml/UpdateNotice.qml).
+    Q_PROPERTY(bool updatedFromOldVersion READ updatedFromOldVersion NOTIFY updatedFromOldVersionChanged)
     Q_PROPERTY(CallManager* call READ call CONSTANT)
 
 public:
@@ -139,6 +141,7 @@ public:
     RemoteAuth* qrLogin() const { return m_qrLogin; }
     PasswordLogin* passwordLogin() const { return m_passwordLogin; }
     CaptchaPrompt* captcha() const { return m_captcha; }
+    bool updatedFromOldVersion() const { return m_updatedFromOldVersion; }
     CallManager* call() const { return m_call; }
     OfflineCache* offlineCache() const { return m_offline; }
     VoiceStates* voiceStates() const { return m_voiceStates; }
@@ -198,6 +201,7 @@ public:
 signals:
     void phaseChanged();
     void errorTextChanged();
+    void updatedFromOldVersionChanged();
     void noticeTextChanged();
     void profileChanged();
     void currentGuildChanged();
@@ -265,6 +269,7 @@ private:
     CaptchaPrompt* m_captcha = nullptr;
     // A token entered just now, not yet accepted by Discord.
     bool m_newToken = false;
+    bool m_updatedFromOldVersion = false;
     CallManager* m_call = nullptr;
     VoiceStates* m_voiceStates = nullptr;
     QTimer m_callClock; // ticks currentCallElapsed

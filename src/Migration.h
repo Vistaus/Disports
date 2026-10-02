@@ -11,7 +11,9 @@ class Preferences;
 //      blockedMessageVisibility, maxComposerLines)
 namespace Migration {
 
-// Before the saved token is read (Session::start()).
-void fromVersion08(Preferences* preferences);
+// Before the saved token is read (Session::start()). True when 0.8 had a
+// sign-in: someone who used it, to be told about the new version (whether
+// or not Discord still accepts that sign-in).
+bool fromVersion08(Preferences* preferences);
 
 }

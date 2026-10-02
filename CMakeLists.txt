@@ -140,6 +140,7 @@ qt_add_qml_module(disports
         qml/ChatPage.qml
         qml/MessageCitation.qml
         qml/PasswordLoginPage.qml
+        qml/UpdateNotice.qml
         qml/MessageDelegate.qml
         qml/PanelHeader.qml
         qml/UnreadBadge.qml

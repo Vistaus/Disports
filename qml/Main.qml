@@ -1,5 +1,6 @@
 import QtQuick
 import Lomiri.Components
+import Lomiri.Components.Popups
 import Disports.Core
 
 MainView {
@@ -80,6 +81,16 @@ MainView {
     Connections {
         target: Session
         function onPhaseChanged() { root.showPhase() }
+    }
+
+    // Updated from 0.8: what's new, once, over the first page (the sign-in
+    // page too, if Discord no longer takes the old sign-in).
+    Connections {
+        target: Session
+        function onUpdatedFromOldVersionChanged() {
+            if (Session.updatedFromOldVersion)
+                Qt.callLater(function() { PopupUtils.open(Qt.resolvedUrl("UpdateNotice.qml"), root) })
+        }
     }
 
     // Captchas Discord wants solved: their page comes up over everything.

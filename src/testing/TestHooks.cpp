@@ -38,6 +38,7 @@ TestHooks::TestHooks(Session* session, QQuickView* view)
     scheduleChannelActions();
     scheduleFolder();
     scheduleLogin();
+    connect(session, &Session::updatedFromOldVersionChanged, this, []() { qInfo("Test: update notice shown"); });
 
     if (!m_captchaToken.isEmpty()) {
         connect(session->captcha(), &CaptchaPrompt::requested, this, [this]() {

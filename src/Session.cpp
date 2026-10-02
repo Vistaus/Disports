@@ -140,7 +140,10 @@ void Session::start()
     if (!m_cdnUrl.isEmpty())
         GetLocalSettings()->SetDiscordCDN(m_cdnUrl.toStdString());
     // Coming from 0.8: its sign-in and settings.
-    Migration::fromVersion08(m_preferences);
+    if (Migration::fromVersion08(m_preferences)) {
+        m_updatedFromOldVersion = true;
+        emit updatedFromOldVersionChanged();
+    }
 
     const std::string token = GetLocalSettings()->GetToken();
     if (token.empty()) {

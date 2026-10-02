@@ -9,7 +9,7 @@
 
 namespace Migration {
 
-void fromVersion08(Preferences* preferences)
+bool fromVersion08(Preferences* preferences)
 {
     const QString folder = QStringLiteral("/disports.jukfiuu");
     const QString tokenPath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
@@ -19,20 +19,18 @@ void fromVersion08(Preferences* preferences)
     const bool hasToken = QFile::exists(tokenPath);
     const bool hasSettings = QFile::exists(settingsPath);
     if (!hasToken && !hasSettings)
-        return;
+        return false;
 
+    QString token;
+    QFile file(tokenPath);
+    if (file.open(QIODevice::ReadOnly))
+        token = QString::fromUtf8(file.readAll()).trimmed();
+    if (token.isEmpty() && hasSettings)
+        token = QSettings(settingsPath, QSettings::IniFormat).value(QStringLiteral("token")).toString().trimmed();
     // The sign-in, unless this version already has one.
-    if (GetLocalSettings()->GetToken().empty()) {
-        QString token;
-        QFile file(tokenPath);
-        if (file.open(QIODevice::ReadOnly))
-            token = QString::fromUtf8(file.readAll()).trimmed();
-        if (token.isEmpty() && hasSettings)
-            token = QSettings(settingsPath, QSettings::IniFormat).value(QStringLiteral("token")).toString().trimmed();
-        if (!token.isEmpty()) {
-            GetLocalSettings()->SetToken(token.toStdString());
-            GetLocalSettings()->Save();
-        }
+    if (!token.isEmpty() && GetLocalSettings()->GetToken().empty()) {
+        GetLocalSettings()->SetToken(token.toStdString());
+        GetLocalSettings()->Save();
     }
 
     // The settings both versions have, unless some were changed here.
@@ -51,6 +49,7 @@ void fromVersion08(Preferences* preferences)
     // Nothing of 0.8 is kept: not a second copy of the token either.
     QFile::remove(tokenPath);
     QFile::remove(settingsPath);
+    return !token.isEmpty();
 }
 
 }
