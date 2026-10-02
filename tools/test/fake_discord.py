@@ -436,6 +436,22 @@ class Rest(BaseHTTPRequestHandler):
             page = list(reversed(msgs))[:limit]
             log("REST history", channel, "before", before or "-", "->", len(page))
             return self.reply(200, page)
+        # The Lottie sticker: a blue rounded square, turning once a second.
+        if path == "/stickers/7003.json":
+            spin = {"a": 1, "k": [{"t": 0, "s": [0], "e": [360], "i": {"x": [0.5], "y": [0.5]},
+                                   "o": {"x": [0.5], "y": [0.5]}}, {"t": 30}]}
+            square = {"ty": "gr", "it": [
+                {"ty": "rc", "d": 1, "s": {"a": 0, "k": [90, 90]}, "p": {"a": 0, "k": [0, 0]}, "r": {"a": 0, "k": 14}},
+                {"ty": "fl", "c": {"a": 0, "k": [0.35, 0.4, 0.8, 1]}, "o": {"a": 0, "k": 100}},
+                {"ty": "tr", "p": {"a": 0, "k": [0, 0]}, "a": {"a": 0, "k": [0, 0]}, "s": {"a": 0, "k": [100, 100]},
+                 "r": {"a": 0, "k": 0}, "o": {"a": 0, "k": 100}}]}
+            lottie = {"v": "5.5.2", "fr": 30, "ip": 0, "op": 30, "w": 160, "h": 160, "nm": "spin", "ddd": 0, "assets": [],
+                      "layers": [{"ddd": 0, "ind": 1, "ty": 4, "nm": "square", "sr": 1, "ao": 0, "ip": 0, "op": 30,
+                                  "st": 0, "bm": 0, "shapes": [square],
+                                  "ks": {"o": {"a": 0, "k": 100}, "r": spin, "p": {"a": 0, "k": [80, 80, 0]},
+                                         "a": {"a": 0, "k": [0, 0, 0]}, "s": {"a": 0, "k": [100, 100, 100]}}}]}
+            log("REST lottie sticker")
+            return self.reply(200, lottie)
         m = re.match(r"/stickers/(\d+)\.(png|gif)$", path)
         if m and m.group(1) in ("7001", "7002", "7004"):
             picture = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "build", "test", "files", "sticker.png")

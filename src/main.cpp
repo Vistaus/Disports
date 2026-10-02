@@ -10,6 +10,7 @@
 #include "ImageCache.h"
 #include "Session.h"
 #include "media/GstVideoPlayer.h"
+#include "media/LottieView.h"
 #ifdef DISPORTS_TEST_HOOKS
 #include "testing/TestHooks.h"
 #endif
@@ -55,6 +56,7 @@ void registerQmlTypes(Session* session)
 {
     qmlRegisterSingletonInstance("Disports.Core", 1, 0, "Session", session);
     qmlRegisterType<GstVideoPlayer>("Disports.Core", 1, 0, "GstVideoPlayer");
+    qmlRegisterType<LottieView>("Disports.Core", 1, 0, "LottieView");
     qmlRegisterUncreatableType<Session>("Disports.Core", 1, 0, "SessionPhase",
                                         QStringLiteral("Use the Session singleton"));
     qmlRegisterUncreatableType<CallManager>("Disports.Core", 1, 0, "CallState",

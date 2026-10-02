@@ -21,6 +21,7 @@ dependencies_target:
   - nlohmann-json3-dev
   - libopus-dev
   - libpulse-dev
+  - librlottie-dev
   # QML runtime modules, so `clickable desktop` can run the app in the
   # container: one for each module the QML imports. On a device they come
   # with the OS image.
@@ -34,9 +35,15 @@ dependencies_target:
 # Not part of every 24.04-2.x device image yet; ship them with the app.
 install_lib:
   - /usr/lib/${ARCH_TRIPLET}/libQt6WebSockets.so.6*
+  # Lottie stickers; not on the device. LGPL-2.1+: shipped unchanged, as
+  # its own library, with its license (install_data).
+  - /usr/lib/${ARCH_TRIPLET}/librlottie.so.0*
   # For the WebP image plugin (third_party/qtimageformats); small, and
   # most images already have them.
   - /usr/lib/${ARCH_TRIPLET}/libwebp.so.7*
   - /usr/lib/${ARCH_TRIPLET}/libwebpdemux.so.2*
   - /usr/lib/${ARCH_TRIPLET}/libwebpmux.so.3*
   - /usr/lib/${ARCH_TRIPLET}/libsharpyuv.so.0*
+
+install_data:
+  /usr/share/doc/librlottie0-1/copyright: licenses/rlottie

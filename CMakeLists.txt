@@ -94,6 +94,7 @@ qt_add_executable(disports
     src/models/MessageListModel.cpp src/models/MessageListModel.h
     src/models/UnreadDmListModel.cpp src/models/UnreadDmListModel.h
     src/media/GstVideoPlayer.cpp src/media/GstVideoPlayer.h
+    src/media/LottieView.cpp src/media/LottieView.h
     src/voice/AudioIO.cpp src/voice/AudioIO.h
     src/voice/CallManager.cpp src/voice/CallManager.h
     src/voice/DaveSession.cpp src/voice/DaveSession.h
@@ -119,6 +120,8 @@ pkg_check_modules(GST REQUIRED IMPORTED_TARGET gstreamer-1.0 gstreamer-app-1.0 g
 # microphone policy groups), with WebRTC's audio processing and RNNoise from
 # third_party/, see src/voice/.
 pkg_check_modules(VOICE REQUIRED IMPORTED_TARGET opus libpulse)
+# Lottie stickers (src/media/LottieView.h).
+pkg_check_modules(RLOTTIE REQUIRED IMPORTED_TARGET rlottie)
 
 qt_add_qml_module(disports
     URI Disports
@@ -204,6 +207,7 @@ target_link_libraries(disports PRIVATE
     Qt6::DBus
     PkgConfig::GST
     PkgConfig::VOICE
+    PkgConfig::RLOTTIE
     dave
     OpenSSL::Crypto
     discord

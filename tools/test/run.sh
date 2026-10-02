@@ -31,6 +31,11 @@ if [ -n "${LEGACY:-}" ]; then
     printf '[General]\nblockedMessageVisibility=hide\ninlineGifPlayback=true\nmaxComposerLines=5\nthemeMode=1\ntoken=\nuitkTheme=Lomiri.Components.Themes.SuruDark\n' \
         > "$OUT/.config/disports.jukfiuu/disports.jukfiuu.conf"
 fi
+# AUTOPLAY=1: "Play GIFs automatically" on.
+if [ -n "${AUTOPLAY:-}" ]; then
+    mkdir -p "$OUT/.config/disports.jukfiuu"
+    printf '[chat]\nautoplayGifs=true\n' >> "$OUT/.config/disports.jukfiuu/preferences.ini"
+fi
 # THEME=dark (or light): the app's theme setting.
 if [ -n "${THEME:-}" ]; then
     mkdir -p "$OUT/.config/disports.jukfiuu"

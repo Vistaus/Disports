@@ -281,9 +281,8 @@ QVariantList MessageContent::stickers(const Message& m)
         const bool lottie = s.m_format == StickerItem::LOTTIE;
         stickers.append(QVariantMap{
             {QStringLiteral("name"), str(s.m_name)},
-            // Lottie stickers are animations Qt cannot draw; they show
-            // their name instead.
-            {QStringLiteral("url"), lottie ? QString() : DiscordUrls::sticker(s.m_id, gif)},
+            // Lottie stickers are JSON animations (qml/StickerView.qml).
+            {QStringLiteral("url"), lottie ? DiscordUrls::lottieSticker(s.m_id) : DiscordUrls::sticker(s.m_id, gif)},
             {QStringLiteral("animated"), gif},
             {QStringLiteral("lottie"), lottie},
         });

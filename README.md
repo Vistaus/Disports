@@ -71,6 +71,7 @@ See [TRANSLATING.md](TRANSLATING.md).
 
 - The Discord client library in `src/discord/` is based on the core of [Discord Messenger](https://github.com/DiscordMessenger/dm) by iProgramInCpp, used under the MIT license (see [src/discord/LICENSE.DiscordMessenger](src/discord/LICENSE.DiscordMessenger)).
 - [nlohmann/json](https://github.com/nlohmann/json), [Boost.Regex](https://github.com/boostorg/regex), [QR Code generator](https://github.com/nayuki/QR-Code-generator) and [Qt Image Formats](https://github.com/qt/qtimageformats).
+- Lottie stickers are drawn with [rlottie](https://github.com/Samsung/rlottie), LGPL-2.1+, shipped unchanged as its own library.
 - Voice calls use [libdave](https://github.com/discord/libdave) and [MLSpp](https://github.com/cisco/mlspp) for end-to-end encryption, [Opus](https://opus-codec.org), [WebRTC Audio Processing](https://gitlab.freedesktop.org/pulseaudio/webrtc-audio-processing) (with [Abseil](https://github.com/abseil/abseil-cpp)) and [RNNoise](https://github.com/xiph/rnnoise).
 
 ## License

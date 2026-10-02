@@ -2,8 +2,9 @@ import QtQuick
 import Lomiri.Components
 import Disports.Core
 
-// A sticker. GIF stickers play like GIFs (only with "Play GIFs in the chat"
-// on); Lottie stickers, which Qt cannot draw, show their name.
+// A sticker. GIF and Lottie stickers play like GIFs (only with "Play GIFs
+// automatically" on; otherwise their first frame). A Lottie sticker that
+// can't be loaded shows its name.
 Item {
     id: stickerView
 
@@ -15,6 +16,14 @@ Item {
 
     width: units.gu(16)
     height: units.gu(16)
+
+    LottieView {
+        id: lottie
+        anchors.fill: parent
+        visible: !!stickerView.sticker.lottie && ready
+        source: stickerView.sticker.lottie ? (stickerView.sticker.url || "") : ""
+        playing: stickerView.playing && Session.preferences.autoplayGifs
+    }
 
     Image {
         anchors.fill: parent
@@ -39,7 +48,7 @@ Item {
     }
 
     LomiriShape {
-        visible: !!stickerView.sticker.lottie
+        visible: !!stickerView.sticker.lottie && !lottie.ready
         anchors.fill: parent
         aspect: LomiriShape.Flat
         radius: "medium"

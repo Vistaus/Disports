@@ -59,6 +59,11 @@ QString sticker(Snowflake stickerId, bool gif, int size)
                       .arg(size);
 }
 
+QString lottieSticker(Snowflake stickerId)
+{
+    return cdn() + QStringLiteral("stickers/%1.json").arg(id(stickerId));
+}
+
 QString initials(const QString& name)
 {
     QString result;
