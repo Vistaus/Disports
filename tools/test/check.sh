@@ -225,13 +225,21 @@ scenario_profile() {    # someone's profile: tapping their picture in a channel,
     STEPS="sleep 6;click 975 68;sleep 2" "$HERE/run.sh" profile-dm 9000 DISPORTS_OPEN_CHANNEL=2001 "${WIDE[@]}"
 }
 
+scenario_voicechat() {  # tapping a voice channel opens its chat; the call button joins
+    STEPS="sleep 6;click 130 539;sleep 3" "$HERE/run.sh" voicechat 10000 DISPORTS_OPEN_CHANNEL=1101 "${WIDE[@]}"
+    expect voicechat 'REST history 1107'
+    ! grep -a -q 'VOICE join' "$LOG" || { echo "   FAIL voicechat: tapping the channel joined the call"; FAILED=1; }
+    STEPS="sleep 6;click 130 539;sleep 3;click 928 68;sleep 3" "$HERE/run.sh" voicechat-join 13000 DISPORTS_OPEN_CHANNEL=1101 "${WIDE[@]}"
+    expect voicechat 'VOICE join 1107'
+}
+
 scenario_permissions() { # read-only, no history, no files, slowmode
     for channel in 1103 1104 1106 1105; do
         STEPS="sleep 5" "$HERE/run.sh" permissions-$channel 6500 DISPORTS_OPEN_CHANNEL=$channel "${WIDE[@]}"
     done
 }
 
-ALL=(channels mentions upload zoom nicknames dmcall call switch threads reply login captcha migration profile permissions)
+ALL=(channels mentions upload zoom nicknames dmcall call switch threads reply login captcha migration profile voicechat permissions)
 SCENARIOS=("${@:-${ALL[@]}}")
 [ $# -eq 0 ] && SCENARIOS=("${ALL[@]}")
 
