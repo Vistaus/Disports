@@ -2,7 +2,7 @@ import QtQuick
 import Lomiri.Components
 import Disports.Core
 
-// A sticker. GIF and Lottie stickers play like GIFs (only with "Play GIFs
+// A sticker. GIF, APNG and Lottie stickers play like GIFs (only with "Play GIFs
 // automatically" on; otherwise their first frame). A Lottie sticker that
 // can't be loaded shows its name.
 Item {
@@ -25,10 +25,18 @@ Item {
         playing: stickerView.playing && Session.preferences.autoplayGifs
     }
 
+    ApngView {
+        id: apng
+        anchors.fill: parent
+        visible: !!stickerView.sticker.apng && ready
+        source: stickerView.sticker.apng ? (stickerView.sticker.url || "") : ""
+        playing: stickerView.playing && Session.preferences.autoplayGifs
+    }
+
     Image {
         anchors.fill: parent
-        visible: !stickerView.sticker.lottie && !animated.visible
-        source: stickerView.sticker.lottie ? "" : (stickerView.sticker.url || "")
+        visible: !stickerView.sticker.lottie && !stickerView.sticker.apng && !animated.visible
+        source: stickerView.sticker.lottie || stickerView.sticker.apng ? "" : (stickerView.sticker.url || "")
         fillMode: Image.PreserveAspectFit
         asynchronous: true
         sourceSize.width: units.gu(32)

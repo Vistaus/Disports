@@ -24,7 +24,7 @@ QString userAvatar(Snowflake user, const std::string& hash, int size = 64);
 QString guildIcon(Snowflake guild, const std::string& hash, int size = 96);
 QString channelIcon(Snowflake channel, const std::string& hash, int size = 64);
 QString emoji(Snowflake emoji, bool animated, int size = 48);
-// A sticker's image: PNG (APNG stickers show their first frame) or GIF.
+// A sticker's image: PNG (also APNG, src/media/ApngView.h) or GIF.
 QString sticker(Snowflake sticker, bool gif, int size = 160);
 // A Lottie sticker's animation (JSON).
 QString lottieSticker(Snowflake sticker);

@@ -25,6 +25,7 @@ import os
 import re
 import threading
 import time
+import zlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import websockets
@@ -194,6 +195,27 @@ for i, text in ((395, "Replying to a recent one"), (10, "Replying to an old one"
     old = HISTORY_MSGS[TEXT][i]
     HISTORY_MSGS[TEXT].append(message(TEXT, ME, text, type=19, referenced_message=old,
                                       message_reference={"type": 0, "message_id": old["id"], "channel_id": TEXT}))
+
+def apng():
+    """The APNG sticker: 64x64, red, then a green square drawn over its middle
+    (blend over, area 32x32 at 16,16), then blue (replacing), half a second each."""
+    def chunk(kind, body):
+        return len(body).to_bytes(4, "big") + kind + body + zlib.crc32(kind + body).to_bytes(4, "big")
+
+    def pixels(w, h, rgba):
+        return zlib.compress(b"".join(b"\0" + bytes(rgba) * w for _ in range(h)))
+
+    def fctl(seq, w, h, x, y, blend):
+        return chunk(b"fcTL", b"".join(v.to_bytes(4, "big") for v in (seq, w, h, x, y))
+                     + (1).to_bytes(2, "big") + (2).to_bytes(2, "big") + bytes([0, blend]))
+
+    out = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", (64).to_bytes(4, "big") * 2 + bytes([8, 6, 0, 0, 0]))
+    out += chunk(b"acTL", (3).to_bytes(4, "big") + (0).to_bytes(4, "big"))
+    out += fctl(0, 64, 64, 0, 0, 0) + chunk(b"IDAT", pixels(64, 64, (220, 40, 40, 255)))
+    out += fctl(1, 32, 32, 16, 16, 1) + chunk(b"fdAT", (2).to_bytes(4, "big") + pixels(32, 32, (40, 200, 40, 255)))
+    out += fctl(3, 64, 64, 0, 0, 0) + chunk(b"fdAT", (4).to_bytes(4, "big") + pixels(64, 64, (40, 40, 220, 255)))
+    return out + chunk(b"IEND", b"")
+
 
 # Stickers, one of each format (1 PNG, 2 APNG, 3 Lottie, 4 GIF), in the DM.
 # The fake CDN answers /stickers/<id>.png|gif with a small picture (and
@@ -456,8 +478,11 @@ class Rest(BaseHTTPRequestHandler):
                                          "a": {"a": 0, "k": [0, 0, 0]}, "s": {"a": 0, "k": [100, 100, 100]}}}]}
             log("REST lottie sticker")
             return self.reply(200, lottie)
+        if path == "/stickers/7002.png":
+            log("REST apng sticker")
+            return self.reply(200, raw=apng(), content_type="image/png")
         m = re.match(r"/stickers/(\d+)\.(png|gif)$", path)
-        if m and m.group(1) in ("7001", "7002", "7004"):
+        if m and m.group(1) in ("7001", "7004"):
             picture = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "build", "test", "files", "sticker.png")
             if os.path.exists(picture):
                 return self.reply(200, raw=open(picture, "rb").read(), content_type="image/png")

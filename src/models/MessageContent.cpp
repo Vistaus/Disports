@@ -286,12 +286,15 @@ QVariantList MessageContent::stickers(const Message& m)
     for (const StickerItem& s : m.m_stickers) {
         const bool gif = s.m_format == StickerItem::GIF;
         const bool lottie = s.m_format == StickerItem::LOTTIE;
+        const bool apng = s.m_format == StickerItem::APNG;
         stickers.append(QVariantMap{
             {QStringLiteral("name"), str(s.m_name)},
             // Lottie stickers are JSON animations (qml/StickerView.qml).
             {QStringLiteral("url"), lottie ? DiscordUrls::lottieSticker(s.m_id) : DiscordUrls::sticker(s.m_id, gif)},
             {QStringLiteral("animated"), gif},
             {QStringLiteral("lottie"), lottie},
+            // Animated PNGs, which Qt shows only the first frame of.
+            {QStringLiteral("apng"), apng},
         });
     }
     return stickers;

@@ -94,6 +94,7 @@ qt_add_executable(disports
     src/models/MessageListModel.cpp src/models/MessageListModel.h
     src/models/UnreadDmListModel.cpp src/models/UnreadDmListModel.h
     src/media/GstVideoPlayer.cpp src/media/GstVideoPlayer.h
+    src/media/ApngView.cpp src/media/ApngView.h
     src/media/LottieView.cpp src/media/LottieView.h
     src/voice/AudioIO.cpp src/voice/AudioIO.h
     src/voice/CallManager.cpp src/voice/CallManager.h

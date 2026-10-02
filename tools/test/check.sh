@@ -233,13 +233,20 @@ scenario_voicechat() {  # tapping a voice channel opens its chat; the call butto
     expect voicechat 'VOICE join 1107'
 }
 
+scenario_stickers() {   # the DM's stickers, playing: the APNG one goes red, green middle, blue
+    AUTOPLAY=1 STEPS="sleep 9" "$HERE/run.sh" stickers 9500 DISPORTS_OPEN_CHANNEL=2001 "${WIDE[@]}" \
+        DISPORTS_FRAMES=/out:6000:6:250
+    expect stickers 'REST apng sticker'
+    expect stickers 'REST lottie sticker'
+}
+
 scenario_permissions() { # read-only, no history, no files, slowmode
     for channel in 1103 1104 1106 1105; do
         STEPS="sleep 5" "$HERE/run.sh" permissions-$channel 6500 DISPORTS_OPEN_CHANNEL=$channel "${WIDE[@]}"
     done
 }
 
-ALL=(channels mentions upload zoom nicknames dmcall call switch threads reply login captcha migration profile voicechat permissions)
+ALL=(channels mentions upload zoom nicknames dmcall call switch threads reply login captcha migration profile voicechat stickers permissions)
 SCENARIOS=("${@:-${ALL[@]}}")
 [ $# -eq 0 ] && SCENARIOS=("${ALL[@]}")
 
