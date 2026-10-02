@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Disports\n"
 "Report-Msgid-Bugs-To: https://github.com/jukfiuune/Disports/issues\n"
-"POT-Creation-Date: 2026-10-01 20:15+0300\n"
+"POT-Creation-Date: 2026-10-02 12:41+0300\n"
 "PO-Revision-Date: 2026-10-01 16:00+0300\n"
 "Last-Translator: Martin Filipov\n"
 "Language-Team: Bulgarian\n"
@@ -494,6 +494,47 @@ msgstr "Ще трябва да влезеш отново, за да използ
 #: qml/Sidebar.qml
 msgid "DMs"
 msgstr "ЛС"
+
+#: qml/UpdateNotice.qml
+msgid "A look more consistent with Ubuntu Touch"
+msgstr "Облик, по-съобразен с Ubuntu Touch"
+
+#: qml/UpdateNotice.qml
+msgid "Calls in DMs, groups and voice channels"
+msgstr "Обаждания в лични съобщения, групи и гласови канали"
+
+#: qml/UpdateNotice.qml
+msgid ""
+"Disports has been rebuilt from scratch for Ubuntu Touch 24.04. Your sign-in "
+"and settings were carried over from the old version."
+msgstr ""
+"Disports е създаден наново за Ubuntu Touch 24.04. Входът и настройките ти "
+"бяха пренесени от старата версия."
+
+#: qml/UpdateNotice.qml
+msgid "Got it"
+msgstr "Разбрах"
+
+#: qml/UpdateNotice.qml
+msgid "New in this version:"
+msgstr "Ново в тази версия:"
+
+#: qml/UpdateNotice.qml
+msgid "Recent conversations stay readable without a connection"
+msgstr "Последните разговори могат да се четат и без връзка"
+
+#: qml/UpdateNotice.qml
+msgid "Signing in with your email and password"
+msgstr "Вход с имейл и парола"
+
+#: qml/UpdateNotice.qml
+msgid ""
+"Something not working like before? <a href=\"%1\">Let us know on GitHub</a>."
+msgstr "Нещо не работи както преди? <a href=\"%1\">Кажи ни в GitHub</a>."
+
+#: qml/UpdateNotice.qml
+msgid "Welcome to Disports %1"
+msgstr "Добре дошъл в Disports %1"
 
 #: qml/VideoPlayer.qml src/media/GstVideoPlayer.cpp
 msgid "The video could not be played."
