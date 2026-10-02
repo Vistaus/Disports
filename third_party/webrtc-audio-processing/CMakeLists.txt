@@ -340,6 +340,8 @@ target_compile_definitions(webrtc_audio_processing
     PRIVATE WEBRTC_LIBRARY_IMPL WEBRTC_APM_DEBUG_DUMP=0 NDEBUG _GNU_SOURCE
 )
 target_compile_features(webrtc_audio_processing PUBLIC cxx_std_17)
-target_compile_options(webrtc_audio_processing PRIVATE -w)
+# Newer GCC (Ubuntu 26.04) no longer pulls <cstdint> in through other
+# headers, and this WebRTC release relies on it.
+target_compile_options(webrtc_audio_processing PRIVATE -w "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include cstdint>")
 target_link_libraries(webrtc_audio_processing PUBLIC absl::base absl::strings absl::optional Threads::Threads)
 set_target_properties(webrtc_audio_processing PROPERTIES POSITION_INDEPENDENT_CODE ON AUTOMOC OFF)
