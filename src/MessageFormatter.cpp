@@ -168,8 +168,17 @@ QString replaceTokens(QString text, Snowflake guild, bool rich, Protected* store
     return text;
 }
 
-// Emphasis, strike and spoilers on escaped text without code.
-QString applyInline(QString text)
+MessageFormatter::Palette s_palette;
+
+// Quotes are marked while the text is built, and cut out or indented at
+// the end (richBlocks(), richText()).
+const QChar QuoteStart(0xE003);
+const QChar QuoteEnd(0xE004);
+
+// Emphasis, strike and spoilers on escaped text without code. Spoilers are
+// numbered per message (`spoilers`) and hidden until tapped: links to
+// "spoiler:<n>".
+QString applyInline(QString text, int& spoilers, const QSet<int>& revealed)
 {
     static const QRegularExpression bold(QStringLiteral("\\*\\*(.+?)\\*\\*"));
     static const QRegularExpression underline(QStringLiteral("__(.+?)__"));
@@ -183,28 +192,83 @@ QString applyInline(QString text)
     text.replace(italicStar, QStringLiteral("<i>\\1</i>"));
     text.replace(italicUnderscore, QStringLiteral("<i>\\1</i>"));
     text.replace(strike, QStringLiteral("<s>\\1</s>"));
-    // Spoilers are shown dimmed rather than hidden until tapped (for now).
-    text.replace(spoiler, QStringLiteral("<span style=\"background-color:#555;color:#ddd\">\\1</span>"));
-    return text;
+    QString out;
+    qsizetype last = 0;
+    auto it = spoiler.globalMatch(text);
+    while (it.hasNext()) {
+        const QRegularExpressionMatch m = it.next();
+        out += text.mid(last, m.capturedStart() - last);
+        const int n = spoilers++;
+        const bool shown = revealed.contains(n);
+        out += QStringLiteral("<a href=\"spoiler:%1\" style=\"text-decoration:none\">"
+                              "<span style=\"background-color:%2;color:%3\">%4</span></a>")
+                   .arg(n)
+                   .arg(shown ? s_palette.code : s_palette.spoiler, shown ? s_palette.text : s_palette.spoiler,
+                        m.captured(1));
+        last = m.capturedEnd();
+    }
+    return out + text.mid(last);
 }
 
-// Headings, block quotes and list bullets, per line.
+// A line of markdown blocks: headings, subtext and list bullets.
+QString formatLine(const QString& line)
+{
+    if (line.startsWith(QLatin1String("### ")))
+        return QStringLiteral("<b>%1</b>").arg(line.mid(4));
+    if (line.startsWith(QLatin1String("## ")))
+        return QStringLiteral("<b><big>%1</big></b>").arg(line.mid(3));
+    if (line.startsWith(QLatin1String("# ")))
+        return QStringLiteral("<b><big><big>%1</big></big></b>").arg(line.mid(2));
+    if (line.startsWith(QLatin1String("-# ")))
+        return QStringLiteral("<font size=\"2\" color=\"%1\">%2</font>").arg(s_palette.muted, line.mid(3));
+    if (line.startsWith(QLatin1String("- ")) || line.startsWith(QLatin1String("* ")))
+        return QStringLiteral("• %1").arg(line.mid(2));
+    if (line.startsWith(QLatin1String("  - ")) || line.startsWith(QLatin1String("  * ")))
+        return QStringLiteral("&nbsp;&nbsp;&nbsp;&nbsp;◦ %1").arg(line.mid(4));
+    return line;
+}
+
+// A block quote, marked for richBlocks() (a bar on the left, as on
+// Discord) or richText() (indented).
+QString quoteBlock(const QStringList& lines)
+{
+    return QuoteStart + lines.join(QStringLiteral("<br>")) + QuoteEnd;
+}
+
+// Headings, subtext, lists and block quotes, per line. Lines after "> "
+// are quoted together; ">>> " quotes the rest of the text.
 QString applyBlocks(const QString& text)
 {
-    QStringList lines = text.split(QLatin1Char('\n'));
-    for (QString& line : lines) {
-        if (line.startsWith(QLatin1String("### ")))
-            line = QStringLiteral("<b>%1</b>").arg(line.mid(4));
-        else if (line.startsWith(QLatin1String("## ")))
-            line = QStringLiteral("<b><big>%1</big></b>").arg(line.mid(3));
-        else if (line.startsWith(QLatin1String("# ")))
-            line = QStringLiteral("<b><big><big>%1</big></big></b>").arg(line.mid(2));
-        else if (line.startsWith(QLatin1String("&gt; ")))
-            line = QStringLiteral("<font color=\"#888\">▎</font> %1").arg(line.mid(5));
-        else if (line.startsWith(QLatin1String("- ")) || line.startsWith(QLatin1String("* ")))
-            line = QStringLiteral("• %1").arg(line.mid(2));
+    QString out;
+    QStringList quote;
+    bool quoteRest = false;
+    bool afterLine = false; // a line was written: a break before the next
+    auto flushQuote = [&]() {
+        if (quote.isEmpty())
+            return;
+        // A table is a block of its own: no breaks around it.
+        out += quoteBlock(quote);
+        quote.clear();
+        afterLine = false;
+    };
+    for (const QString& line : text.split(QLatin1Char('\n'))) {
+        if (quoteRest) {
+            quote.append(formatLine(line));
+        } else if (line.startsWith(QLatin1String("&gt;&gt;&gt; "))) {
+            quoteRest = true;
+            quote.append(formatLine(line.mid(13)));
+        } else if (line.startsWith(QLatin1String("&gt; ")) || line == QLatin1String("&gt;")) {
+            quote.append(formatLine(line.mid(5)));
+        } else {
+            flushQuote();
+            if (afterLine)
+                out += QStringLiteral("<br>");
+            out += formatLine(line);
+            afterLine = true;
+        }
     }
-    return lines.join(QStringLiteral("<br>"));
+    flushQuote();
+    return out;
 }
 
 }
@@ -276,38 +340,92 @@ int emojiOnlyCount(const QString& content)
     return count;
 }
 
-QString richText(const QString& content, Snowflake guild, int emojiSize)
+void setPalette(const Palette& palette)
+{
+    s_palette = palette;
+}
+
+namespace {
+
+// Rich text with quotes marked (QuoteStart, QuoteEnd).
+QString markedText(const QString& content, Snowflake guild, int emojiSize, const QSet<int>& revealed,
+                   int firstSpoiler)
 {
     // Split out code first so nothing inside it is formatted.
     static const QRegularExpression code(QStringLiteral("```(?:[\\w+-]*\\n)?([\\s\\S]*?)```|`([^`\\n]+)`"));
 
     QString result;
     qsizetype last = 0;
+    int spoilers = firstSpoiler;
     auto flushText = [&](qsizetype end) {
         Protected store;
         const QString escaped = content.mid(last, end - last).toHtmlEscaped();
-        result += store.restore(applyBlocks(applyInline(replaceTokens(escaped, guild, true, &store, emojiSize))));
+        result += store.restore(
+            applyBlocks(applyInline(replaceTokens(escaped, guild, true, &store, emojiSize), spoilers, revealed)));
     };
+    const QString mono = QStringLiteral("<font face=\"Ubuntu Mono,monospace\">%1</font>");
 
     auto it = code.globalMatch(content);
     while (it.hasNext()) {
         const QRegularExpressionMatch m = it.next();
-        flushText(m.capturedStart());
-        if (m.capturedLength(1) > 0 || m.captured(0).startsWith(QLatin1String("```"))) {
-            QString block = m.captured(1).toHtmlEscaped();
-            if (block.endsWith(QLatin1Char('\n')))
-                block.chop(1);
-            block.replace(QLatin1Char('\n'), QStringLiteral("<br>"));
-            block.replace(QLatin1Char(' '), QStringLiteral("&nbsp;"));
-            result += QStringLiteral("<br><font face=\"Ubuntu Mono,monospace\">%1</font><br>").arg(block);
+        const bool block = m.capturedLength(1) > 0 || m.captured(0).startsWith(QLatin1String("```"));
+        // A block is a box of its own line: not the line break before it.
+        qsizetype end = m.capturedStart();
+        if (block && end > last && content.at(end - 1) == QLatin1Char('\n'))
+            --end;
+        flushText(end);
+        if (block) {
+            QString lines = m.captured(1).toHtmlEscaped();
+            if (lines.endsWith(QLatin1Char('\n')))
+                lines.chop(1);
+            lines.replace(QLatin1Char('\n'), QStringLiteral("<br>"));
+            lines.replace(QLatin1Char(' '), QStringLiteral("&nbsp;"));
+            result += QStringLiteral("<table width=\"100%\" cellspacing=\"0\" cellpadding=\"6\" bgcolor=\"%1\">"
+                                     "<tr><td>%2</td></tr></table>").arg(s_palette.code, mono.arg(lines));
         } else {
-            result += QStringLiteral("<font face=\"Ubuntu Mono,monospace\">%1</font>")
-                          .arg(m.captured(2).toHtmlEscaped());
+            result += QStringLiteral("<span style=\"background-color:%1\">%2</span>")
+                          .arg(s_palette.code, mono.arg(QStringLiteral("&nbsp;") + m.captured(2).toHtmlEscaped()
+                                                        + QStringLiteral("&nbsp;")));
         }
         last = m.capturedEnd();
+        // Nor the one after it.
+        if (block && last < content.size() && content.at(last) == QLatin1Char('\n'))
+            ++last;
     }
     flushText(content.size());
     return result;
+}
+
+}
+
+QString richText(const QString& content, Snowflake guild, int emojiSize, const QSet<int>& revealed, int firstSpoiler)
+{
+    QString text = markedText(content, guild, emojiSize, revealed, firstSpoiler);
+    text.replace(QuoteStart, QStringLiteral("<blockquote>"));
+    text.replace(QuoteEnd, QStringLiteral("</blockquote>"));
+    return text;
+}
+
+QVariantList richBlocks(const QString& content, Snowflake guild, int emojiSize, const QSet<int>& revealed)
+{
+    const QString text = markedText(content, guild, emojiSize, revealed, 0);
+    QVariantList blocks;
+    auto add = [&blocks](const QString& part, bool quote) {
+        if (!part.isEmpty())
+            blocks.append(QVariantMap{{QStringLiteral("text"), part}, {QStringLiteral("quote"), quote}});
+    };
+    qsizetype last = 0;
+    while (true) {
+        const qsizetype start = text.indexOf(QuoteStart, last);
+        if (start < 0)
+            break;
+        const qsizetype end = text.indexOf(QuoteEnd, start);
+        add(text.mid(last, start - last), false);
+        add(text.mid(start + 1, (end < 0 ? text.size() : end) - start - 1), true);
+        last = end < 0 ? text.size() : end + 1;
+    }
+    add(text.mid(last), false);
+    return blocks;
 }
 
 QString plainText(const QString& content, Snowflake guild)

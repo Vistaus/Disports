@@ -209,10 +209,14 @@ bool MessageContent::bodyIsEmbedLink(const Message& m)
     return false;
 }
 
-QVariantList MessageContent::embeds(const Message& m, Snowflake guild, int emojiSize)
+QVariantList MessageContent::embeds(const Message& m, Snowflake guild, int emojiSize, const QSet<int>& revealed)
 {
     QVariantList cards;
+    int firstSpoiler = 0;
     for (const RichEmbed& e : m.m_embeds) {
+        // This embed's spoilers: 1000 numbers of its own, 100 per field.
+        firstSpoiler += 1000;
+        int fieldSpoilers = firstSpoiler;
         if (isMediaEmbed(e))
             continue;
         if (e.m_title.empty() && e.m_description.empty() && e.m_authorName.empty() && e.m_fields.empty()
@@ -222,8 +226,10 @@ QVariantList MessageContent::embeds(const Message& m, Snowflake guild, int emoji
         QVariantList fields;
         for (const RichEmbedField& f : e.m_fields) {
             fields.append(QVariantMap{
-                {QStringLiteral("name"), MessageFormatter::richText(str(f.m_title), guild, emojiSize)},
-                {QStringLiteral("value"), MessageFormatter::richText(str(f.m_value), guild, emojiSize)},
+                {QStringLiteral("name"), MessageFormatter::richText(str(f.m_title), guild, emojiSize, revealed,
+                                                                    fieldSpoilers += 100)},
+                {QStringLiteral("value"), MessageFormatter::richText(str(f.m_value), guild, emojiSize, revealed,
+                                                                     fieldSpoilers + 50)},
                 {QStringLiteral("inline"), f.m_bInline},
             });
         }
@@ -262,7 +268,8 @@ QVariantList MessageContent::embeds(const Message& m, Snowflake guild, int emoji
             {QStringLiteral("authorIcon"), str(e.m_authorIconProxiedUrl.empty() ? e.m_authorIconUrl : e.m_authorIconProxiedUrl)},
             {QStringLiteral("title"), str(e.m_title).toHtmlEscaped()},
             {QStringLiteral("url"), str(e.m_url)},
-            {QStringLiteral("description"), MessageFormatter::richText(str(e.m_description), guild, emojiSize)},
+            {QStringLiteral("description"), MessageFormatter::richText(str(e.m_description), guild, emojiSize,
+                                                                       revealed, firstSpoiler)},
             {QStringLiteral("fields"), fields},
             {QStringLiteral("thumbnailUrl"), thumbnail},
             {QStringLiteral("image"), image},

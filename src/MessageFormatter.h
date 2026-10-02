@@ -1,6 +1,8 @@
 #pragma once
 
+#include <QSet>
 #include <QString>
+#include <QVariantList>
 
 #include "discord/models/Snowflake.hpp"
 
@@ -15,8 +17,26 @@ namespace MessageFormatter {
 // user isn't known.
 QString displayName(Snowflake user, Snowflake guild, const QString& fallback = QString());
 
-// emojiSize: pixel size of custom emoji images.
-QString richText(const QString& content, Snowflake guild, int emojiSize = 20);
+// The theme's colours ("#rrggbb"), set from QML (MessageListModel.palette):
+// subtext, code backgrounds, hidden spoilers and text.
+struct Palette {
+    QString muted = QStringLiteral("#888888");
+    QString code = QStringLiteral("#e8e8e8");
+    QString spoiler = QStringLiteral("#888888");
+    QString text = QStringLiteral("#333333");
+};
+void setPalette(const Palette& palette);
+
+// emojiSize: pixel size of custom emoji images. Spoilers are links to
+// "spoiler:<n>", numbered from `firstSpoiler`, hidden unless in `revealed`.
+// Quotes are indented (see richBlocks() for the message view's bars).
+QString richText(const QString& content, Snowflake guild, int emojiSize = 20,
+                 const QSet<int>& revealed = {}, int firstSpoiler = 0);
+
+// The same in blocks for the message view, which draws quotes' bars:
+// [{text, quote}].
+QVariantList richBlocks(const QString& content, Snowflake guild, int emojiSize = 20,
+                        const QSet<int>& revealed = {});
 
 // How many emoji the content is, when it is nothing but emoji (and spaces);
 // else 0.

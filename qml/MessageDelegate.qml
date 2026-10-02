@@ -11,7 +11,8 @@ ListItem {
     required property string authorId
     required property string author
     required property string avatarUrl
-    required property string body
+    // Rich text in blocks: [{text, quote}] (MessageListModel).
+    required property var body
     required property string plainBody
     required property string timestamp
     required property bool edited
@@ -143,9 +144,23 @@ ListItem {
     // line of text.
     readonly property bool lineRow: isSystem || placeholder
 
+    readonly property real bodyPixelSize: jumbo ? units.gu(4.2) : units.gu(1.6)
+    // After the last block: a system line's time, or "(edited)".
+    readonly property string bodySuffix: isSystem
+        ? " <font size=\"1\" color=\"" + theme.palette.normal.backgroundSecondaryText + "\">" + timestamp + "</font>"
+        : edited ? " <font size=\"1\" color=\"#888\">(edited)</font>" : ""
+
+    // A link in the text: a spoiler to show, or a page to open.
+    function openLink(link) {
+        if (link.indexOf("spoiler:") === 0)
+            Session.messages.revealSpoiler(messageId, parseInt(link.substring(8)))
+        else
+            Qt.openUrlExternally(link)
+    }
+
     FontMetrics {
         id: bodyMetrics
-        font: bodyLabel.font
+        font.pixelSize: bubble.bodyPixelSize
     }
 
     Icon {
@@ -153,9 +168,9 @@ ListItem {
         x: bubble.contentLeft - units.gu(1.5) - width
         // One line: its real height (inline emoji make it taller than the
         // font's line); more lines: the first one.
-        readonly property Item line: bubble.placeholder ? placeholderLabel : bodyLabel
-        readonly property real lineHeight: line.lineCount === 1 ? line.height : bodyMetrics.height
-        y: (bubble.placeholder ? placeholderLabel.y : content.y + bodyLabel.y) + (lineHeight - height) / 2
+        readonly property Item line: bubble.placeholder ? placeholderLabel : bodyColumn.firstLabel
+        readonly property real lineHeight: line && line.lineCount === 1 ? line.height : bodyMetrics.height
+        y: (bubble.placeholder ? placeholderLabel.y : content.y + bodyColumn.y) + (lineHeight - height) / 2
         width: units.gu(2)
         height: width
         name: bubble.placeholder ? "security-alert" : bubble.systemIcon
@@ -177,7 +192,7 @@ ListItem {
               + " <font size=\"1\" color=\"" + theme.palette.normal.backgroundSecondaryText + "\">" + bubble.timestamp + "</font>"
         textFormat: Text.RichText
         wrapMode: Text.Wrap
-        font: bodyLabel.font
+        font.pixelSize: bubble.bodyPixelSize
         color: theme.palette.normal.backgroundSecondaryText
         onLinkActivated: bubble.revealed = true
     }
@@ -315,19 +330,49 @@ ListItem {
             }
         }
 
-        Label {
-            id: bodyLabel
+        // The text, block by block: quotes with a bar on the left.
+        Column {
+            id: bodyColumn
             width: parent.width
-            visible: bubble.body !== ""
-            text: bubble.linkStyle + bubble.body + (bubble.isSystem
-                                 ? " <font size=\"1\" color=\"" + theme.palette.normal.backgroundSecondaryText + "\">" + bubble.timestamp + "</font>"
-                                 : bubble.edited ? " <font size=\"1\" color=\"#888\">(edited)</font>" : "")
-            textFormat: Text.RichText
-            wrapMode: Text.Wrap
-            // Only 1-3 emoji: large, like Discord
-            font.pixelSize: bubble.jumbo ? units.gu(4.2) : units.gu(1.6)
-            color: bubble.isSystem ? theme.palette.normal.backgroundSecondaryText : theme.palette.normal.backgroundText
-            onLinkActivated: function(link) { Qt.openUrlExternally(link) }
+            visible: bubble.body.length > 0
+            readonly property Item firstLabel: bodyBlocks.count > 0 && bodyBlocks.itemAt(0) ? bodyBlocks.itemAt(0).label : null
+
+            Repeater {
+                id: bodyBlocks
+                model: bubble.body
+
+                delegate: Item {
+                    required property var modelData
+                    required property int index
+                    readonly property alias label: blockLabel
+
+                    width: bodyColumn.width
+                    height: blockLabel.height
+
+                    Rectangle {
+                        visible: modelData.quote
+                        width: units.dp(3)
+                        height: parent.height
+                        radius: width / 2
+                        color: theme.palette.normal.base
+                    }
+
+                    Label {
+                        id: blockLabel
+                        x: modelData.quote ? units.gu(1.2) : 0
+                        width: parent.width - x
+                        text: bubble.linkStyle + modelData.text
+                              + (index === bubble.body.length - 1 ? bubble.bodySuffix : "")
+                        textFormat: Text.RichText
+                        wrapMode: Text.Wrap
+                        // Only 1-3 emoji: large, like Discord
+                        font.pixelSize: bubble.bodyPixelSize
+                        color: bubble.isSystem ? theme.palette.normal.backgroundSecondaryText
+                                               : theme.palette.normal.backgroundText
+                        onLinkActivated: function(link) { bubble.openLink(link) }
+                    }
+                }
+            }
         }
 
         // Pictures and videos. Their room is reserved from the start
@@ -365,6 +410,7 @@ ListItem {
             delegate: EmbedCard {
                 required property var modelData
                 embed: modelData
+                messageId: bubble.messageId
                 width: Math.min(content.width, units.gu(52))
                 playing: bubble.onScreen
                 onMediaOpened: function(media) { bubble.mediaOpened(media) }

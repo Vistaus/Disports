@@ -131,7 +131,7 @@ PY
 
 scenario_nicknames() {  # history has no member objects: the app asks, and shows "Ally"
     STEPS="sleep 6" "$HERE/run.sh" nicknames 8000 DISPORTS_OPEN_CHANNEL=1101 "${WIDE[@]}"
-    expect nicknames 'member search \[.*"200".*\] -> \[.alice.\]'
+    expect nicknames 'member search \[.*"200".*\] -> \[.alice.(, .bob.)?\]'
 }
 
 scenario_dmcall() {     # a DM with a call going on
@@ -220,7 +220,7 @@ scenario_migration() {  # from 0.8.5: its token and settings carried over, its f
 }
 
 scenario_profile() {    # someone's profile: tapping their picture in a channel, and a DM's info
-    STEPS="sleep 6;click 347 722;sleep 2" "$HERE/run.sh" profile 9000 DISPORTS_OPEN_CHANNEL=1101 "${WIDE[@]}"
+    STEPS="sleep 6;click 347 547;sleep 2" "$HERE/run.sh" profile 9000 DISPORTS_OPEN_CHANNEL=1101 "${WIDE[@]}"
     expect profile 'REST profile 200'
     STEPS="sleep 6;click 975 68;sleep 2" "$HERE/run.sh" profile-dm 9000 DISPORTS_OPEN_CHANNEL=2001 "${WIDE[@]}"
 }

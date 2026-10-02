@@ -123,6 +123,19 @@ ListView {
 
     clip: true
     model: Session.messages
+
+    // The theme's colours for formatted text (code, subtext, spoilers),
+    // built into each message's text by the model.
+    Binding {
+        target: Session.messages
+        property: "palette"
+        value: ({
+            "muted": theme.palette.normal.backgroundSecondaryText.toString(),
+            "code": Qt.tint(theme.palette.normal.background, "#24808080").toString(),
+            "spoiler": Qt.tint(theme.palette.normal.background, "#b0808080").toString(),
+            "text": theme.palette.normal.backgroundText.toString(),
+        })
+    }
     verticalLayoutDirection: ListView.BottomToTop
     // Rows are built ahead of the finger in the background.
     cacheBuffer: units.gu(150)

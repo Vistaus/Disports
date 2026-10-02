@@ -151,6 +151,10 @@ def message(channel, author, content, **extra):
 for ch in (GENERAL, NOHISTORY, SLOW, NOFILES, READONLY, DM, THREAD):
     HISTORY_MSGS[ch] = [message(ch, ALICE, "Hello from Alice in %s" % ch)]
 HISTORY_MSGS[GROUP] = [message(GROUP, ALICE, "Who's coming on Saturday?")]
+# Markdown in #general: heading, quote, subtext, list, code and a spoiler.
+HISTORY_MSGS[GENERAL].append(message(GENERAL, BOB, "## Plans\n> Meet at the station\n> at **ten**\n-# small print here\n"
+                                     "- bring `snacks`\n- and *water*\n```\nlet x = 1;\nlet y = 2;\n```\n"
+                                     "The surprise is ||a cake||."))
 
 # #media: 200 messages of pictures, videos, several pictures, link previews,
 # for scrolling tests. The files are build/test/files/sticker.png (any

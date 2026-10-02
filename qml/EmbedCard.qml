@@ -1,11 +1,15 @@
 import QtQuick
 import Lomiri.Components
+import Disports.Core
 
 // A link preview or bot embed: a Lomiri card with the embed's colour on the
 // left, then provider, author, title, description, fields, picture and
 // footer, each shown when present.
 LomiriShape {
     id: card
+
+    // For its spoilers (MessageListModel.revealSpoiler()).
+    property string messageId
 
     // An entry of a message's `embeds`, see MessageContent::embeds().
     property var embed: ({})
@@ -27,6 +31,10 @@ LomiriShape {
     readonly property string linkStyle: "<style>a { color: " + theme.palette.normal.activity + "; }</style>"
 
     function openLink(link) {
+        if (link && link.indexOf("spoiler:") === 0) {
+            Session.messages.revealSpoiler(card.messageId, parseInt(link.substring(8)))
+            return
+        }
         if (link)
             Qt.openUrlExternally(link)
     }

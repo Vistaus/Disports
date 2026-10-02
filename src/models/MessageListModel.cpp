@@ -63,16 +63,16 @@ QVariant MessageListModel::data(const QModelIndex& index, int role) const
         return m.IsWebHook() ? QString::fromStdString(m.m_author)
                              : MessageFormatter::displayName(m.m_author_snowflake, m_guild, QString::fromStdString(m.m_author));
     case AvatarUrlRole: return DiscordUrls::userAvatar(m.m_author_snowflake, m.m_avatar);
-    case BodyRole:
+    case BodyRole: {
+        auto one = [](const QString& text) {
+            return QVariantList{QVariantMap{{QStringLiteral("text"), text}, {QStringLiteral("quote"), false}}};
+        };
         if (systemRow)
-            return system.text;
-        if (m.m_type == MessageType::THREAD_STARTER_MESSAGE)
-            return m.m_pReferencedMessage
-                       ? MessageFormatter::richText(str(m.m_pReferencedMessage->m_message), m_guild, m_emojiSize)
-                       : QStringLiteral("<i>Sorry, we couldn't load the first message in this thread.</i>");
-        if (m.m_bIsForward && m.m_pReferencedMessage)
-            return MessageFormatter::richText(str(m.m_pReferencedMessage->m_message), m_guild, m_emojiSize);
-        return MessageContent::bodyIsEmbedLink(m) ? QString() : richBody(m);
+            return one(system.text);
+        if (m.m_type == MessageType::THREAD_STARTER_MESSAGE && !m.m_pReferencedMessage)
+            return one(QStringLiteral("<i>Sorry, we couldn't load the first message in this thread.</i>"));
+        return MessageContent::bodyIsEmbedLink(m) ? QVariantList() : richBody(m);
+    }
     case PlainBodyRole:
         if (systemRow)
             return MessageFormatter::systemText(m, m_guild);
@@ -118,7 +118,8 @@ QVariant MessageListModel::data(const QModelIndex& index, int role) const
     // their line already says it all.
     case MediaRole:     return systemRow ? QVariantList() : MessageContent::media(m);
     case ReactionsRole: return MessageContent::reactions(m);
-    case EmbedsRole:    return systemRow ? QVariantList() : MessageContent::embeds(m, m_guild, m_emojiSize);
+    case EmbedsRole:
+        return systemRow ? QVariantList() : MessageContent::embeds(m, m_guild, m_emojiSize, m_revealedSpoilers.value(m.m_snowflake));
     case InteractionRole:
         if (m.m_interactionName.empty() || m.m_interactionUserName.empty())
             return QString();
@@ -183,6 +184,7 @@ void MessageListModel::clear()
     beginResetModel();
     m_rows.clear();
     m_bodyCache.clear();
+    m_revealedSpoilers.clear();
     endResetModel();
     m_olderGap = 0;
     m_reachedStart = false;
@@ -432,13 +434,45 @@ void MessageListModel::refreshBodies()
         emit dataChanged(index(0), index(int(m_rows.size()) - 1), {BodyRole});
 }
 
-QString MessageListModel::richBody(const Message& message) const
+// Forwards and thread starters show the message they carry.
+QVariantList MessageListModel::richBody(const Message& message) const
 {
     auto it = m_bodyCache.constFind(message.m_snowflake);
     if (it != m_bodyCache.constEnd())
         return *it;
-    const QString body = MessageFormatter::richText(QString::fromStdString(message.m_message), m_guild,
-                                                    isJumbo(message) ? m_jumboEmojiSize : m_emojiSize);
+    const bool carried = (message.m_bIsForward || message.m_type == MessageType::THREAD_STARTER_MESSAGE)
+                         && message.m_pReferencedMessage;
+    const std::string& content = carried ? message.m_pReferencedMessage->m_message : message.m_message;
+    const QVariantList body = MessageFormatter::richBlocks(QString::fromStdString(content), m_guild,
+                                                           isJumbo(message) ? m_jumboEmojiSize : m_emojiSize,
+                                                           m_revealedSpoilers.value(message.m_snowflake));
     m_bodyCache.insert(message.m_snowflake, body);
     return body;
+}
+
+void MessageListModel::revealSpoiler(const QString& messageId, int spoiler)
+{
+    const Snowflake id = DiscordUrls::fromId(messageId);
+    m_revealedSpoilers[id].insert(spoiler);
+    m_bodyCache.remove(id);
+    const int row = indexOfMessage(messageId);
+    if (row >= 0)
+        emit dataChanged(index(row), index(row), {BodyRole, EmbedsRole});
+}
+
+void MessageListModel::setPalette(const QVariantMap& palette)
+{
+    if (m_palette == palette)
+        return;
+    m_palette = palette;
+    MessageFormatter::Palette colours;
+    colours.muted = palette.value(QStringLiteral("muted"), colours.muted).toString();
+    colours.code = palette.value(QStringLiteral("code"), colours.code).toString();
+    colours.spoiler = palette.value(QStringLiteral("spoiler"), colours.spoiler).toString();
+    colours.text = palette.value(QStringLiteral("text"), colours.text).toString();
+    MessageFormatter::setPalette(colours);
+    emit paletteChanged();
+    m_bodyCache.clear();
+    if (!m_rows.empty())
+        emit dataChanged(index(0), index(int(m_rows.size()) - 1), {BodyRole, EmbedsRole});
 }

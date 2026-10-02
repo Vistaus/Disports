@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QSet>
 #include <QVariant>
 
 #include "discord/models/Snowflake.hpp"
@@ -26,7 +27,9 @@ QVariantList media(const Message& m);
 //   description (rich text), fields [{name, value, inline}],
 //   thumbnailUrl (beside the text), image (a media() entry under the
 //   text, or null), footer, footerIcon
-QVariantList embeds(const Message& m, Snowflake guild, int emojiSize);
+// Spoilers in embeds count from 1000 per embed (the message's own text has
+// the ones below), shown when in `revealed`.
+QVariantList embeds(const Message& m, Snowflake guild, int emojiSize, const QSet<int>& revealed = {});
 
 // [{name, url, animated, lottie}]
 QVariantList stickers(const Message& m);

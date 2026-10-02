@@ -24,6 +24,9 @@ class MessageListModel : public QAbstractListModel
     // (up to three emoji, shown large). Set from QML in grid units.
     Q_PROPERTY(int emojiSize READ emojiSize WRITE setEmojiSize NOTIFY emojiSizeChanged)
     Q_PROPERTY(int jumboEmojiSize READ jumboEmojiSize WRITE setJumboEmojiSize NOTIFY emojiSizeChanged)
+    // The theme's colours for formatted text, from QML: {muted, code,
+    // spoiler, text} (see MessageFormatter::Palette).
+    Q_PROPERTY(QVariantMap palette READ palette WRITE setPalette NOTIFY paletteChanged)
 
 public:
     enum Roles {
@@ -31,7 +34,7 @@ public:
         AuthorIdRole,
         AuthorRole,
         AvatarUrlRole,
-        BodyRole,          // rich text
+        BodyRole,          // rich text in blocks, [{text, quote}] (quotes get a bar)
         PlainBodyRole,
         TimestampRole,     // "14:02" today, else "2026-09-29 14:02"
         EditedRole,
@@ -81,6 +84,8 @@ public:
     MessagePtr olderGap() const;
     // The row of a message, or -1 when it isn't loaded.
     Q_INVOKABLE int indexOfMessage(const QString& id) const;
+    // A tapped spoiler ("spoiler:<n>" in the text) shown from now on.
+    Q_INVOKABLE void revealSpoiler(const QString& messageId, int spoiler);
     // Newest real message, for read acknowledgement.
     Snowflake newestMessageId() const;
 
@@ -89,12 +94,15 @@ public:
     int emojiSize() const { return m_emojiSize; }
     void setEmojiSize(int size);
     int jumboEmojiSize() const { return m_jumboEmojiSize; }
+    QVariantMap palette() const { return m_palette; }
+    void setPalette(const QVariantMap& palette);
     void setJumboEmojiSize(int size);
 
 signals:
     void countChanged();
     void hasOlderChanged();
     void emojiSizeChanged();
+    void paletteChanged();
 
 private:
     struct Row {
@@ -105,7 +113,7 @@ private:
 
     std::vector<Row> readCache(Snowflake& olderGap, bool& reachedStart) const;
     static void computeGrouping(std::vector<Row>& rows);
-    QString richBody(const Message& message) const;
+    QVariantList richBody(const Message& message) const;
     static bool isJumbo(const Message& message);
     void refreshBodies();
 
@@ -117,5 +125,7 @@ private:
     std::vector<Row> m_rows;
     int m_emojiSize = 20;
     int m_jumboEmojiSize = 48;
-    mutable QHash<Snowflake, QString> m_bodyCache; // message id -> rich text
+    mutable QHash<Snowflake, QVariantList> m_bodyCache; // message id -> rich text blocks
+    QHash<Snowflake, QSet<int>> m_revealedSpoilers;
+    QVariantMap m_palette;
 };
