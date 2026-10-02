@@ -12,6 +12,9 @@ class Session;
 //   DISPORTS_API_URL, DISPORTS_CDN_URL   use the fake server
 //   DISPORTS_WIDTH, DISPORTS_HEIGHT      window size
 //   DISPORTS_SCREENSHOT=path[:ms]        save a screenshot and quit
+//   DISPORTS_FRAMES=dir:start:count:every  save `count` screenshots, `every`
+//                                        ms apart from `start` ms on (to
+//                                        look at animations)
 //   DISPORTS_OPEN_CHANNEL=id             open a channel once connected, then:
 //     DISPORTS_SEND_MESSAGE=text         send a message
 //     DISPORTS_SEND_FILE=path            send a file (DISPORTS_SEND_FILE_TEXT)
@@ -37,6 +40,7 @@ public:
 private:
     TestHooks(Session* session, QQuickView* view);
     void scheduleScreenshot();
+    void scheduleFrames();
     void scheduleChannelActions();
     void scheduleFolder();
     void scheduleLogin();

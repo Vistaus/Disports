@@ -35,6 +35,7 @@ TestHooks::TestHooks(Session* session, QQuickView* view)
         view->resize(width, height);
 
     scheduleScreenshot();
+    scheduleFrames();
     scheduleChannelActions();
     scheduleFolder();
     scheduleLogin();
@@ -84,6 +85,20 @@ void TestHooks::scheduleScreenshot()
               saved ? "saved" : "FAILED");
         QCoreApplication::quit();
     });
+}
+
+void TestHooks::scheduleFrames()
+{
+    const QStringList spec = qEnvironmentVariable("DISPORTS_FRAMES").split(QLatin1Char(':'));
+    if (spec.size() != 4)
+        return;
+    const QString dir = spec[0];
+    const int start = spec[1].toInt(), count = spec[2].toInt(), every = spec[3].toInt();
+    for (int i = 0; i < count; ++i) {
+        QTimer::singleShot(start + i * every, this, [this, dir, i]() {
+            m_view->grabWindow().save(QStringLiteral("%1/frame-%2.png").arg(dir).arg(i, 3, 10, QLatin1Char('0')));
+        });
+    }
 }
 
 void TestHooks::scheduleChannelActions()

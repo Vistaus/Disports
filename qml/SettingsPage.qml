@@ -8,7 +8,8 @@ Page {
 
     // A collapsed OptionSelector shows its first option until it has been
     // opened and closed once (Lomiri only scrolls its list to the selected
-    // one after collapsing): scroll it there ourselves.
+    // one after collapsing), and again after a theme change restyles it:
+    // put its list there ourselves, without the scroll animation.
     function showSelected(selector) {
         if (selector.currentlyExpanded)
             return
@@ -24,8 +25,30 @@ Page {
             return null
         }
         const list = listIn(selector)
-        if (list)
-            Qt.callLater(function() { list.positionViewAtIndex(selector.selectedIndex, ListView.Beginning) })
+        if (!list)
+            return
+        const scrolling = []
+        for (let i = 0; i < list.data.length; ++i) {
+            const behavior = list.data[i]
+            if (behavior.animation !== undefined && behavior.enabled) {
+                behavior.enabled = false
+                scrolling.push(behavior)
+            }
+        }
+        list.positionViewAtIndex(selector.selectedIndex, ListView.Beginning)
+        scrolling.forEach(behavior => behavior.enabled = true)
+    }
+
+    // A theme picked in the open selector: applied once it has closed. Done
+    // at once, the restyle lands in the middle of its closing animation.
+    Timer {
+        id: applyTheme
+        property int mode
+        interval: LomiriAnimation.BriskDuration * 2 + 50
+        onTriggered: {
+            Session.preferences.themeMode = mode
+            Qt.callLater(settingsPage.showSelected, themeSelector)
+        }
     }
 
     header: PageHeader {
@@ -81,19 +104,20 @@ Page {
                     id: themeSelector
                     anchors { left: parent.left; right: parent.right; margins: units.gu(2) }
                     expanded: false
+                    // All the options, open: Lomiri's own height follows the
+                    // parent, whose height follows this, and opening stutters.
+                    containerHeight: itemHeight * model.length
                     // Same order as Preferences.themeMode: 0 light, 1 dark, 2 system.
                     model: [i18n.tr("Light"), i18n.tr("Dark"), i18n.tr("Follow system")]
-                    onDelegateClicked: function(index) { Session.preferences.themeMode = index }
-                    onSelectedIndexChanged: settingsPage.showSelected(themeSelector)
-                }
-
-                // selectedIndex is the list's currentIndex, which the model
-                // resets to 0 when set after it: apply it once built.
-                Binding {
-                    target: themeSelector
-                    property: "selectedIndex"
-                    value: Session.preferences.themeMode
-                    delayed: true
+                    onDelegateClicked: function(index) {
+                        applyTheme.mode = index
+                        applyTheme.restart()
+                    }
+                    // Once the model is in (setting it resets the selection).
+                    Component.onCompleted: {
+                        selectedIndex = Session.preferences.themeMode
+                        Qt.callLater(settingsPage.showSelected, themeSelector)
+                    }
                 }
             }
 
@@ -198,16 +222,15 @@ Page {
                     readonly property var modes: ["hide", "reveal", "show"]
                     anchors { left: parent.left; right: parent.right; margins: units.gu(2) }
                     expanded: false
+                    // All the options, open: Lomiri's own height follows the
+                    // parent, whose height follows this, and opening stutters.
+                    containerHeight: itemHeight * model.length
                     model: [i18n.tr("Hide completely"), i18n.tr("Show a placeholder to tap"), i18n.tr("Show normally")]
                     onDelegateClicked: function(index) { Session.preferences.blockedMessages = modes[index] }
-                    onSelectedIndexChanged: settingsPage.showSelected(blockedSelector)
-                }
-
-                Binding {
-                    target: blockedSelector
-                    property: "selectedIndex"
-                    value: Math.max(0, blockedSelector.modes.indexOf(Session.preferences.blockedMessages))
-                    delayed: true
+                    Component.onCompleted: {
+                        selectedIndex = Math.max(0, modes.indexOf(Session.preferences.blockedMessages))
+                        Qt.callLater(settingsPage.showSelected, blockedSelector)
+                    }
                 }
             }
 
