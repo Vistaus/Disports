@@ -172,7 +172,8 @@ ListView {
     // Above the oldest message (bottom-to-top).
     footer: Item {
         width: list.width
-        height: units.gu(6)
+        // Room for a long name in "This is the beginning of..." too.
+        height: Math.max(units.gu(6), beginning.height + units.gu(3))
 
         Label {
             anchors.centerIn: parent
@@ -193,7 +194,11 @@ ListView {
         }
 
         Label {
+            id: beginning
             anchors.centerIn: parent
+            width: parent.width - units.gu(4)
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.Wrap
             visible: Session.messages.reachedStart && list.count > 0 && Session.permissions.canReadHistory
             text: Session.inDirectMessages
                   ? i18n.tr("This is the beginning of your conversation with %1").arg(Session.currentChannelName)
