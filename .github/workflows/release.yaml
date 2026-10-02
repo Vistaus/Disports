@@ -1,8 +1,9 @@
 name: Release
 
-# Pushing a tag such as v1.0.0 makes a GitHub release with both clicks. A
-# tagged build is versioned without the commit (see CMakeLists.txt), so the
-# tag has to match the version there.
+# Pushing a tag such as v1.0.0 or v1.0.0-beta1 makes a GitHub release with
+# both clicks (a pre-release for alpha, beta and rc). The tag has to match the
+# version in CMakeLists.txt; the clicks are then 1.0.0 or 1.0.0~beta1 (see
+# CMakeLists.txt).
 
 on:
   push:
@@ -20,8 +21,12 @@ jobs:
       - name: Check the version
         run: |
           version=$(sed -n 's/^project(disports VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
-          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::The tag is $GITHUB_REF_NAME but CMakeLists.txt says $version"
+          case "$GITHUB_REF_NAME" in
+            "v$version"|"v$version"-*) ;;
+            *) echo "::error::The tag is $GITHUB_REF_NAME but CMakeLists.txt says $version"; exit 1 ;;
+          esac
+          if ! echo "$GITHUB_REF_NAME" | grep -qE '^v[0-9.]+(-[A-Za-z0-9.]+)?$'; then
+            echo "::error::After the version, a tag may only have -beta1 and the like"
             exit 1
           fi
 
@@ -40,14 +45,17 @@ jobs:
           path: clicks
           merge-multiple: true
 
-      # The clicks themselves must carry the plain version, not a commit.
+      # The clicks must carry the release's version (v1.0.0-beta1 is
+      # 1.0.0~beta1), not a commit.
       - name: Check the clicks
         run: |
+          version=${GITHUB_REF_NAME#v}
+          version=${version/-/\~}
           ls clicks
           for click in clicks/*.click; do
             case "$(basename "$click")" in
-              disports.jukfiuu_${GITHUB_REF_NAME#v}_*.click) ;;
-              *) echo "::error::$(basename "$click") isn't version ${GITHUB_REF_NAME#v}"; exit 1 ;;
+              disports.jukfiuu_${version}_*.click) ;;
+              *) echo "::error::$(basename "$click") isn't version $version"; exit 1 ;;
             esac
           done
 

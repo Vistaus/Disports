@@ -7,18 +7,32 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(APP_NAME "disports")
 set(APP_ID "disports.jukfiuu")
 
-# Builds from a tagged commit are 1.0.0; any other is 1.0.0.<commit>, so
-# each one installs as a new version (and gets a fresh AppArmor profile).
+# The click's version: 1.0.0 when built from the tag v1.0.0, 1.0.0~beta1
+# from v1.0.0-beta1 (git tags can't hold "~", and it sorts before 1.0.0),
+# and 1.0.0.<commit> otherwise, so each build installs as a new version (and
+# gets a fresh AppArmor profile).
 set(APP_VERSION ${PROJECT_VERSION})
 find_package(Git QUIET)
 if(GIT_FOUND AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
     # The build container runs as another user than the checkout's owner.
     set(GIT ${GIT_EXECUTABLE} -c safe.directory=* -C ${CMAKE_CURRENT_SOURCE_DIR})
-    execute_process(COMMAND ${GIT} describe --tags --exact-match
-        RESULT_VARIABLE TAGGED OUTPUT_QUIET ERROR_QUIET)
+    execute_process(COMMAND ${GIT} tag --points-at HEAD
+        OUTPUT_VARIABLE TAGS OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
     execute_process(COMMAND ${GIT} rev-parse --short=7 HEAD
         OUTPUT_VARIABLE COMMIT OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-    if(NOT TAGGED EQUAL 0 AND COMMIT)
+    string(REPLACE "." "\\." VERSION_PATTERN ${PROJECT_VERSION})
+    string(REPLACE "\n" ";" TAGS "${TAGS}")
+    set(RELEASE_VERSION "")
+    foreach(TAG ${TAGS})
+        if(TAG STREQUAL "v${PROJECT_VERSION}")
+            set(RELEASE_VERSION ${PROJECT_VERSION})
+        elseif(TAG MATCHES "^v${VERSION_PATTERN}-([A-Za-z0-9.]+)$" AND NOT RELEASE_VERSION)
+            set(RELEASE_VERSION "${PROJECT_VERSION}~${CMAKE_MATCH_1}")
+        endif()
+    endforeach()
+    if(RELEASE_VERSION)
+        set(APP_VERSION ${RELEASE_VERSION})
+    elseif(COMMIT)
         set(APP_VERSION ${PROJECT_VERSION}.${COMMIT})
     endif()
     # Configure again after each commit.
