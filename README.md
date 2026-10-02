@@ -1,5 +1,7 @@
 # Disports
 
+[![Telegram](https://img.shields.io/badge/-updates-24a1de?logo=telegram&logoColor=white&labelColor=gray)](https://t.me/disportsdiscussion)
+
 A Discord client built for Ubuntu Touch.
 
 > [!IMPORTANT]
