@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Disports\n"
 "Report-Msgid-Bugs-To: https://github.com/jukfiuune/Disports/issues\n"
-"POT-Creation-Date: 2026-10-02 12:41+0300\n"
+"POT-Creation-Date: 2026-10-02 13:17+0300\n"
 "PO-Revision-Date: 2026-10-01 16:00+0300\n"
 "Last-Translator: Martin Filipov\n"
 "Language-Team: Bulgarian\n"
@@ -78,11 +78,11 @@ msgstr "Категория"
 msgid "Channel"
 msgstr "Канал"
 
-#: qml/ChannelInfoPage.qml qml/MessageDelegate.qml
+#: qml/ChannelInfoPage.qml qml/MessageDelegate.qml qml/ProfileView.qml
 msgid "Copy"
 msgstr "Копирай"
 
-#: qml/ChannelInfoPage.qml
+#: qml/ChannelInfoPage.qml qml/ProfileView.qml
 msgid "ID"
 msgstr "ID"
 
@@ -101,6 +101,10 @@ msgstr "Сървър"
 #: qml/ChannelInfoPage.qml
 msgid "Topic"
 msgstr "Тема"
+
+#: qml/ChannelInfoPage.qml
+msgid "You"
+msgstr "Ти"
 
 #: qml/ChannelPanel.qml qml/MessageList.qml
 msgid "Loading..."
@@ -399,6 +403,38 @@ msgstr "Анкетата приключи"
 #: qml/PollCard.qml
 msgid "pick any"
 msgstr "избери няколко"
+
+#: qml/ProfileView.qml
+msgid "About me"
+msgstr "За мен"
+
+#: qml/ProfileView.qml
+msgid "Bot"
+msgstr "Бот"
+
+#: qml/ProfileView.qml
+msgid "Do not disturb"
+msgstr "Не безпокойте"
+
+#: qml/ProfileView.qml
+msgid "Idle"
+msgstr "Неактивен"
+
+#: qml/ProfileView.qml
+msgid "Message"
+msgstr "Съобщение"
+
+#: qml/ProfileView.qml
+msgid "Offline"
+msgstr "Офлайн"
+
+#: qml/ProfileView.qml
+msgid "Online"
+msgstr "На линия"
+
+#: qml/ProfileView.qml
+msgid "You blocked this user"
+msgstr "Блокирал си този потребител"
 
 #: qml/SettingsPage.qml
 msgid "Calls"
