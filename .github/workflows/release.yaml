@@ -51,7 +51,9 @@ jobs:
         run: |
           version=${GITHUB_REF_NAME#v}
           version=${version/-/\~}
-          ls clicks
+          # Each comes in its build folders (<arch>/app/), all in one place.
+          find clicks -mindepth 2 -name '*.click' -exec mv -t clicks {} +
+          ls clicks/*.click
           for click in clicks/*.click; do
             case "$(basename "$click")" in
               disports.jukfiuu_${version}_*.click) ;;
