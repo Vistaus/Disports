@@ -7,7 +7,9 @@ A Discord client built for Ubuntu Touch.
 
 ## Installation
 
-Disports can currently be installed on your Ubuntu Touch device via the [Open-Store](https://open-store.io/app/disports.jukfiuu), [GitHub releases](https://github.com/jukfiuune/Disports/releases) or by building it yourself using [Clickable](https://clickable-ut.dev).
+Disports can currently be installed on your Ubuntu Touch device via the [Open-Store](https://open-store.io/app/disports.jukfiuu), [GitHub releases](https://github.com/jukfiuune/Disports/releases) or by building it yourself using [Clickable](https://clickable-ut.dev). It needs Ubuntu Touch 24.04-2.x or newer.
+
+Updating from Disports 0.8 keeps you signed in and keeps your settings.
 
 ## Logging In
 
@@ -15,12 +17,23 @@ Disports can currently be installed on your Ubuntu Touch device via the [Open-St
 
 This is the safest and easiest way to sign in. It works just like scanning a QR code in the official Discord client.
 
-1. Open Disports and tap **Login with QR Code**.
-2. A QR code will appear on screen.
-3. On an Android or iOS device, open Discord and go to:
+1. Open Disports. The sign-in page shows a QR code.
+2. On an Android or iOS device, open Discord and go to:
    **User Settings -> Scan QR Code**
-4. Point your camera at the QR code shown in Disports.
-5. Confirm the login on your device - you're in!
+3. Point your camera at the QR code shown in Disports.
+4. Confirm the login on your device - you're in!
+
+### Email and Password Login (Not Recommended)
+
+> [!WARNING]
+> Signing in with your password from an unofficial client makes Discord more suspicious of your account. Use the QR code if you can.
+
+1. On the sign-in page, tap **Sign in with a password (not recommended)**.
+2. Enter your email or phone number and your password, and tap **Sign in**.
+3. Discord will most likely ask you to prove you're human: solve the check that appears.
+4. If your account has two-factor authentication, enter the code from your authenticator app, a backup code, or tap **Text me a code instead** to get one by SMS.
+
+Your password is only sent to Discord and is never saved. Accounts that only use a security key for two-factor authentication can't sign in this way.
 
 ### Token Login (Not Recommended)
 
@@ -35,7 +48,7 @@ If you still need to use token login, here's how to find your token:
 4. In the filter/search box, type `discord api`.
 5. Click on any request that appears, and look in the **Request Headers** section.
 6. Find the `Authorization` header - its value is your token.
-7. Copy it, paste it into the Token field in Disports, and tap **Login**.
+7. In Disports, tap **Paste a token instead (not recommended)**, paste it, and tap **Sign in**.
 
 ## Planned features
 
