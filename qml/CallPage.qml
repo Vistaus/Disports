@@ -143,6 +143,12 @@ Page {
                                     anchors.fill: parent
                                     source: modelData.avatarUrl
                                     ring: modelData.speaking
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        onClicked: callPage.pageStack.push(Qt.resolvedUrl("ProfilePage.qml"),
+                                                                           { "userId": modelData.id })
+                                    }
                                 }
 
                                 StateBadge {

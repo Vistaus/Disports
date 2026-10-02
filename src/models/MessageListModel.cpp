@@ -56,7 +56,8 @@ QVariant MessageListModel::data(const QModelIndex& index, int role) const
 
     switch (role) {
     case MessageIdRole: return DiscordUrls::id(m.m_snowflake);
-    case AuthorIdRole:  return DiscordUrls::id(m.m_author_snowflake);
+    // Webhooks post under a name, not as a user with a profile.
+    case AuthorIdRole:  return m.IsWebHook() ? QString() : DiscordUrls::id(m.m_author_snowflake);
     // Server nicknames, as they are now (see Session::requestMissingMembers).
     case AuthorRole:
         return m.IsWebHook() ? QString::fromStdString(m.m_author)

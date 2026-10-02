@@ -11,6 +11,7 @@
 #include "discord/config/DiscordClientConfig.hpp"
 #include "discord/config/LocalSettings.hpp"
 #include "discord/state/MessageCache.hpp"
+#include "discord/state/ProfileCache.hpp"
 
 #include "ChannelInfo.h"
 #include "DiscordUrls.h"
@@ -433,7 +434,38 @@ QString Session::currentChannelTopic() const
 QVariantMap Session::channelInfo(const QString& channelId) const
 {
     Channel* channel = m_instance ? m_instance->GetChannel(DiscordUrls::fromId(channelId)) : nullptr;
-    return channel ? describeChannel(*m_instance, *channel) : QVariantMap();
+    if (!channel)
+        return QVariantMap();
+    // A 1:1 DM shows the other person's profile.
+    if (channel->m_channelType == Channel::DM && !channel->m_recipients.empty())
+        userInfo(DiscordUrls::id(channel->GetDMRecipient()));
+    return describeChannel(*m_instance, *channel);
+}
+
+QVariantMap Session::userInfo(const QString& userId) const
+{
+    const Snowflake user = DiscordUrls::fromId(userId);
+    if (!m_instance || !user)
+        return QVariantMap();
+    // Bio and pronouns: the full profile, fetched once (the page refreshes
+    // on profileChanged).
+    Profile* profile = GetProfileCache()->LookupProfile(user, "", "", "", false);
+    if (profile && !profile->m_bExtraDataFetched)
+        GetProfileCache()->RequestExtraData(user, 0, false, false);
+    return describeUser(*m_instance, user);
+}
+
+QString Session::directMessageWith(const QString& userId) const
+{
+    const Snowflake user = DiscordUrls::fromId(userId);
+    Guild* dms = m_instance ? m_instance->GetGuild(0) : nullptr;
+    if (!dms || !user)
+        return QString();
+    for (const Channel& channel : dms->m_channels) {
+        if (channel.m_channelType == Channel::DM && channel.GetDMRecipient() == user)
+            return DiscordUrls::id(channel.m_snowflake);
+    }
+    return QString();
 }
 
 void Session::selectDirectMessages()

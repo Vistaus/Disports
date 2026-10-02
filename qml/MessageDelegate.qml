@@ -8,6 +8,7 @@ ListItem {
 
     required property int index
     required property string messageId
+    required property string authorId
     required property string author
     required property string avatarUrl
     required property string body
@@ -37,6 +38,8 @@ ListItem {
     signal replyRequested(string messageId, string author, string text)
     // Tapped the message this one replies to.
     signal jumpRequested(string messageId)
+    // Tapped the author's picture or name.
+    signal profileRequested(string userId)
     signal editRequested(string messageId, string text)
     signal deleteRequested(string messageId)
     // caller: the item the reaction picker points at
@@ -210,6 +213,12 @@ ListItem {
         width: bubble.avatarSize
         height: bubble.avatarSize
         imageSource: bubble.avatarUrl
+
+        MouseArea {
+            anchors.fill: parent
+            enabled: bubble.authorId !== ""
+            onClicked: bubble.profileRequested(bubble.authorId)
+        }
     }
 
     Column {
@@ -269,6 +278,12 @@ ListItem {
                 font.pixelSize: units.gu(1.6)
                 font.bold: true
                 font.italic: bubble.isSystem
+
+                MouseArea {
+                    anchors.fill: parent
+                    enabled: bubble.authorId !== "" && !bubble.isSystem
+                    onClicked: bubble.profileRequested(bubble.authorId)
+                }
             }
 
             Label {

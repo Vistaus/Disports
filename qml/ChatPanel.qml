@@ -113,6 +113,9 @@ Item {
             PopupUtils.open(deleteDialog, chatPanel, { "messageId": messageId })
         }
         onMediaOpened: function(media) { chatPanel.openMedia(media) }
+        onProfileRequested: function(userId) {
+            chatPanel.pageStack.push(Qt.resolvedUrl("ProfilePage.qml"), { "userId": userId })
+        }
     }
 
     Label {

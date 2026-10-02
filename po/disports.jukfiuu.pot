@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Disports\n"
 "Report-Msgid-Bugs-To: https://github.com/jukfiuune/Disports/issues\n"
-"POT-Creation-Date: 2026-10-02 12:41+0300\n"
+"POT-Creation-Date: 2026-10-02 13:17+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -79,11 +79,11 @@ msgstr ""
 msgid "Channel"
 msgstr ""
 
-#: qml/ChannelInfoPage.qml qml/MessageDelegate.qml
+#: qml/ChannelInfoPage.qml qml/MessageDelegate.qml qml/ProfileView.qml
 msgid "Copy"
 msgstr ""
 
-#: qml/ChannelInfoPage.qml
+#: qml/ChannelInfoPage.qml qml/ProfileView.qml
 msgid "ID"
 msgstr ""
 
@@ -101,6 +101,10 @@ msgstr ""
 
 #: qml/ChannelInfoPage.qml
 msgid "Topic"
+msgstr ""
+
+#: qml/ChannelInfoPage.qml
+msgid "You"
 msgstr ""
 
 #: qml/ChannelPanel.qml qml/MessageList.qml
@@ -393,6 +397,38 @@ msgstr ""
 
 #: qml/PollCard.qml
 msgid "pick any"
+msgstr ""
+
+#: qml/ProfileView.qml
+msgid "About me"
+msgstr ""
+
+#: qml/ProfileView.qml
+msgid "Bot"
+msgstr ""
+
+#: qml/ProfileView.qml
+msgid "Do not disturb"
+msgstr ""
+
+#: qml/ProfileView.qml
+msgid "Idle"
+msgstr ""
+
+#: qml/ProfileView.qml
+msgid "Message"
+msgstr ""
+
+#: qml/ProfileView.qml
+msgid "Offline"
+msgstr ""
+
+#: qml/ProfileView.qml
+msgid "Online"
+msgstr ""
+
+#: qml/ProfileView.qml
+msgid "You blocked this user"
 msgstr ""
 
 #: qml/SettingsPage.qml

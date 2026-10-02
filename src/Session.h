@@ -160,6 +160,11 @@ public:
     Q_INVOKABLE void markCurrentChannelRead();
     // See describeChannel() in ChannelInfo.h.
     Q_INVOKABLE QVariantMap channelInfo(const QString& channelId) const;
+    // See describeUser() in ChannelInfo.h; fetches the full profile once
+    // (profileChanged follows).
+    Q_INVOKABLE QVariantMap userInfo(const QString& userId) const;
+    // Our 1:1 DM with someone, or "" when there is none yet.
+    Q_INVOKABLE QString directMessageWith(const QString& userId) const;
 
     // Actions on messages of the open channel. Own messages only for
     // editing; false when it can't be done.

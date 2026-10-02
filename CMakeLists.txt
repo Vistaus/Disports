@@ -140,6 +140,8 @@ qt_add_qml_module(disports
         qml/ChatPage.qml
         qml/MessageCitation.qml
         qml/PasswordLoginPage.qml
+        qml/ProfilePage.qml
+        qml/ProfileView.qml
         qml/UpdateNotice.qml
         qml/MessageDelegate.qml
         qml/PanelHeader.qml

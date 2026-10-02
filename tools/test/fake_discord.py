@@ -150,6 +150,7 @@ def message(channel, author, content, **extra):
 
 for ch in (GENERAL, NOHISTORY, SLOW, NOFILES, READONLY, DM, THREAD):
     HISTORY_MSGS[ch] = [message(ch, ALICE, "Hello from Alice in %s" % ch)]
+HISTORY_MSGS[GROUP] = [message(GROUP, ALICE, "Who's coming on Saturday?")]
 
 # #media: 200 messages of pictures, videos, several pictures, link previews,
 # for scrolling tests. The files are build/test/files/sticker.png (any
@@ -271,7 +272,7 @@ def ready():
         "private_channels": [{"id": DM, "type": 1, "recipient_ids": ["200"],
                               "last_message_id": HISTORY_MSGS[DM][-1]["id"]},
                              {"id": BOB_DM, "type": 1, "recipient_ids": ["300"], "last_message_id": None},
-                             {"id": GROUP, "type": 3, "name": "Weekend plans", "icon": None,
+                             {"id": GROUP, "type": 3, "name": "Weekend plans with the whole family and everyone else", "icon": None,
                               "recipient_ids": ["200", "300"], "last_message_id": None}],
         "read_state": {"entries": [], "version": 1},
         "relationships": [{"id": "200", "user_id": "200", "type": 1, "user": ALICE},
@@ -411,6 +412,15 @@ class Rest(BaseHTTPRequestHandler):
         if re.match(r"/assets/[0-9a-f]+\.mp3$", path):
             log("REST ringtone", path)
             return self.reply(200, raw=b"\xff\xfb" * 2048, content_type="audio/mpeg")
+        m = re.match(r"/api/v9/users/(\d+)/profile$", path)
+        if m:
+            person = next((u for u in MEMBERS + EXTRA if u["id"] == m.group(1)), None)
+            if person is None:
+                return self.reply(404, {"message": "Unknown User", "code": 10013})
+            log("REST profile", m.group(1))
+            return self.reply(200, {"user": dict(person, bio="Hi! I test Disports.\nSecond line of my bio."),
+                                    "user_profile": {"bio": "Hi! I test Disports.\nSecond line of my bio.",
+                                                     "pronouns": "she/her"}})
         if path == "/api/v9/experiments":
             return self.reply(200, {"fingerprint": "test-fingerprint", "assignments": []})
         if path == "/api/v9/gateway":

@@ -219,13 +219,19 @@ scenario_migration() {  # from 0.8.5: its token and settings carried over, its f
         || { echo "   FAIL migration-unused: update notice for someone who never signed in"; FAILED=1; }
 }
 
+scenario_profile() {    # someone's profile: tapping their picture in a channel, and a DM's info
+    STEPS="sleep 6;click 347 722;sleep 2" "$HERE/run.sh" profile 9000 DISPORTS_OPEN_CHANNEL=1101 "${WIDE[@]}"
+    expect profile 'REST profile 200'
+    STEPS="sleep 6;click 975 68;sleep 2" "$HERE/run.sh" profile-dm 9000 DISPORTS_OPEN_CHANNEL=2001 "${WIDE[@]}"
+}
+
 scenario_permissions() { # read-only, no history, no files, slowmode
     for channel in 1103 1104 1106 1105; do
         STEPS="sleep 5" "$HERE/run.sh" permissions-$channel 6500 DISPORTS_OPEN_CHANNEL=$channel "${WIDE[@]}"
     done
 }
 
-ALL=(channels mentions upload zoom nicknames dmcall call switch threads reply login captcha migration permissions)
+ALL=(channels mentions upload zoom nicknames dmcall call switch threads reply login captcha migration profile permissions)
 SCENARIOS=("${@:-${ALL[@]}}")
 [ $# -eq 0 ] && SCENARIOS=("${ALL[@]}")
 

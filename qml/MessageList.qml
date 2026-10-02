@@ -13,6 +13,7 @@ ListView {
     signal editRequested(string messageId, string text)
     signal deleteRequested(string messageId)
     signal mediaOpened(var media)
+    signal profileRequested(string userId)
 
     // Stays on the newest message until scrolled away from, and goes back
     // to it when the content grows (history arriving, images laid out) or
@@ -163,6 +164,7 @@ ListView {
         width: list.width
         onReplyRequested: function(messageId, author, text) { list.replyRequested(messageId, author, text) }
         onJumpRequested: function(messageId) { list.jumpToMessage(messageId) }
+        onProfileRequested: function(userId) { list.profileRequested(userId) }
         onReactRequested: function(messageId, caller) { list.reactRequested(messageId, caller) }
         onEditRequested: function(messageId, text) { list.editRequested(messageId, text) }
         onDeleteRequested: function(messageId) { list.deleteRequested(messageId) }
